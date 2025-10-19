@@ -38,11 +38,7 @@ namespace TrueTrace {
                 Start();
             }
             if(RayMaster == null) return;
-    #if !TTCustomMotionVectors
-            RayTracingMaster._camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
-    #else
             RayTracingMaster._camera.depthTextureMode = DepthTextureMode.None;
-    #endif
             CommandBuffer cmd = new CommandBuffer();
             cmd.name = "TrueTrace";
             RayMaster.RenderImage(destination, cmd);

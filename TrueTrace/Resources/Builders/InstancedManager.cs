@@ -188,10 +188,12 @@ namespace TrueTrace {
             for (int i = AddQueCount; i >= 0; i--)
             {
                 var CurrentRep = BuildQue.Count;
-                BuildQue.Add(AddQue[i]);
+                if(AddQue[i].enabled) {
+                    BuildQue.Add(AddQue[i]);
+                    BuildQue[CurrentRep].LoadData();
+                    CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
+                }
                 AddQue.RemoveAt(i);
-                BuildQue[CurrentRep].LoadData();
-                CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
             }
             // UnityEngine.Profiling.Profiler.EndSample();
             // UnityEngine.Profiling.Profiler.BeginSample("Instaced BuildQue");

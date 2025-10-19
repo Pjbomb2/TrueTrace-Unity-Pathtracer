@@ -7,6 +7,7 @@ namespace TrueTrace
     public static class TTPathFinder
     {
         private static string baseResourcePath;
+        public static string CurrentTargetFile;
 
         public static string GetResourcePath()
         {
@@ -41,7 +42,7 @@ namespace TrueTrace
         // Ensure all paths returned from these methods are normalized
         public static string GetSaveFilePath() => NormalizePath(Path.Combine(GetResourcePath(), "Utility/SaveFile.xml"));
         public static string GetGlobalDefinesPath() => NormalizePath(Path.Combine(GetResourcePath(), "GlobalDefines.cginc"));
-        public static string GetMaterialPresetsPath() => NormalizePath(Path.Combine(GetResourcePath(), "Utility/MaterialPresets.xml"));
+        public static string GetMaterialPresetsPath() => NormalizePath(Path.Combine(GetResourcePath(), "Utility/MaterialPresets/"));
         public static string GetMaterialMappingsPath() => NormalizePath(Path.Combine(GetResourcePath(), "Utility/MaterialMappings.xml"));
     }
 }

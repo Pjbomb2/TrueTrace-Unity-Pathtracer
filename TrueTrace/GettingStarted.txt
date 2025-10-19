@@ -11,14 +11,12 @@ To get started:
 
 Adding new objects
 	Automatic methods
-  		First, add your gameobjects as a child of the "Scene" gameobject created by TrueTrace.
   			Global setup: Press "Auto Assign Scripts" in the TrueTrace settings menu.
   			Local setup: Go to "Hierarchy Options" in the TrueTrace settings menu. 
   			Drag the root gameobject that you added to the "Selective Auto Assign Scripts" section.
   			Click "Selective Auto Assign".
 
 	Manual method
-		First, add your gameobjects as a child of the "Scene" gameobject created by TrueTrace.
   		Each gameobject that contains a mesh needs the script "RayTracingObject" added to it.
   		For non-skinned meshes: 
     		Add the script "ParentObject" to either:
@@ -42,17 +40,10 @@ This will allow you to toggle some low level settings:
 	3. IgnoreGlassShadow - Shadow Rays can pass through glass
 	4. IgnoreGlassMain - Main Rays can pass through glass
 	5. FadeMapping - Enables experimental Fade material type
-	6. HardwareRT - Turn on if your in Unity 2023 or higher and want to use Hardware RT cores
-	7. PointFiltering - Switch between point and linear filtering for albedo textures
-	8. StainedGlassShadows - Shadow rays passing through glass will be tinted to the glass color
-	9. IgnoreBackFacing - Culls backfacing triangles
-	10. WhiteLights - Forces all lights to be white
-	11. LBVH - Enable/Disable the light BVH
-	12. FasterLightSampling - Uses an alternative method for calculating LBVH PDF that is a bit wrong, but much faster
-	13. AccurateEmissionTex - Turn on/off emission textures
-	14. RadianceCache - Turn on/off the Radiance Cache
-	15. IndirectRetraceWeighting - Adds indirect lighting into ReSTIR GI retracing/luminance validation
-	16. TrueBlack - Allows materials to be truely black, removes the bottom limit
-	17. AdvancedRadCacheAlt - Experimental working set for the Radiance Cache, not recomended
-	18. UseTextureLOD - (Only works with Bindless)Enables Texture LOD
-	19. DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"
+	6. PointFiltering - Switch between point and linear filtering for albedo textures
+	7. StainedGlassShadows - Shadow rays passing through glass will be tinted to the glass color
+	8. IgnoreBackFacing - Culls backfacing triangles
+	9. LBVH - Enable/Disable the light BVH
+	10. AccurateEmissionTex - Turn on/off emission textures
+	11. RadianceCache - Turn on/off the Radiance Cache
+	12. UseTextureLOD - (Only works with Bindless)Enables Texture LOD"

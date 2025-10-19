@@ -22,11 +22,7 @@ Texture2D<half4> TEX_FLAT_COLOR;
 	Texture2D<float4> Albedo;
 	Texture2D<float4> Albedo2;
 #endif
-#if defined(HDRP) && !defined(TTCustomMotionVectors)
-	Texture2DArray<float4> TEX_FLAT_MOTION;
-#else
-	Texture2D<float4> TEX_FLAT_MOTION;
-#endif
+Texture2D<float4> TEX_FLAT_MOTION;
 Texture2D<half4> TEX_ASVGF_TAA_B;
 SamplerState my_linear_clamp_sampler;
 
@@ -109,11 +105,7 @@ void preload(int2 group_base, int2 group_size, int gl_LocalInvocationIndex)
 		float4 color = TEX_FLAT_COLOR[ipos];
 		ipos = (float2)ipos * float2(rcp(source_width), rcp(source_height)) * float2(target_width, target_height);
 		float3 color_pq = PQEncode(color.rgb);
-		#if defined(HDRP) && !defined(TTCustomMotionVectors)
-			float2 motion = TEX_FLAT_MOTION[int3(ipos,0)].xy;
-		#else
-			float2 motion = TEX_FLAT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xy;
-		#endif
+		float2 motion = TEX_FLAT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xy;
 		// Store
 		s_color_pq[yy][xx] = float4(color_pq, color.a);
 		s_motion[yy][xx] = -motion;

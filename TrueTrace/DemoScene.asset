@@ -31,26 +31,24 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 1
+  DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
-  ReSTIRGISpatialCount: 24
-  ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 5.4
+  Exposure: 50
   DoPartialRendering: 0
-  PartialRenderingFactor: 1
+  PartialRenderingFactor: 2
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
-  ClayMetalOverride: 1
-  ClayRoughnessOverride: 0.3
+  ClayMetalOverride: 0
+  ClayRoughnessOverride: 0
   DoClayMetalRoughOverride: 0
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
   FireflyFrameCount: 0
@@ -74,10 +72,10 @@ MonoBehaviour:
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
-  PPFXAA: 1
+  PPFXAA: 0
   OIDNBlendRatio: 1
   ConvBloom: 1
-  ConvStrength: 0.04
+  ConvStrength: 0.4
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0
@@ -103,3 +101,10 @@ MonoBehaviour:
   ColorVignette: {x: 0, y: 0, z: 0}
   aoStrength: 1
   aoRadius: 2
+  CurrentTargetFile: C:/Unity/Unity Raytracing V277/Assets/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/Utility/MaterialPresets/MaterialPresets.xml
+  SamplesPerFrame: 1
+  PhotonMapRadiusCoverage: 12
+  CausticIntensityMultiplier: 1
+  PhotonGuidingRatio: 0.15
+  PhotonGuidingPerLightGuidingResolution: 128
+  PhotonGuidingTotalPhotonsPerFrame: 2000000

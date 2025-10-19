@@ -33,15 +33,13 @@ namespace TrueTrace {
         [SerializeField] public bool UseReSTIRGITemporal = true;
         [SerializeField] public bool UseReSTIRGISpatial = true;
         [SerializeField] public bool UseReSTIRGI = false;
-        [SerializeField] public int ReSTIRGISpatialCount = 24;
-        [SerializeField] public float ReSTIRGISpatialRadius = 50.0f;
-        [SerializeField] public int ReSTIRGITemporalMCap = 20;
+        [SerializeField] public int ReSTIRGITemporalMCap = 4;
         [SerializeField] public bool DoReSTIRGIConnectionValidation = true;
         [SerializeField] public float Exposure = 1.0f;
         [SerializeField] public bool DoPartialRendering = false;
         [SerializeField] public int PartialRenderingFactor = 1;
         [SerializeField] public bool DoFirefly = false;
-        [SerializeField] public bool ImprovedPrimaryHit = false;
+        [SerializeField] public bool ImprovedPrimaryHit = true;
         [SerializeField] public int RISCount = 12;
         [SerializeField] public int ToneMapper = 0;
         [SerializeField] public float SkyDesaturate = 0.0f;
@@ -100,6 +98,13 @@ namespace TrueTrace {
         [SerializeField] public Vector3 ColorVignette = Vector3.zero;
         [SerializeField] public float aoStrength = 1.0f;
         [SerializeField] public float aoRadius = 2.0f;
+        [SerializeField] public string CurrentTargetFile = null;
+        [SerializeField] public int SamplesPerFrame = 1;
+        [SerializeField] public float PhotonMapRadiusCoverage = 8;
+        [SerializeField] public float CausticIntensityMultiplier = 1;
+        [SerializeField] public float PhotonGuidingRatio = 0.15f;
+        [SerializeField] public int PhotonGuidingPerLightGuidingResolution = 128;
+        [SerializeField] public int PhotonGuidingTotalPhotonsPerFrame = 2000000;
 
     }
 

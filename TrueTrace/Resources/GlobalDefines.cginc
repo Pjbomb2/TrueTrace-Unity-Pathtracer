@@ -1,12 +1,11 @@
 // #define HardwareRT
 // #define HDRP
 // #define DX11
-#define UseBindless
 #define UseSGTree
-// #define TTCustomMotionVectors
-// #define TTReflectionMotionVectors
+#define TTReflectionMotionVectors
 // #define MultiMapScreenshot
 // #define RasterizedDirect
+// #define PhotonMapping
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
@@ -15,11 +14,10 @@
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 #define LBVH
 #define AccurateEmissionTex
-#define TrueBlack
 // #define UseTextureLOD
 #define EONDiffuse
 // #define AdvancedBackground
@@ -27,11 +25,9 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-// #define ClampRoughnessToBounce
+#define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
-// #define ReSTIRRestrictSpatial
-// #define SmartRestriction
-// #define RestirPreventCrossMatBlur
+#define ReSTIRReflectionRefinement
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
 // #define ClayMetalOverride
@@ -94,6 +90,8 @@
 #define Thin 9
 #define VertexColors 10
 #define InvertAlpha 11
+#define EnableCausticGeneration 12
+#define DisableCausticRecieving 13
 
 #define SampleAlbedo 0
 #define SampleMetallic 1

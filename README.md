@@ -44,7 +44,9 @@
   <li>Lambert or EON diffuse models</li>
   <li>Chromatic Aberation, Saturation, Colored Vignette</li>
   <li>Full Multiscatter Fog(Not realtime)</li>
-  <li>Orthographic Camera</li>
+  <li>Orthographic Camera Support</li>
+  <li>Photon Mapping for fast(but not realtime) caustics</li>
+  <li>Animatable Material Properties</li> 
 </ul>
 
 MASSIVE thanks to 
@@ -80,8 +82,7 @@ for bringing bindless textures to unity!
 
 ### Manual method
 <ul>
-  <li>First, add your gameobjects as a child of the "Scene" gameobject created by TrueTrace.</li>
-  <li>Each gameobject that contains a mesh needs the script "RayTracingObject" added to it.</li>
+  <li>First, each gameobject that contains a mesh needs the script "RayTracingObject" added to it.(This keeps track of per-mesh materials)</li>
   <li>For non-skinned meshes: </li>
   <ul>
     <li>Add the script "ParentObject" to either:</li>
@@ -104,25 +105,24 @@ for bringing bindless textures to unity!
   <li>DX12 is recommended, as it enables use of OIDN, Bindless texturing, RT Cores, and higher performance</li>
   <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds(Turn on Truetrace Settings -> Functionality Settings</li>
-  <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
+  <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to be rebuilt for them</li>
   <li>Emissive meshes need to be have a non-zero emissive value when they are built or rebuilt to work with NEE, but after that can have their emissiveness changed at will</li>
   <li>To set up PBR with the DEFAULT BIRP material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
+  <li>Some settings will be hidden behind an "Advanced Mode" toggle found in "Functionality Settings"</li>
+</ul>
+
+## Animating TT Materials
+<ul>
+  <li>To animate properties of a truetrace material, you need to add the script "MaterialAnimationView" to the same gameobject as the RayTracingObject</li>
+  <li>Next, you need to select the targeted submaterial in the dropdown of the newly added script</li>
+  <li>Finally, you can now animate any material property by animating the SelectedMaterial properties.</li> 
 </ul>
 
 ## URP Setup
 <ul>
-  <li>If using Unity 6000 or above, you need to go to Project Settings -> Graphics -> (at the bottom)Turn on Compatability Mode</li>
-  <li>In the Universal Renderer Asset being used turn on "Native RenderPass"</li>
-  <li>EITHER:</li>
-  <ul>
-    <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
-    <li>OR</li>
-    <li>In Truetrace Settings -> Functionality Settings -> Turn ON "Use Custom Motion Vectors"</li>
-  </ul>
-  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject if it has not been automatically added</li>
-  <li>Reccomended - Go to the Universal Render Pipeline Asset you are using, and turn the render scale to 1</li>
+  <li>Add the URPTTInjectPass to the currently used renderer as a renderfeature(The name of which can be found in the Camera)</li>
 </ul>
 
 ## Creating Non-Standard Images
@@ -148,20 +148,26 @@ for bringing bindless textures to unity!
 
 ## Functionality Settings Contents
 <ul>
-  <li>NOTE FIRST: MOST OF THESE IN THIS TABLE NOW HAVE TOOLTIPS THAT APPEAR IF YOU HOVER OVER THEM!</li>
+  <li>NOTES 1: MOST OF THESE IN THIS TABLE HAVE TOOLTIPS THAT APPEAR IF YOU HOVER OVER THEM!</li>
+  <li>NOTES 2: SOME OF THESE ARE HIDDEN BEHIND TTAdvancedMode, WHICH CAN BE TOGGLED IN THIS MENU.</li>
   <li>Enable RT Cores - (DX12 Only, REQUIRES UNITY 2023 OR HIGHER)Enables Hardware RT for cards that support it.</li>
-  <li>Disable Bindless Textures - DX11(/vulkan/metal) compatability, Disables bindless texturing, and uses the atlas fallback(Limits resolution).</li>
   <li>Use Old Light BVH Instead of Gaussian Tree - Disables the Gaussian Tree for higher performance but worse light sampling on metallics.</li>
-  <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11(/vulkan/metal).</li>
   <li>Enable OIDN - (DX12 Only) Adds the OIDN denoiser to the Denoiser list in "Main Options"</li>
-  <li>FULLY Disable Radiance Cache - Will free the memory usually used by the Radiance Cache</li>
-  <li>Remove Rasterization Requirement - Truetrace stops using rasterization for anything(other than upscaling with TAAU), so you can turn off rasterization rendering in your cameras for extra performance</li>
+  <li>FULLY Disable Radiance Cache - Will free the memory(RAM/VRAM) usually used by the Radiance Cache</li>
+  <li>Use Rasterized Lighting For Direct - Experimental, only known to work in BIRP, Forces truetrace to only render indirect</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
   <li>Enable Verbose Logging - Truetrace will yell more information into the console.</li>
+  <li>Enable Triangle Splitting - Optimization for SWRT that splits triangles to improve tracing performance.</li>
+  <li>Enable Strict Memory Reduction - Shrinks compute buffers when objects are removed, which reduces performance but saves VRAM.</li>
+  <li>Save Multiple Maps On Screenshot - Any sort of image saved by truetrace will also generate images of the corrosponding material and mesh IDs.</li>
+  <li>Enable Photon Mapping - Enables the experimental photon mapping pass for caustic generation.  Materials will need to have their flag enabled to generate caustics.</li>
+  <li>Remove TT Scripts During Save - Will delete all unmodified raytracingobject and parentobject scripts when the scene is saved, then add them back. This helps with version control.</li>
   <li>Fade Mapping - Not super compatable with realtime denoisers, but allows for surfaces with variable transparency, based on alpha texture.</li>
   <li>Stained Glass - Whether or not to color shadow rays that pass through colored glass, dictated by material parameters: Thin, Albedo, Scatter Distance.</li>
   <li>Use Light BVH - Toggles the use of EITHER the Light BVH or Gaussian Tree on/off; uses the RIS count of NEE if off. Turn off for maximum speed, but poor emissive mesh sampling quality.</li>
   <li>Quick Radcache Toggle - Toggles the radcache on/off. Useful for comparing to ground truth pathtracing.</li>
+  <li>Use Texture LOD - Samples LOD of textures based on bounce number, can improve performance.</li>
+  <li>Double Buffer Light Tree - Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but hurts performance with ASVGF.</li>
 </ul>
 
 
@@ -169,8 +175,8 @@ for bringing bindless textures to unity!
 TrueTrace Options Description - 
 <ul>
   <li>Build Aggregated BVH(Recommended to do any time you change objects in edit mode)- Allows you to pre-build objects BVH's before running so you dont have to wait every time you go into play mode for it to build.</li>
-  <li>Clear Parent Data - Clears the data stored in parent GameObjects, allowing you to actually click them without lagging</li>
   <li>Take Screenshot - Takes a screenshot to the path under "Functionality Settings" in the TrueTrace options</li>
+  <li>Clear Parent Data - Clears the data stored in parent GameObjects, allowing you to actually click them without lagging</li>
   <li>Auto Assign Scripts - Assigns all required scripts to all objects under the Scene GameObject, best way to add objects</li>
   <li>Remaining Objects - Objects still being processed</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
@@ -193,7 +199,7 @@ TrueTrace Options Description -
     </ul>
   <li>Upscaler(ONLY when "Interal Resolution Ratio" is NOT 1) - Allows selection from one of a few upscaling methods</li>
   <li>Use Partial Rendering - Traces only 1 out of (X*X) rays, improving performance</li>
-  <li>Enable AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
+  <li>Enable AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels, will produce artifacts in image if activated too early(frames accumulated)</li>
     <ul>
       <li>Frames Before Anti-Firefly - Frames accumulated before triggering Anti-Firefly</li>
       <li>Anti-Firefly Frame Interval - Anti-Firefly will run once every X frames, this is X</li>
@@ -224,10 +230,7 @@ GlobalDefines.cginc Description -
   <ul>
     <li>HardwareRT - This is handled from the CPU side under Functionality Settings</li>
     <li>HDRP - This is handled from the CPU side automatically</li>
-    <li>DX11 - This is handled from the CPU side automatically/Under Functionality Settings</li>
-    <li>UseBindless - This is handled from the CPU side automatically/Under Functionality Settings</li>
     <li>UseSGTree - This is handled from the CPU side under Functionality Settings</li>
-    <li>TTCustomMotionVectors - This is handled from the CPU side under Functionality Settings; named "Remove Rasterization Requirement"</li>
     <li>MultiMapScreenshot - This is handled from the CPU side under Functionality Settings; named "Save Multiple Maps On Screenshot"; Truetrace will also save images of material ID and mesh ID maps when using TTAdvancedImageGen or the Screenshot button</li>
   </ul>
   <li>These are fine to modify yourself:</li>
@@ -243,7 +246,6 @@ GlobalDefines.cginc Description -
     <li>IgnoreBackfacing - Rays will not intersect triangle facing away from the ray(also accessable from Functionality Settings)</li>
     <li>LBVH - Whether or not to use RIS for triangle sampling or one of the light trees(also accessable from Functionality Settings)</li>
     <li>AccurateEmissionTex - Whether or not to sample emission textues</li>
-    <li>TrueBlack - Legacy option, allows for actual black, which used to cause issues but no longer does</li>
     <li>UseTextureLOD - When bindless is on, this allows for dumb sampling of texture LOD's(also accessable from Functionality Settings)</li>
     <li>EONDiffuse - Whether to use Lambert diffuse model or EON diffuse model(also accessable from Functionality Settings)</li>
     <li>AdvancedBackground - Allows selected surfaces to instead be treated as hitting the skybox(also accessable from Functionality Settings)</li>
@@ -252,14 +254,12 @@ GlobalDefines.cginc Description -
     <li>Fog - Toggles multiscatter fog, not denoiser compatable(also accessable from Functionality Settings)</li>
     <li>RadCache - Quick toggle for the Radiance Cache(also accessable from Functionality Settings)</li>
     <li>ClampRoughnessToBounce - Clamps the material roughness to be higher for each bounce, helps fight fireflies</li>
-    <li>RasterizedDirect - Experimental, BIRP only, will make truetrace only contribnute to indirect, and use unity rasterization for direct</li>
     <li>ReSTIRSampleReduction - Experiemental, only pathtraces half the rays and lets ReSTIR fill in the gaps</li>
-    <li>ReSTIRRestrictSpatial - Experiemental option to allow for cleaner reflections in near-mirrors</li>
-    <li>SmartRestriction - Additional cleanup ontop of previous define</li>
-    <li>ReSTIRAdditionalAO - Adds fake AO through restir, can help with brightened corners</li>
+    <li>ReSTIRReflectionRefinement - Experiemental option to allow for cleaner reflections in near-mirrors</li>
     <li>ShadowGlassAttenuation - Advancement of "StainedGlassShadow"; still experimental</li>
     <li>DisableNormalMaps - Debug thing</li>
     <li>ClayMetalOverride - Allows for clay mode to also define a constant metallic/roughness</li>
+    <li>MoreAO - Adds fake AO, can help with brightened corners</li>
   </ul>
 </ul>
 
@@ -300,6 +300,7 @@ GlobalDefines.cginc Description -
 
 ![](/.Images/Yanus2.png)
 ![](/.Images/Yanus0.png)
+![](/.Images/Caustics1.png)
 ![](/.Images/ModernBistro.png)
 ![](/.Images/NewSponza3V2.png)
 ![](/.Images/NewSponza2V2.png)

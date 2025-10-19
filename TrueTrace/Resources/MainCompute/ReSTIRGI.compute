@@ -7,11 +7,7 @@
 #include "CommonData.cginc"
 #include "Materials.cginc"
 
-#if defined(HDRP) && !defined(TTCustomMotionVectors)
-    Texture2DArray<float2> MotionVectors;
-#else
-    Texture2D<float2> MotionVectors;
-#endif
+Texture2D<float2> MotionVectors;
 
 
 #ifdef HardwareRT
@@ -47,22 +43,22 @@ inline bool VisabilityCheck(SmallerRay ray, float dist) {
                         triangle_id += triangleOffset;
                         int mesh_id = MeshOffsets[Indexes.x].y;
                         int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[triangle_id].MatDat);
-                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;} 
+                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;} 
                     #endif
                     #ifdef AdvancedAlphaMapped
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTrisA[triangle_id].texedge1) * u + TOHALF(AggTrisA[triangle_id].texedge2) * v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;}
                         }
                     #endif
                     #ifdef IgnoreBackfacing
                         TrianglePos tri = triangle_get_positions(triangle_id);
-                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;}
                     #endif
                     #ifdef IgnoreGlassShadow
                         if(_Materials[MaterialIndex].specTrans == 1) {
-                            myRay.TMin = q.CommittedRayT() + 0.0001f; 
+                            myRay.TMin = q.CommittedRayT() + NormalOffset; 
                             continue;
                         }
                     #endif
@@ -95,9 +91,7 @@ float IndirectBoost;
 bool UseReSTIRGITemporal;
 bool UseReSTIRGISpatial;
 bool DoReSTIRGIConnectionValidation;
-int ReSTIRGISpatialCount;
 int ReSTIRGITemporalMCap;
-float GISpatialRadius;
 
 struct RadianceData
 {
@@ -405,11 +399,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     // RunningReservoirC.Ray.FrameAccum = frames_accumulated;
 
 
-    #if defined(HDRP) && !defined(TTCustomMotionVectors)
-        float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, float3(UV,0), 0).xy;
-    #else
-         float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
-    #endif
+     float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
     int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
   
 
@@ -582,7 +572,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             if(CellTapCoord.y < 0 || CellTapCoord.y >= screen_height) CellTapCoord.y = id.y - CellOffset.y;
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
-#ifdef RestirPreventCrossMatBlur
+#ifdef ReSTIRReflectionRefinement
             if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
 #endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
@@ -626,12 +616,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
-#ifdef ReSTIRRestrictSpatial
-        #ifdef SmartRestriction
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
-        #else
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
-        #endif
+#ifdef ReSTIRReflectionRefinement
+            RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -711,8 +697,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
 
-    RunningReservoirB.Radiance.W = (luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
-    RunningReservoirC.W = (luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
+    RunningReservoirB.Radiance.W = clamp((luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum), 0, 10000.0f);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
+    RunningReservoirC.W = clamp((luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum), 0, 10000.0f);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
 
     WorldPosA[id.xy] = WorldPos;
     NEEPosA[id.xy] = NEEPos;
@@ -817,7 +803,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
 
-#ifdef RestirPreventCrossMatBlur
+#ifdef ReSTIRReflectionRefinement
             if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
 #endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
@@ -863,12 +849,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
-#ifdef ReSTIRRestrictSpatial
-        #ifdef SmartRestriction
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
-        #else
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
-        #endif
+#ifdef ReSTIRReflectionRefinement
+            RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -957,7 +939,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     [branch]if (DoReSTIRGIConnectionValidation) {
         float2 DistDist = 1;
         if(SurfaceMat.specTrans == 0 && SurfaceMat.diffTrans == 0) {
-            PrimaryHitPosition += GeomNorm * 0.0001f;
+            PrimaryHitPosition += GeomNorm * NormalOffset;
             float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
             SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
             if (luminance(RunningReservoirC.Color) != 0) {
@@ -970,7 +952,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                         RunningReservoirC.Color *= saturate(saturate(dot(ray.direction, -Light.Direction)) * MiscInfo.y + MiscInfo.z);
                             float3 LocalLight = ToLocal(GetTangentSpace(Light.Direction), -ray.direction) * 0.5f + 0.5f;
                             float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
-                            if(AlignedUV.x != -1) RunningReservoirC.Color *= _IESAtlas.SampleLevel(my_trilinear_repeat_sampler, AlignedUV, 0);
+                            if(AlignedUV.x != -1) RunningReservoirC.Color *= _IESAtlas.SampleLevel(my_linear_clamp_sampler, AlignedUV, 0);
 
                     } else if(Light.Type == AREALIGHTQUAD) {
                         RunningReservoirC.Color *= pow(saturate(dot(ray.direction, -Light.Direction)), MiscInfo.x);
@@ -1012,7 +994,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                     }
                 }
             #endif
-            PrimaryHitPosition -= GeomNorm * 0.0001f;
+            PrimaryHitPosition -= GeomNorm * NormalOffset;
         }
 
         #ifdef ReSTIRAdvancedValidation
@@ -1023,8 +1005,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
 
-    RunningReservoirB.Radiance.W = (luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
-    RunningReservoirC.W = (luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
+    RunningReservoirB.Radiance.W = clamp((luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum),0,1000.0f);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
+    RunningReservoirC.W = clamp((luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum),0,1000.0f);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
     Valid2 = EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
     RunningReservoirB.Radiance.W *= RunningReservoirB.Radiance.W < 100.0f;
     RunningReservoirC.W *= RunningReservoirC.W < 100.0f;

@@ -66,7 +66,6 @@ namespace TrueTrace {
          [SerializeField] public bool GITemporal = true;
          [SerializeField] public int GITemporalMCap = 20;
          [SerializeField] public bool GISpatial = true;
-         [SerializeField] public int GISpatialSampleCount = 24;
          [SerializeField] public bool TAA = false;
          [SerializeField] public bool FXAA = false;
          [SerializeField] public bool ToneMap = false;
@@ -79,8 +78,7 @@ namespace TrueTrace {
          [SerializeField] public bool DoPartialRendering = false;
          [SerializeField] public int PartialRenderingFactor = 1;
          [SerializeField] public bool DoFirefly = false;
-         [SerializeField] public bool ImprovedPrimaryHit = false;
-         [SerializeField] public float ReSTIRGISpatialRadius = 50;
+         [SerializeField] public bool ImprovedPrimaryHit = true;
          [SerializeField] public int RISCount = 5;
          [SerializeField] public int DenoiserMethod = 0;
          [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
@@ -199,6 +197,7 @@ namespace TrueTrace {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             EditorSceneManager.sceneSaving += SaveScene;
             EditorSceneManager.activeSceneChanged += ChangedActiveScene;
+            EditorSceneManager.sceneSaved += SaveScenePost;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
                var data = EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false));
                JsonUtility.FromJsonOverwrite(data, this);
@@ -409,7 +408,7 @@ namespace TrueTrace {
             Parents.This = Parent;
             int ChildCount = Parent.childCount;
             for(int i = 0; i < ChildCount; i++) {
-               if(Parent.GetChild(i).gameObject.activeInHierarchy) Parents.Children.Add(GrabChildren2(Parent.GetChild(i)));
+               if(Parent.GetChild(i).gameObject.activeInHierarchy && !(Parent.GetChild(i).gameObject.name.Contains("LOD") && !Parent.GetChild(i).gameObject.name.Contains("LOD0"))) Parents.Children.Add(GrabChildren2(Parent.GetChild(i)));
 
             }
             return Parents;
@@ -450,11 +449,15 @@ namespace TrueTrace {
             if((Fine0 || Fine1) && !Parent.This.gameObject.TryGetComponent<InstancedObject>(out InstancedObject InstObj)) {
                if(!Parent.This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj)) {
                      if(Parent.This.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer MeshRend)) {
-                        if(MeshRend.sharedMaterials != null && MeshRend.sharedMaterials.Length != 0)
-                          Parent.This.gameObject.AddComponent<RayTracingObject>();
+                        if(MeshRend.sharedMaterials != null && MeshRend.sharedMaterials.Length != 0) {
+                          var TempOBJ = Parent.This.gameObject.AddComponent<RayTracingObject>();
+                          // TempOBJ.hideFlags = HideFlags.DontSave;
+                       }
                      } else if(Parent.This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer SkinRend)) {
-                        if(SkinRend.sharedMaterials != null && SkinRend.sharedMaterials.Length != 0)
-                           Parent.This.gameObject.AddComponent<RayTracingObject>();
+                        if(SkinRend.sharedMaterials != null && SkinRend.sharedMaterials.Length != 0) {
+                           var TempOBJ = Parent.This.gameObject.AddComponent<RayTracingObject>();
+                           // TempOBJ.hideFlags = HideFlags.DontSave;
+                        }
                      }
 
                   }
@@ -479,23 +482,36 @@ namespace TrueTrace {
             if(RayTracingObjectChildCount > 0) {
                if(!Parent.This.gameObject.TryGetComponent<AssetManager>(out AssetManager TempAsset)) {
                   if(!Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) {
-                     Parent.This.gameObject.AddComponent<ParentObject>();
+                     var TempOBJ = Parent.This.gameObject.AddComponent<ParentObject>();
+                     // TempOBJ.hideFlags = HideFlags.DontSave;
+                  
                   }
                }
                else {
                   for(int i = 0; i < ChildLength; i++) {
-                     if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                     if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) {
+                        var TempOBJ = Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                        // TempOBJ.hideFlags = HideFlags.DontSave;
+                     }
                   }               
                }
             } else {
+               if(ChildLength == 0 && Parent.This.root == Parent.This && Parent.This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj4) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent5)) {
+                  var TempOBJ = Parent.This.gameObject.AddComponent<ParentObject>();
+                  // TempOBJ.hideFlags = HideFlags.DontSave;
+               }
                for(int i = 0; i < ChildLength; i++) {
-                  if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) Parent.This.gameObject.AddComponent<ParentObject>();
+                  if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) {
+                     var TempOBJ = Parent.This.gameObject.AddComponent<ParentObject>();
+                     // TempOBJ.hideFlags = HideFlags.DontSave;
+                  }
                }
             }
             if(HasNormalMeshAsChild && HasSkinnedMeshAsChild) {
                for(int i = 0; i < ChildLength; i++) {
                   if(!Parent.Children[i].This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin3) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3)) {
-                     Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                     var TempOBJ = Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                     // TempOBJ.hideFlags = HideFlags.DontSave;
                   }
                }  
             }
@@ -503,7 +519,7 @@ namespace TrueTrace {
 
          }
 
-         private void QuickStart() {
+         public void QuickStart() {
             // ParentObject[] TempObjects2 = GameObject.FindObjectsOfType<ParentObject>();
             // foreach(var a in TempObjects2) {
             //    DestroyImmediate(a);
@@ -523,9 +539,13 @@ namespace TrueTrace {
             // FlagsObjects RootFlag = Prepare(Assets.transform);
             // Prune(ref RootFlag);
 
-            ParentData SourceParent = GrabChildren2(Assets.transform);
+            GameObject[] RootObjs = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            int RootLength = RootObjs.Length;
+            for(int i = 0; i < RootLength; i++) {
+               ParentData SourceParent = GrabChildren2(RootObjs[i].transform);
 
-            SolveChildren(SourceParent);
+               SolveChildren(SourceParent);
+            }
 
 
                Terrain[] Terrains = GameObject.FindObjectsOfType<Terrain>();
@@ -551,11 +571,11 @@ namespace TrueTrace {
                   List<GameObject> Objects = new List<GameObject>();
                   UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects(Objects);
                   GameObject SceneObject = new GameObject("Scene", typeof(AssetManager));
-                  foreach(GameObject Obj in Objects) {
-                     if(Obj.GetComponent<Camera>() == null && !Obj.name.Equals("InstancedStorage")) {
-                        Obj.transform.SetParent(SceneObject.transform);
-                     }
-                  }
+                  // foreach(GameObject Obj in Objects) {
+                  //    if(Obj.GetComponent<Camera>() == null && !Obj.name.Equals("InstancedStorage")) {
+                  //       Obj.transform.SetParent(SceneObject.transform);
+                  //    }
+                  // }
                   Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
                   QuickStart();
                }
@@ -569,7 +589,7 @@ namespace TrueTrace {
          public void OnFocus() {
            if(Assets == null) {
                if( GameObject.Find("Scene") != null) {
-                  InitializeGlob();
+                  EnsureInitializedGlobalDefines();
                   Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
                   if(Assets == null) {
                      Assets = GameObject.Find("Scene").AddComponent<AssetManager>();
@@ -599,7 +619,6 @@ Toggle BloomToggle;
 IntegerField AtmoScatterField;
 Toggle GIToggle;
 IntegerField TemporalGIMCapField;
-FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
 Toggle TAAToggle;
@@ -833,8 +852,9 @@ Toolbar toolbar;
          HDRILongElement.Add(HDRILongField);
       HDRILongSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongField.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
       HDRILongField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongSlider.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
-      SceneSettingsMenu.Add(HDRILongElement);
-
+      #if TTAdvancedSettings
+         SceneSettingsMenu.Add(HDRILongElement);
+      #endif
 
       VisualElement HDRILatElement = new VisualElement();
          HDRILatElement.style.flexDirection = FlexDirection.Row;
@@ -848,8 +868,9 @@ Toolbar toolbar;
          HDRILatElement.Add(HDRILatField);
       HDRILatSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatField.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
       HDRILatField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatSlider.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
-      SceneSettingsMenu.Add(HDRILatElement);
-
+      #if TTAdvancedSettings
+         SceneSettingsMenu.Add(HDRILatElement);
+      #endif
      VisualElement HDRIScaleElement = new VisualElement();
          HDRIScaleElement.style.flexDirection = FlexDirection.Row;
          FloatField HDRIXScale = new FloatField() {label = "HDRI Scaling X: ", value = HDRIScale.x};
@@ -865,10 +886,12 @@ Toolbar toolbar;
          HDRIScaleElement.Add(HDRIYScale);
       HDRIXScale.RegisterValueChangedCallback(evt => {HDRIScale = new Vector2(evt.newValue, HDRIScale.y); RayMaster.LocalTTSettings.HDRIScale = HDRIScale;});
       HDRIYScale.RegisterValueChangedCallback(evt => {HDRIScale = new Vector2(HDRIScale.x, evt.newValue); RayMaster.LocalTTSettings.HDRIScale = HDRIScale;});
-      SceneSettingsMenu.Add(HDRIScaleElement);
+      #if TTAdvancedSettings
+         SceneSettingsMenu.Add(HDRIScaleElement);
+         SceneSettingsMenu.Add(TransmittanceInNEEToggle);
+         SceneSettingsMenu.Add(GroundColorField);
+      #endif
 
-      SceneSettingsMenu.Add(TransmittanceInNEEToggle);
-      SceneSettingsMenu.Add(GroundColorField);
 
 
       }
@@ -896,7 +919,8 @@ Toolbar toolbar;
                                        SecondaryNormalTexture,
                                        DiffTransTexture,
                                        EmissionColor,
-                                       EmissionIntensity
+                                       EmissionIntensity,
+                                       MatCapColor,
                                        };
 
       VisualElement MaterialPairingMenu;
@@ -946,7 +970,7 @@ Toolbar toolbar;
             int Prop = (int)AvailableIndexes[i].PropertyIndex;
             List<TexturePairs> FallbackNodes = new List<TexturePairs>();
             TexturePairs FallbackNode = null;
-            if(Prop != (int)Properties.EmissionColor && Prop != (int)Properties.EmissionIntensity && Prop != (int)Properties.AlbedoColor && Prop != (int)Properties.MetallicSlider && Prop != (int)Properties.MetallicMin && Prop != (int)Properties.MetallicMax && Prop != (int)Properties.RoughnessSlider && Prop != (int)Properties.RoughnessMin && Prop != (int)Properties.RoughnessMax) {
+            if(Prop != (int)Properties.MatCapColor && Prop != (int)Properties.EmissionColor && Prop != (int)Properties.EmissionIntensity && Prop != (int)Properties.AlbedoColor && Prop != (int)Properties.MetallicSlider && Prop != (int)Properties.MetallicMin && Prop != (int)Properties.MetallicMax && Prop != (int)Properties.RoughnessSlider && Prop != (int)Properties.RoughnessMin && Prop != (int)Properties.RoughnessMax) {
                if((AvailableIndexes[i].inputContainer[0] as Port).connections.ToList().Count != 0) {
                   int Purpose = 0;
                   int ReadIndex = 0;
@@ -1015,6 +1039,9 @@ Toolbar toolbar;
             }
 
             switch(Prop) {
+               case((int)Properties.MatCapColor):
+                  MatShader.MatCapColorValue = ColorProperties[VerboseColorProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
                case((int)Properties.EmissionColor):
                   MatShader.EmissionColorValue = ColorProperties[VerboseColorProperties.IndexOf(AvailableIndexes[i].title)];
                break;
@@ -1377,6 +1404,7 @@ Toolbar toolbar;
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "DiffTrans Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Color), Port.Capacity.Single, "Emission Color"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Emission Intensity"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "MatCap Color"));
 
          _graphView.AddElement(OutputNode);
          Vector2 Pos = new Vector2(30, 10);
@@ -1533,6 +1561,14 @@ Toolbar toolbar;
                _graphView.AddElement(ThisNode);
                _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.EmissionColor] as Port));
             }
+            Index = ColorProperties.IndexOf(MatShader.MatCapColorValue);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                  Pos.y = 1700;
+                ThisNode = CreateInputNode("MatCap Color", typeof(Color), Pos, MatShader.MatCapColorValue);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapColor] as Port));
+            }
             Index = FloatProperties.IndexOf(MatShader.EmissionIntensityValue);
             if(Index > 0) {
                DialogueNode ThisNode = new DialogueNode();
@@ -1604,12 +1640,10 @@ Toolbar toolbar;
 
 
         var TextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null"));}) {text = "Texture"};
-        // var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture"};
         var FloatNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Float", typeof(float), new Vector2(0,0), "null"));}) {text = "Float"};
         var ColorNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Color", typeof(Color), new Vector2(0,0), "null"));}) {text = "Color"};
 
         toolbar.Add(TextureNodeButton);//partial textures will be defined as according to the output they are connected to 
-        // toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
         toolbar.Add(FloatNodeButton);
         toolbar.Add(ColorNodeButton);
         MaterialPairingMenu.Add(toolbar);
@@ -1702,7 +1736,7 @@ Toolbar toolbar;
       Toggle MaterialHelperToggle;
       Toggle DX11Toggle;
       Toggle TriangleSplittingToggle;
-
+      Toggle PhotonMappingToggle;
 
       private Toggle CustomToggle(string Label, string TargetDefine, string tooltip = "", VisualElement ToggleableContainer = null, VisualElement ParentContainer = null) {
             Toggle CustToggle = new Toggle() {value = GetGlobalDefine(TargetDefine), text = Label};
@@ -1717,36 +1751,42 @@ Toolbar toolbar;
          return CustToggle;
       }
 
+      void EnsureInitializedGlobalDefines() {
+         definesList = GetDefines();
+         if(SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D12) {
+            if(!definesList.Contains("DX11Only")) {
+               ActiveDX11Overrides(); 
+               definesList = GetDefines();
+            }
+         } else if(definesList.Contains("DX11Only")) {
+            RemoveDefine("DX11Only"); 
+            RemoveDefine("UseAtlas"); 
+
+         }
+
+
+
+         SetGlobalDefines("PhotonMapping", definesList.Contains("EnablePhotonMapping"));
+         SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+         // SetGlobalDefines("TTCustomMotionVectors", !definesList.Contains("TTDisableCustomMotionVectors"));
+         SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
+         SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
+         if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
+         SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
+         SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
+      }
 
 
       void ActiveDX11Overrides() {
-         BindlessToggle.value = true; 
-         HardwareRTToggle.value = false;
-         OIDNToggle.value = false;
+         // BindlessToggle.value = true; 
          RemoveDefine("UseOIDN"); 
+         RemoveDefine("EnablePhotonMapping"); 
          AddDefine("UseAtlas"); 
          AddDefine("DX11Only"); 
+         SetGlobalDefines("PhotonMapping", false); 
          SetGlobalDefines("DX11", true); 
-         SetGlobalDefines("UseBindless", false);
          RemoveDefine("HardwareRT"); 
          SetGlobalDefines("HardwareRT", false);
-      }
-
-      void InitializeGlob() {
-            definesList = GetDefines();
-            SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
-            SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
-            SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
-            // SetGlobalDefines("TTReflectionMotionVectors", definesList.Contains("TTReflectionMotionVectors"));
-            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
-            SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
-            SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
-
-            if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
-               if(!definesList.Contains("DX11Only")) {
-                  // ActiveDX11Overrides(); 
-               }
-            }
       }
 
       void AddHardSettingsToMenu() {
@@ -1756,17 +1796,7 @@ Toolbar toolbar;
          
          VisualElement NonPlayContainer = new VisualElement();
          NonPlayContainer.style.paddingLeft = 10;
-            definesList = GetDefines();
-            SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
-            SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
-            SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
-            SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
-            // SetGlobalDefines("TTReflectionMotionVectors", definesList.Contains("TTReflectionMotionVectors"));
-            SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
-            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
-            SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
-            SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
-
+         EnsureInitializedGlobalDefines();
 
             HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {RemoveDefine("TTTriSplitting"); TriangleSplittingToggle.SetEnabled(false); AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {TriangleSplittingToggle.SetEnabled(true); RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
@@ -1778,13 +1808,13 @@ Toolbar toolbar;
             GaussianTreeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", false);} else {RemoveDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", true);}});
 
 
-            BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
-               BindlessToggle.tooltip = "Uses Atlas fallback, which increases VRAM/RAM use, and scales down texture resolution when needed";
-            BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
+            // BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
+            //    BindlessToggle.tooltip = "Uses Atlas fallback, which increases VRAM/RAM use, and scales down texture resolution when needed";
+            // BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
 
-            Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Remove Rasterization Requirement(EXPERIMENTAL)"};
-               CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
-            CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
+            // Toggle CustomMotionVectorToggle = new Toggle() {value = (!definesList.Contains("TTDisableCustomMotionVectors")), text = "Enable TrueTrace Motion Vectors"};
+            //    CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
+            // CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(!evt.newValue) {AddDefine("TTDisableCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);} else {RemoveDefine("TTDisableCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);}});
 
             // Toggle ReflectionMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTReflectionMotionVectors")), text = "Accurate Mirror Motion Vectors(Experiemental)"};
             //    ReflectionMotionVectorToggle.tooltip = "A better way to calculate motion vectors for reflections in mirrors and such for ASVGF, requires \"RemoveRasterizationRequirement\"";
@@ -1795,14 +1825,14 @@ Toolbar toolbar;
             RasterizedDirectToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("RasterizedDirect"); SetGlobalDefines("RasterizedDirect", true);} else {RemoveDefine("RasterizedDirect"); SetGlobalDefines("RasterizedDirect", false);}});
 
             Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
-               NonAccurateLightTriToggle.tooltip = "Uses more ram(rarely it can use a LOT), but allows for much better emissive mesh sampling if you make heavy use of emission masks";
+               NonAccurateLightTriToggle.tooltip = "Uses more ram(rarely it can use a LOT), but allows for much better emissive mesh sampling if you make heavy use of emission masks or textures";
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
 
             Toggle LoadTTSettingsFromResourcesToggle = new Toggle() {value = (definesList.Contains("LoadTTSettingsFromResources")), text = "Load TTSettings from Global File"};
                LoadTTSettingsFromResourcesToggle.tooltip = "Replaces the per-scene TTSettings file with the one that is declared in the RayTracingMaster's inspector window";
             LoadTTSettingsFromResourcesToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("LoadTTSettingsFromResources"); else RemoveDefine("LoadTTSettingsFromResources");});
 
-            TriangleSplittingToggle = new Toggle() {value = (definesList.Contains("TTTriSplitting")), text = "Enable Triangle Splitting"};
+            TriangleSplittingToggle = new Toggle() {value = (definesList.Contains("TTTriSplitting")), text = "Enable Triangle Pre-Splitting(Leave this ON when Hardware RT is OFF)"};
                TriangleSplittingToggle.tooltip = "Enables Triangle Splitting for SWRT";
             TriangleSplittingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTTriSplitting"); else RemoveDefine("TTTriSplitting");});
 
@@ -1815,8 +1845,26 @@ Toolbar toolbar;
             ExtraVerboseToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTExtraVerbose"); else RemoveDefine("TTExtraVerbose");});
 
             Toggle MultiMapScreenshotToggle = new Toggle() {value = (definesList.Contains("MultiMapScreenshot")), text = "Save Multiple Maps on Screenshot"};
-               MultiMapScreenshotToggle.tooltip = "Save Mat ID and Mesh ID when taking a screenshot";
+               MultiMapScreenshotToggle.tooltip = "Save Mat ID and Mesh ID as seperate images when taking a screenshot";
             MultiMapScreenshotToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", true);} else {RemoveDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", false);}});
+
+            Toggle TTAdvancedSettingsToggle = new Toggle() {value = (definesList.Contains("TTAdvancedSettings")), text = "Display Advanced Settings"};
+               TTAdvancedSettingsToggle.tooltip = "Enables more advanced settings to be displayed";
+            TTAdvancedSettingsToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTAdvancedSettings");} else {RemoveDefine("TTAdvancedSettings");}});
+
+            PhotonMappingToggle = new Toggle() {value = (definesList.Contains("EnablePhotonMapping")), text = "Enable Photon Mapped Caustics"};
+               PhotonMappingToggle.tooltip = "Enable Photon Mapping for Caustics";
+            PhotonMappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", true);} else {RemoveDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", false);}});
+
+
+            Toggle TTIncrementRenderCounterToggle = new Toggle() {value = (definesList.Contains("TTIncrementRenderCounter")), text = "Add Render Counter To File"};
+            TTIncrementRenderCounterToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTIncrementRenderCounter");} else {RemoveDefine("TTIncrementRenderCounter");}});
+
+
+            Toggle RemoveScriptsDuringSaveToggle = new Toggle() {value = (definesList.Contains("RemoveScriptsDuringSave")), text = "Remove TT Scripts During Save"};
+               RemoveScriptsDuringSaveToggle.tooltip = "Removes all ParentObject and unmodified RayTracingObject scripts during scene save, and adds them back after(Helps with version control)";
+            RemoveScriptsDuringSaveToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("RemoveScriptsDuringSave");} else {RemoveDefine("RemoveScriptsDuringSave");}});
+
 
             VisualElement ClayColorBox = new VisualElement();
 
@@ -1854,7 +1902,7 @@ Toolbar toolbar;
             MaxSampField.RegisterValueChangedCallback(evt => {MaxSampCount = evt.newValue; MaxSampCount = Mathf.Min(Mathf.Max(MaxSampCount, 0), 99999999); MaxSampField.value = MaxSampCount; RayMaster.LocalTTSettings.MaxSampCount = MaxSampCount;});
 
 
-            OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
+            OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(DX12 ONLY)"};
                OIDNToggle.tooltip = "Allows access to the OIDN denoiser in the main menus \"Denoiser\" field";
             OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN");});
 
@@ -1869,12 +1917,14 @@ Toolbar toolbar;
 
 
 
+            // DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
             if(Application.isPlaying) {
+               PhotonMappingToggle.SetEnabled(false);
                HardwareRTToggle.SetEnabled(false);
-               CustomMotionVectorToggle.SetEnabled(false);
+               // CustomMotionVectorToggle.SetEnabled(false);
                // ReflectionMotionVectorToggle.SetEnabled(false);
                RasterizedDirectToggle.SetEnabled(false);
-               BindlessToggle.SetEnabled(false);
+               // BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
                RadCacheToggle.SetEnabled(false);
@@ -1885,12 +1935,17 @@ Toolbar toolbar;
                TriangleSplittingToggle.SetEnabled(false);
                StrictMemoryReductionToggle.SetEnabled(false);
                MultiMapScreenshotToggle.SetEnabled(false);
+               TTAdvancedSettingsToggle.SetEnabled(false);
+               RemoveScriptsDuringSaveToggle.SetEnabled(false);
+               TTIncrementRenderCounterToggle.SetEnabled(false);
+               // DX11Toggle.SetEnabled(false);
             } else {
+               PhotonMappingToggle.SetEnabled(true);
                HardwareRTToggle.SetEnabled(true);
-               CustomMotionVectorToggle.SetEnabled(true);
+               // CustomMotionVectorToggle.SetEnabled(true);
                // ReflectionMotionVectorToggle.SetEnabled(true);
                RasterizedDirectToggle.SetEnabled(true);
-               BindlessToggle.SetEnabled(true);
+               // BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
                OIDNToggle.SetEnabled(true);
                RadCacheToggle.SetEnabled(true);
@@ -1901,6 +1956,10 @@ Toolbar toolbar;
                TriangleSplittingToggle.SetEnabled(true);
                StrictMemoryReductionToggle.SetEnabled(true);
                MultiMapScreenshotToggle.SetEnabled(true);
+               TTAdvancedSettingsToggle.SetEnabled(true);
+               RemoveScriptsDuringSaveToggle.SetEnabled(true);
+               TTIncrementRenderCounterToggle.SetEnabled(true);
+               // DX11Toggle.SetEnabled(true);
             }
 
             if(definesList.Contains("HardwareRT")) {
@@ -1911,61 +1970,73 @@ Toolbar toolbar;
             } else if(!Application.isPlaying) {
                TriangleSplittingToggle.SetEnabled(true);
             }
-            if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
+            if(SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D12) {
                if(!definesList.Contains("DX11Only")) {
                   ActiveDX11Overrides(); 
                }
-               BindlessToggle.SetEnabled(false);
+               // BindlessToggle.SetEnabled(false);
                HardwareRTToggle.SetEnabled(false);
+               PhotonMappingToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
             }
 
-            DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
 
-            if(Application.isPlaying) {
-               DX11Toggle.SetEnabled(false);
-            } else {
-               DX11Toggle.SetEnabled(true);
-            }
-
-            DX11Toggle.RegisterValueChangedCallback(evt => {
-               if(evt.newValue) {
-                  ActiveDX11Overrides(); 
-                  BindlessToggle.SetEnabled(false);
-                  HardwareRTToggle.SetEnabled(false);
-                  OIDNToggle.SetEnabled(false);
-               } else {
-                  if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11) {
-                     Debug.LogError("DX12 Not Found, Forcing DX11"); 
-                     DX11Toggle.value = true;
-                  } else {
-                     OIDNToggle.SetEnabled(true);
-                     HardwareRTToggle.SetEnabled(true);
-                     BindlessToggle.SetEnabled(true);
-                     RemoveDefine("DX11Only"); 
-                     SetGlobalDefines("DX11", false); 
-                  } 
-               }
-            });
+            // DX11Toggle.RegisterValueChangedCallback(evt => {
+            //    if(evt.newValue) {
+            //       ActiveDX11Overrides(); 
+            //       // BindlessToggle.SetEnabled(false);
+            //       HardwareRTToggle.SetEnabled(false);
+            //       PhotonMappingToggle.SetEnabled(false);
+            //       OIDNToggle.SetEnabled(false);
+            //    } else {
+            //       if(SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D12) {
+            //          Debug.LogError("DX12 Not Found, Forcing DX11"); 
+            //          DX11Toggle.value = true;
+            //       } else {
+            //          OIDNToggle.SetEnabled(true);
+            //          HardwareRTToggle.SetEnabled(true);
+            //          PhotonMappingToggle.SetEnabled(true);
+            //          // BindlessToggle.SetEnabled(true);
+            //          RemoveDefine("DX11Only"); 
+            //          SetGlobalDefines("DX11", false); 
+            //       } 
+            //    }
+            // });
 
          NonPlayContainer.Add(HardwareRTToggle);
-         NonPlayContainer.Add(BindlessToggle);
-         NonPlayContainer.Add(GaussianTreeToggle);
-         NonPlayContainer.Add(DX11Toggle);
+         // NonPlayContainer.Add(BindlessToggle);
+         #if TTAdvancedSettings
+            NonPlayContainer.Add(GaussianTreeToggle);
+         #endif
+         // NonPlayContainer.Add(DX11Toggle);
          NonPlayContainer.Add(OIDNToggle);
-         NonPlayContainer.Add(RadCacheToggle);
-         NonPlayContainer.Add(CustomMotionVectorToggle);
+         #if TTAdvancedSettings
+            NonPlayContainer.Add(RadCacheToggle);
+         #endif
+         // NonPlayContainer.Add(CustomMotionVectorToggle);
          // NonPlayContainer.Add(ReflectionMotionVectorToggle);
-         NonPlayContainer.Add(RasterizedDirectToggle);
+         #if TTAdvancedSettings
+            NonPlayContainer.Add(RasterizedDirectToggle);
+         #endif
          NonPlayContainer.Add(NonAccurateLightTriToggle);
-         NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
-         NonPlayContainer.Add(VerboseToggle);
-#if TTVerbose
-         NonPlayContainer.Add(ExtraVerboseToggle);
-#endif
+         #if TTAdvancedSettings
+            NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
+            NonPlayContainer.Add(VerboseToggle);
+            #if TTVerbose
+               NonPlayContainer.Add(ExtraVerboseToggle);
+            #endif
+         #endif
          NonPlayContainer.Add(TriangleSplittingToggle);
-         NonPlayContainer.Add(StrictMemoryReductionToggle);
-         NonPlayContainer.Add(MultiMapScreenshotToggle);
+         #if TTAdvancedSettings
+            NonPlayContainer.Add(StrictMemoryReductionToggle);
+            NonPlayContainer.Add(MultiMapScreenshotToggle);
+         #endif
+         NonPlayContainer.Add(PhotonMappingToggle);
+         #if TTAdvancedSettings
+            NonPlayContainer.Add(RemoveScriptsDuringSaveToggle);
+            NonPlayContainer.Add(TTIncrementRenderCounterToggle);
+         #endif
+         NonPlayContainer.Add(TTAdvancedSettingsToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
@@ -1986,16 +2057,21 @@ Toolbar toolbar;
          AOContainer.Add(AORadiusField);
          AOContainer.Add(AOStrengthField);
 
-
-         PlayContainer.Add(CustomToggle("Accurate Mirror Motion Vectors(Experiemental)", "TTReflectionMotionVectors", "A better way to calculate motion vectors for reflections in mirrors and such for ASVGF, requires \"RemoveRasterizationRequirement\""));
+         #if TTAdvancedSettings
+            PlayContainer.Add(CustomToggle("Accurate Mirror Motion Vectors(Experiemental)", "TTReflectionMotionVectors", "A better way to calculate motion vectors for reflections in mirrors and such for ASVGF, requires \"RemoveRasterizationRequirement\""));
+         #endif
          PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping", "Allows for fade mapping"));
          PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows", "Simulates colored glass coloring shadow rays - Stained glass effect"));
          PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing", "Backfacing triangles wont get rendered"));
-         PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH", "Quick toggle to switch between the active light tree(Gaussian tree or light bvh), and simple RIS, like the default unity lights use"));
+         #if TTAdvancedSettings
+            PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH", "Quick toggle to switch between the active light tree(Gaussian tree or light bvh), and simple RIS, like the default unity lights use"));
+         #endif
          PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache", "Quick toggle for the radiance cache, does NOT affect memory used by the radiance cache, unlike the toggle above"));
-         PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "Bindless mode only - Uses a higher texture LOD for each bounce, which can help performance"));
-         PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse", "Different diffuse material model"));
-         PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+         #if TTAdvancedSettings
+            PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "DX12 Only - Uses a higher texture LOD for each bounce, which can help performance"));
+            PlayContainer.Add(CustomToggle("Double Buffer Light Tree", "DoubleBufferSGTree", "Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but hurts performance"));
+            PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+         #endif
          PlayContainer.Add(CustomToggle("More AO", "MoreAO", "If you want yet more AO", AOContainer, PlayContainer));
 
 
@@ -2005,7 +2081,7 @@ Toolbar toolbar;
                FogSlider.showInputField = true;        
                FogSlider.style.width = 400;
                FogSlider.ElementAt(0).style.minWidth = 65;
-               FogSlider.RegisterCallback<FocusOutEvent>(evt => {FogDensity = FogSlider.value; RayMaster.LocalTTSettings.FogDensity = FogDensity;});        
+               FogSlider.RegisterValueChangedCallback(evt => {FogDensity = FogSlider.value; RayMaster.LocalTTSettings.FogDensity = FogDensity;});        
 
             Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.00001f};
                FogHeightSlider.value = FogHeight;
@@ -2013,7 +2089,7 @@ Toolbar toolbar;
                FogHeightSlider.style.width = 400;
                FogHeightSlider.ElementAt(0).style.minWidth = 65;
                FogHeightSlider.value = FogHeight;
-               FogHeightSlider.RegisterCallback<FocusOutEvent>(evt => {FogHeight = FogHeightSlider.value; RayMaster.LocalTTSettings.FogHeight = FogHeight;});        
+               FogHeightSlider.RegisterValueChangedCallback(evt => {FogHeight = FogHeightSlider.value; RayMaster.LocalTTSettings.FogHeight = FogHeight;});        
             
             ColorField FogColorField = new ColorField();
                FogColorField.value = FogColor;
@@ -2035,7 +2111,7 @@ Toolbar toolbar;
          MaterialHelperToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) RemoveDefine("HIDEMATERIALREATIONS"); else AddDefine("HIDEMATERIALREATIONS");});
 
 
-         Toggle DoSavingToggle = new Toggle() {value = DoSaving, text = "Enable RayTacingObject Saving"};
+         Toggle DoSavingToggle = new Toggle() {value = DoSaving, text = "Enable RayTracingObject Saving"};
             DoSavingToggle.tooltip = "Allows saving any changes to your truetrace materials made during play mode";
          DoSavingToggle.RegisterValueChangedCallback(evt => {DoSaving = evt.newValue; RayTracingMaster.DoSaving = DoSaving;});
          Toggle MatChangeResetsAccumToggle = new Toggle() {value = MatChangeResetsAccum, text = "Material Change Resets Accumulation"};
@@ -2118,8 +2194,10 @@ Toolbar toolbar;
          HardSettingsMenu.Add(PlayLabel);
          HardSettingsMenu.Add(PlayContainer);
          HardSettingsMenu.Add(ClayModeToggle);
-         HardSettingsMenu.Add(MaterialHelperToggle);
-         HardSettingsMenu.Add(MatChangeResetsAccumToggle);
+         #if TTAdvancedSettings
+            HardSettingsMenu.Add(MaterialHelperToggle);
+            HardSettingsMenu.Add(MatChangeResetsAccumToggle);
+         #endif
          if(ClayMode) HardSettingsMenu.Add(ClayColorBox);
          VisualElement Spacer = new VisualElement();
          Spacer.style.height = 10;
@@ -2130,7 +2208,7 @@ Toolbar toolbar;
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);
          HardSettingsMenu.Add(TimelineBox);
-         HardSettingsMenu.Add(CorrectMatOptionsButton);
+         // HardSettingsMenu.Add(CorrectMatOptionsButton);
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          
 
@@ -2538,16 +2616,39 @@ Toolbar toolbar;
          }
 
          void SaveScene(Scene Current, string ThrowawayString) {
+#if RemoveScriptsDuringSave
+            ParentObject[] TempParents = GameObject.FindObjectsOfType<ParentObject>();
+            foreach(var obj in TempParents) {
+               obj.BotherToUpdate = false;
+               DestroyImmediate(obj);
+            }
+            RayTracingObject[] TempRayObjs = GameObject.FindObjectsOfType<RayTracingObject>();
+            foreach(var obj in TempRayObjs) {
+               if(obj.DeleteObject) {
+                  DestroyImmediate(obj);
+               }
+            }
+#endif
             if(Assets != null) {
                EditorUtility.SetDirty(Assets);
                Assets.ClearAll();
+               AssetManager.Assets = null;
             }
             InstancedManager Instanced = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
             if(Instanced != null) {
                EditorUtility.SetDirty(Instanced);
                Instanced.ClearAll();
             }
+
+
             Cleared = true;
+         }
+
+         void SaveScenePost(Scene Current) {
+#if RemoveScriptsDuringSave
+            QuickStart();
+            GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
+#endif
          }
 
          // [Shortcut("TrueTrace/ScreenShot", KeyCode.None, ShortcutModifiers.Action)]
@@ -2580,7 +2681,39 @@ Toolbar toolbar;
          System.IO.File.WriteAllBytes(Path, bytes);
       }
 
+      public static void IncrementRenderCounter() {
+         #if TTIncrementRenderCounter
+            string Path = Application.persistentDataPath + "/TTStats.txt";
+            Debug.Log(Path);
+            List<string> RenderStatData = new List<string>();
+            DateTime CurrentDate = DateTime.Now;
+            string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
+            if(File.Exists(Path)) {
+               using (StreamReader sr = new StreamReader(Path)) {
+                   string Line;
+                   while((Line = sr.ReadLine()) != null) {
+                     RenderStatData.Add(Line);
+                   }
+               }            
+            }
+            int DateIndex = RenderStatData.IndexOf("Renders For: " + FormattedDate);
+            if(DateIndex == -1) {
+               RenderStatData.Add("Renders For: " + FormattedDate);
+               RenderStatData.Add("1");
+            } else {
+               RenderStatData[DateIndex + 1] = "" + (int.Parse(RenderStatData[DateIndex + 1]) + 1);
+            }
+            using (StreamWriter sw = new StreamWriter(Path)) {
+               int Coun = RenderStatData.Count;
+               for(int i = 0; i < Coun; i++) {
+                  sw.WriteLine(RenderStatData[i]);
+               }
+            }
+         #endif
+      }
+
          public static void TakeScreenshot() {
+            IncrementRenderCounter();
            string SegmentNumber = "";
            string FilePath = "";
            int TempSeg = 1;
@@ -2616,34 +2749,40 @@ Slider AperatureSlider;
 
 
         public void CreateGUI() {
+            EnsureInitializedGlobalDefines();
+
             HasNoMore = false;
+            string BasePath = Application.dataPath.Replace("/Assets", "");
+            if(!System.IO.Directory.Exists(BasePath + "/TrueTrace")) {
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace");
+            }
             if(!PlayerPrefs.HasKey("ScreenShotPath")) {
-               PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
+               PlayerPrefs.SetString("ScreenShotPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!PlayerPrefs.HasKey("PanoramaPath")) {
-               PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
+               PlayerPrefs.SetString("PanoramaPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!PlayerPrefs.HasKey("TimelinePath")) {
-               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
+               PlayerPrefs.SetString("TimelinePath",  BasePath + "/TrueTrace/TimelineFrames");
             }
             if(!PlayerPrefs.HasKey("TurnTablePath")) {
-               PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
+               PlayerPrefs.SetString("TurnTablePath",  BasePath + "/TrueTrace/TurnTables");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath"))) {
-               AssetDatabase.CreateFolder("Assets", "TurnTables");
-               PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/TurnTables");
+               PlayerPrefs.SetString("TurnTablePath",  BasePath + "/TrueTrace/TurnTables");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("ScreenShotPath"))) {
-               AssetDatabase.CreateFolder("Assets", "ScreenShots");
-               PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/ScreenShots");
+               PlayerPrefs.SetString("ScreenShotPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("PanoramaPath"))) {
-               AssetDatabase.CreateFolder("Assets", "ScreenShots");
-               PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/ScreenShots");
+               PlayerPrefs.SetString("PanoramaPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TimelinePath"))) {
-               AssetDatabase.CreateFolder("Assets", "TimelineFrames");
-               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/TimelineFrames");
+               PlayerPrefs.SetString("TimelinePath",  BasePath + "/TrueTrace/TimelineFrames");
             }
 
             OnFocus();
@@ -2703,15 +2842,6 @@ Slider AperatureSlider;
                       A.customPasses.Add(new HDRPCompatability());
                   }
                #endif
-               #if UNITY_PIPELINE_URP
-                  GameObject NewObject = GameObject.Find("URPTTINJECTOR");
-                  
-                  if(NewObject == null) {
-                      NewObject = new GameObject();
-                      NewObject.name = "URPTTINJECTOR";
-                      NewObject.AddComponent<InjectPathTracingPass>();
-                  }
-               #endif
             }
 
             if(RayMaster != null && Assets != null) {
@@ -2752,7 +2882,6 @@ Slider AperatureSlider;
            GISpatial = RayMaster.LocalTTSettings.UseReSTIRGISpatial;
            SampleValid = RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation;
            GITemporalMCap = RayMaster.LocalTTSettings.ReSTIRGITemporalMCap;
-           GISpatialSampleCount = RayMaster.LocalTTSettings.ReSTIRGISpatialCount;
            TAA = RayMaster.LocalTTSettings.PPTAA;
            FXAA = RayMaster.LocalTTSettings.PPFXAA;
            ToneMap = RayMaster.LocalTTSettings.PPToneMap;
@@ -2761,7 +2890,6 @@ Slider AperatureSlider;
            DoPartialRendering = RayMaster.LocalTTSettings.DoPartialRendering;
            PartialRenderingFactor = RayMaster.LocalTTSettings.PartialRenderingFactor;
            DoFirefly = RayMaster.LocalTTSettings.DoFirefly;
-           ReSTIRGISpatialRadius = RayMaster.LocalTTSettings.ReSTIRGISpatialRadius;
            RISCount = RayMaster.LocalTTSettings.RISCount;
            ImprovedPrimaryHit = RayMaster.LocalTTSettings.ImprovedPrimaryHit;
            ClayMode = RayMaster.LocalTTSettings.ClayMode;
@@ -2873,7 +3001,9 @@ Slider AperatureSlider;
            MainSource.Add(TopEnclosingBox);
 
            RRToggle = new Toggle() {value = RR, text = "Use Russian Roulette"};
-           MainSource.Add(RRToggle);
+            #if TTAdvancedSettings
+               MainSource.Add(RRToggle);
+            #endif
            RRToggle.RegisterValueChangedCallback(evt => {RR = evt.newValue; RayMaster.LocalTTSettings.UseRussianRoulette = RR;});
 
            MovingToggle = new Toggle() {value = Moving, text = "Enable Object Moving"};
@@ -2895,13 +3025,17 @@ Slider AperatureSlider;
             NEEBox.Add(RISLabel);
             NEEBox.Add(RISCountField);
            NEEToggle.RegisterValueChangedCallback(evt => {NEE = evt.newValue; RayMaster.LocalTTSettings.UseNEE = NEE; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(NEEToggle) + 1, NEEBox);else MainSource.Remove(NEEBox);});
-            if(NEEToggle.value) {
-               MainSource.Add(NEEBox);
-            }
+            #if TTAdvancedSettings
+               if(NEEToggle.value) {
+                  MainSource.Add(NEEBox);
+               }
+            #endif
        
 
            SkinToggle = new Toggle() {value = MeshSkin, text = "Allow Mesh Skinning"};
-           MainSource.Add(SkinToggle);
+            #if TTAdvancedSettings
+               MainSource.Add(SkinToggle);
+            #endif
            SkinToggle.RegisterValueChangedCallback(evt => {MeshSkin = evt.newValue; Assets.UseSkinning = MeshSkin;});
 
             List<string> DenoiserSettings = new List<string>();
@@ -2909,7 +3043,7 @@ Slider AperatureSlider;
             DenoiserSettings.Add("ASVGF");
             #if UseOIDN
                DenoiserSettings.Add("OIDN");
-			   DenoiserSettings.Add("OptiX");
+            DenoiserSettings.Add("OptiX");
             #endif
             PopupField<string> DenoiserField = new PopupField<string>("<b>Denoiser</b>");
             VisualElement DenoiserExtrasContainer = CreateHorizontalBox("Denoiser Extra Info Container");
@@ -3009,19 +3143,8 @@ Slider AperatureSlider;
                Box SpatialGI = new Box();
                    SpatialGI.style.flexDirection = FlexDirection.Row;
                    SpatialGIToggle = new Toggle() {value = GISpatial, text = "Enable Spatial"};
-                   Label SpatialGISampleCountLabel = new Label("Spatial Sample Count");
-                   Label ReSTIRGISpatialRadiusLabel = new Label("Minimum Spatial Radius");
-                   SpatialGISampleCountLabel.tooltip = "How many neighbors are sampled, tradeoff between performance and quality";
-                   FloatField SpatialGISampleCountField = new FloatField() {value = GISpatialSampleCount};
-                   FloatField ReSTIRGISpatialRadiusField = new FloatField() {value = ReSTIRGISpatialRadius};
                    SpatialGIToggle.RegisterValueChangedCallback(evt => {GISpatial = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGISpatial = GISpatial;});
-                   SpatialGISampleCountField.RegisterValueChangedCallback(evt => {GISpatialSampleCount = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGISpatialCount = GISpatialSampleCount;});
-                   ReSTIRGISpatialRadiusField.RegisterValueChangedCallback(evt => {ReSTIRGISpatialRadius = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGISpatialRadius = ReSTIRGISpatialRadius;});
                    SpatialGI.Add(SpatialGIToggle);
-                   // SpatialGI.Add(SpatialGISampleCountField);
-                   // SpatialGI.Add(SpatialGISampleCountLabel);
-                   // SpatialGI.Add(ReSTIRGISpatialRadiusField);
-                   // SpatialGI.Add(ReSTIRGISpatialRadiusLabel);
                EnclosingGI.Add(SpatialGI);
            GIFoldout.Add(EnclosingGI);
            MainSource.Add(GIToggle);
@@ -3060,7 +3183,9 @@ Slider AperatureSlider;
                PartialRenderingField.RegisterValueChangedCallback(evt => {PartialRenderingField.value = Mathf.Max(2, evt.newValue); PartialRenderingFactor = PartialRenderingField.value; RayMaster.LocalTTSettings.PartialRenderingFactor = PartialRenderingFactor;});
                PartialRenderingFoldout.Add(PartialRenderingField);
            DoPartialRenderingToggle = new Toggle() {value = DoPartialRendering, text = "Use Partial Rendering"};
-           MainSource.Add(DoPartialRenderingToggle);
+            #if TTAdvancedSettings
+              MainSource.Add(DoPartialRenderingToggle);
+            #endif
            DoPartialRenderingToggle.RegisterValueChangedCallback(evt => {DoPartialRendering = evt.newValue; RayMaster.LocalTTSettings.DoPartialRendering = DoPartialRendering;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoPartialRenderingToggle) + 1, PartialRenderingFoldout); else MainSource.Remove(PartialRenderingFoldout);});
            if(DoPartialRendering) MainSource.Add(PartialRenderingFoldout);
 
@@ -3097,7 +3222,9 @@ Slider AperatureSlider;
 
            Toggle ImprovedPrimaryHitToggle = new Toggle() {value = ImprovedPrimaryHit, text = "RR Ignores Primary Hit"};
            ImprovedPrimaryHitToggle.RegisterValueChangedCallback(evt => {ImprovedPrimaryHit = evt.newValue; RayMaster.LocalTTSettings.ImprovedPrimaryHit = ImprovedPrimaryHit;});
-           MainSource.Add(ImprovedPrimaryHitToggle);
+            #if TTAdvancedSettings
+               MainSource.Add(ImprovedPrimaryHitToggle);
+            #endif
 
 
            VisualElement AtmoBox = new VisualElement();
@@ -3105,8 +3232,9 @@ Slider AperatureSlider;
                AtmoScatterField = new IntegerField("Atmospheric Scattering Samples") {value = AtmoScatter};
                AtmoScatterField.RegisterValueChangedCallback(evt => {AtmoScatterField.value = Mathf.Max(evt.newValue, 1); AtmoScatter = AtmoScatterField.value; RayMaster.AtmoNumLayers = AtmoScatter;});
                AtmoBox.Add(AtmoScatterField);
-           MainSource.Add(AtmoBox);
-
+            #if TTAdvancedSettings
+               MainSource.Add(AtmoBox);
+            #endif
 
 
            Toggle SampleShowToggle = new Toggle() {value = ShowFPS, text = "Show Sample Count"};
@@ -3363,5 +3491,10 @@ public class DialogueGraphView : GraphView
     }
 }  
 
+
+
 }
+
+
+
 #endif
