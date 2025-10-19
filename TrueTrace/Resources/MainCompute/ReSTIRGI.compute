@@ -7,11 +7,7 @@
 #include "CommonData.cginc"
 #include "Materials.cginc"
 
-#if defined(HDRP) && !defined(TTCustomMotionVectors)
-    Texture2DArray<float2> MotionVectors;
-#else
-    Texture2D<float2> MotionVectors;
-#endif
+Texture2D<float2> MotionVectors;
 
 
 #ifdef HardwareRT
@@ -403,11 +399,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     // RunningReservoirC.Ray.FrameAccum = frames_accumulated;
 
 
-    #if defined(HDRP) && !defined(TTCustomMotionVectors)
-        float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, float3(UV,0), 0).xy;
-    #else
-         float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
-    #endif
+     float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
     int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
   
 

@@ -90,9 +90,7 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture MultiMapMeshIDTextureInitial;
         [HideInInspector] public RenderTexture MultiMapMeshIDTexture;
 #endif
-#if !TTDisableCustomMotionVectors
         private RenderTexture MVTexture;
-#endif
         private RenderTexture GIReservoirA;
         private RenderTexture GIReservoirB;
         private RenderTexture GIReservoirC;
@@ -198,9 +196,7 @@ namespace TrueTrace {
         private int ReSTIRGISpatialKernel;
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
-#if !TTDisableCustomMotionVectors
         private int MVKernel;
-#endif
         #if !DisableRadianceCache
             private int ResolveKernel;
             private int CompactKernel;
@@ -304,9 +300,7 @@ namespace TrueTrace {
             ReSTIRGISpatialKernel = ReSTIRGI.FindKernel("ReSTIRGISpatial");
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
-#if !TTDisableCustomMotionVectors
             MVKernel = ShadingShader.FindKernel("MVKernel");
-#endif
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
                 CompactKernel = GenerateShader.FindKernel("CacheCompact");
@@ -449,9 +443,7 @@ namespace TrueTrace {
             MultiMapMeshIDTexture.ReleaseSafe();
             MultiMapMeshIDTextureInitial.ReleaseSafe();
 #endif
-#if !TTDisableCustomMotionVectors
             MVTexture.ReleaseSafe();
-#endif
             ScreenSpaceInfo.ReleaseSafe();
             ScreenSpaceInfoPrev.ReleaseSafe();
             GradientsA.ReleaseSafe();
@@ -756,11 +748,7 @@ namespace TrueTrace {
 
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
-#if TTDisableCustomMotionVectors
-            ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-#else
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "TTMotionVectorTexture");
-#endif       
 
 
             if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
@@ -871,7 +859,6 @@ namespace TrueTrace {
                 ShadingShader.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
             #endif
 
-#if !TTDisableCustomMotionVectors
             AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel);
             ShadingShader.SetTexture(MVKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
@@ -890,7 +877,6 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(MVKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(MVKernel + 2, "GlobalColors", LightingBuffer);
             ShadingShader.SetTexture(MVKernel + 2, "ScreenSpaceInfo", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-#endif
 
             Atmo.AssignTextures(ShadingShader, ShadeKernel);
             AssetManager.Assets.SetLightData(ShadingShader, ShadeKernel);
@@ -1068,9 +1054,7 @@ namespace TrueTrace {
                     FirstDiffuseThroughputTex.ReleaseSafe();
                     FirstDiffusePosTex.ReleaseSafe();
 #endif
-#if !TTDisableCustomMotionVectors
                     MVTexture.ReleaseSafe();
-#endif
                     ScreenSpaceInfo.ReleaseSafe();
                     ScreenSpaceInfoPrev.ReleaseSafe();
                     GradientsA.ReleaseSafe();
@@ -1152,9 +1136,7 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref MultiMapMeshIDTextureInitial, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
 #endif
 
-#if !TTDisableCustomMotionVectors
-                CommonFunctions.CreateRenderTexture(ref MVTexture, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
-#endif
+                CommonFunctions.CreateRenderTexture(ref MVTexture, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfoPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, SourceWidth, SourceHeight, CommonFunctions.RTHalf1);
@@ -1205,12 +1187,10 @@ namespace TrueTrace {
         
         private void GenerateRays(CommandBuffer cmd) {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
-#if !TTDisableCustomMotionVectors
             if(DoKernelProfiling) cmd.BeginSample("TTMV");
                 cmd.DispatchCompute(ShadingShader, MVKernel+1, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 cmd.DispatchCompute(ShadingShader, MVKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
             if(DoKernelProfiling) cmd.EndSample("TTMV");
-#endif            
                 if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
                     // AssetManager.Assets.SetMeshTraceBuffers(ASVGFCode.shader, 1);
                     ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
@@ -1319,11 +1299,9 @@ namespace TrueTrace {
                     }
                 if(DoKernelProfiling) cmd.EndSample("Pathtracing Kernels");
 
-#if !TTDisableCustomMotionVectors
             if(DoKernelProfiling) cmd.BeginSample("TTMV2");
                 cmd.DispatchCompute(ShadingShader, MVKernel+2, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
-#endif
 #if EnablePhotonMapping
                 if(Assets.UnityLightCount != 0) {
                     PhotonMap.Generate(cmd, LocalTTSettings.PhotonMapRadiusCoverage, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB, LocalTTSettings.CausticIntensityMultiplier, LocalTTSettings.PhotonGuidingRatio);
@@ -1510,14 +1488,12 @@ namespace TrueTrace {
                 RunUpdate();
                 if(RebuildMeshObjectBuffers(cmd)) {
                     InitRenderTexture();
-#if !TTDisableCustomMotionVectors
-        Shader.SetGlobalTexture("TTMotionVectorTexture", MVTexture);
-#endif
-        for(int i = 0; i < LocalTTSettings.SamplesPerFrame; i++) {
-                    SetShaderParameters(cmd);
-                    Render(destination, cmd);
+                    Shader.SetGlobalTexture("TTMotionVectorTexture", MVTexture);
+                    for(int i = 0; i < LocalTTSettings.SamplesPerFrame; i++) {
+                        SetShaderParameters(cmd);
+                        Render(destination, cmd);
                     // else cmd.Blit(_FinalTex, destination);
-                }
+                    }
                 }
                 uFirstFrame = 0;
             }

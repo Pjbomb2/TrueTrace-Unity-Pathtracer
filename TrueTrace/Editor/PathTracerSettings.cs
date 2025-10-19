@@ -1770,7 +1770,6 @@ Toolbar toolbar;
          SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
          // SetGlobalDefines("TTCustomMotionVectors", !definesList.Contains("TTDisableCustomMotionVectors"));
          SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
-         SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
          SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
          if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
          SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
@@ -1786,7 +1785,6 @@ Toolbar toolbar;
          AddDefine("DX11Only"); 
          SetGlobalDefines("PhotonMapping", false); 
          SetGlobalDefines("DX11", true); 
-         SetGlobalDefines("UseBindless", false);
          RemoveDefine("HardwareRT"); 
          SetGlobalDefines("HardwareRT", false);
       }
@@ -1854,9 +1852,13 @@ Toolbar toolbar;
                TTAdvancedSettingsToggle.tooltip = "Enables more advanced settings to be displayed";
             TTAdvancedSettingsToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTAdvancedSettings");} else {RemoveDefine("TTAdvancedSettings");}});
 
-            PhotonMappingToggle = new Toggle() {value = (definesList.Contains("EnablePhotonMapping")), text = "Enable Photon Mapping"};
-               PhotonMappingToggle.tooltip = "Enable Photon Mapping(EXPERIMENTAL)";
+            PhotonMappingToggle = new Toggle() {value = (definesList.Contains("EnablePhotonMapping")), text = "Enable Photon Mapped Caustics"};
+               PhotonMappingToggle.tooltip = "Enable Photon Mapping for Caustics";
             PhotonMappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", true);} else {RemoveDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", false);}});
+
+
+            Toggle TTIncrementRenderCounterToggle = new Toggle() {value = (definesList.Contains("TTIncrementRenderCounter")), text = "Add Render Counter To File"};
+            TTIncrementRenderCounterToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTIncrementRenderCounter");} else {RemoveDefine("TTIncrementRenderCounter");}});
 
 
             Toggle RemoveScriptsDuringSaveToggle = new Toggle() {value = (definesList.Contains("RemoveScriptsDuringSave")), text = "Remove TT Scripts During Save"};
@@ -1935,6 +1937,7 @@ Toolbar toolbar;
                MultiMapScreenshotToggle.SetEnabled(false);
                TTAdvancedSettingsToggle.SetEnabled(false);
                RemoveScriptsDuringSaveToggle.SetEnabled(false);
+               TTIncrementRenderCounterToggle.SetEnabled(false);
                // DX11Toggle.SetEnabled(false);
             } else {
                PhotonMappingToggle.SetEnabled(true);
@@ -1955,6 +1958,7 @@ Toolbar toolbar;
                MultiMapScreenshotToggle.SetEnabled(true);
                TTAdvancedSettingsToggle.SetEnabled(true);
                RemoveScriptsDuringSaveToggle.SetEnabled(true);
+               TTIncrementRenderCounterToggle.SetEnabled(true);
                // DX11Toggle.SetEnabled(true);
             }
 
@@ -2030,6 +2034,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(PhotonMappingToggle);
          #if TTAdvancedSettings
             NonPlayContainer.Add(RemoveScriptsDuringSaveToggle);
+            NonPlayContainer.Add(TTIncrementRenderCounterToggle);
          #endif
          NonPlayContainer.Add(TTAdvancedSettingsToggle);
          NonPlayContainer.Add(new Label("-------------"));
@@ -2063,7 +2068,7 @@ Toolbar toolbar;
          #endif
          PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache", "Quick toggle for the radiance cache, does NOT affect memory used by the radiance cache, unlike the toggle above"));
          #if TTAdvancedSettings
-            PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "Bindless mode only - Uses a higher texture LOD for each bounce, which can help performance"));
+            PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "DX12 Only - Uses a higher texture LOD for each bounce, which can help performance"));
             PlayContainer.Add(CustomToggle("Double Buffer Light Tree", "DoubleBufferSGTree", "Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but hurts performance"));
             PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
          #endif
@@ -2677,32 +2682,34 @@ Toolbar toolbar;
       }
 
       public static void IncrementRenderCounter() {
-         // string Path = Application.persistentDataPath + "/TTStats.txt";
-         // Debug.Log(Path);
-         // List<string> RenderStatData = new List<string>();
-         // DateTime CurrentDate = DateTime.Now;
-         // string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
-         // if(File.Exists(Path)) {
-         //    using (StreamReader sr = new StreamReader(Path)) {
-         //        string Line;
-         //        while((Line = sr.ReadLine()) != null) {
-         //          RenderStatData.Add(Line);
-         //        }
-         //    }            
-         // }
-         // int DateIndex = RenderStatData.IndexOf("Renders For: " + FormattedDate);
-         // if(DateIndex == -1) {
-         //    RenderStatData.Add("Renders For: " + FormattedDate);
-         //    RenderStatData.Add("1");
-         // } else {
-         //    RenderStatData[DateIndex + 1] = "" + (int.Parse(RenderStatData[DateIndex + 1]) + 1);
-         // }
-         // using (StreamWriter sw = new StreamWriter(Path)) {
-         //    int Coun = RenderStatData.Count;
-         //    for(int i = 0; i < Coun; i++) {
-         //       sw.WriteLine(RenderStatData[i]);
-         //    }
-         // }
+         #if TTIncrementRenderCounter
+            string Path = Application.persistentDataPath + "/TTStats.txt";
+            Debug.Log(Path);
+            List<string> RenderStatData = new List<string>();
+            DateTime CurrentDate = DateTime.Now;
+            string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
+            if(File.Exists(Path)) {
+               using (StreamReader sr = new StreamReader(Path)) {
+                   string Line;
+                   while((Line = sr.ReadLine()) != null) {
+                     RenderStatData.Add(Line);
+                   }
+               }            
+            }
+            int DateIndex = RenderStatData.IndexOf("Renders For: " + FormattedDate);
+            if(DateIndex == -1) {
+               RenderStatData.Add("Renders For: " + FormattedDate);
+               RenderStatData.Add("1");
+            } else {
+               RenderStatData[DateIndex + 1] = "" + (int.Parse(RenderStatData[DateIndex + 1]) + 1);
+            }
+            using (StreamWriter sw = new StreamWriter(Path)) {
+               int Coun = RenderStatData.Count;
+               for(int i = 0; i < Coun; i++) {
+                  sw.WriteLine(RenderStatData[i]);
+               }
+            }
+         #endif
       }
 
          public static void TakeScreenshot() {

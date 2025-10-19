@@ -42,32 +42,35 @@ namespace TrueTrace {
 
 
       public static void IncrementRenderCounter() {
-         // string Path = Application.persistentDataPath + "/TTStats.txt";
-         // Debug.Log(Path);
-         // List<string> RenderStatData = new List<string>();
-         // DateTime CurrentDate = DateTime.Now;
-         // string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
-         // if(System.IO.File.Exists(Path)) {
-         //    using (System.IO.StreamReader sr = new System.IO.StreamReader(Path)) {
-         //        string Line;
-         //        while((Line = sr.ReadLine()) != null) {
-         //          RenderStatData.Add(Line);
-         //        }
-         //    }            
-         // }
-         // int DateIndex = RenderStatData.IndexOf("Renders For: " + FormattedDate);
-         // if(DateIndex == -1) {
-         //    RenderStatData.Add("Renders For: " + FormattedDate);
-         //    RenderStatData.Add("1");
-         // } else {
-         //    RenderStatData[DateIndex + 1] = "" + (int.Parse(RenderStatData[DateIndex + 1]) + 1);
-         // }
-         // using (System.IO.StreamWriter sw = new System.IO.StreamWriter(Path)) {
-         //    int Coun = RenderStatData.Count;
-         //    for(int i = 0; i < Coun; i++) {
-         //       sw.WriteLine(RenderStatData[i]);
-         //    }
-         // }
+        #if TTIncrementRenderCounter
+
+         string Path = Application.persistentDataPath + "/TTStats.txt";
+         Debug.Log(Path);
+         List<string> RenderStatData = new List<string>();
+         DateTime CurrentDate = DateTime.Now;
+         string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
+         if(System.IO.File.Exists(Path)) {
+            using (System.IO.StreamReader sr = new System.IO.StreamReader(Path)) {
+                string Line;
+                while((Line = sr.ReadLine()) != null) {
+                  RenderStatData.Add(Line);
+                }
+            }            
+         }
+         int DateIndex = RenderStatData.IndexOf("Renders For: " + FormattedDate);
+         if(DateIndex == -1) {
+            RenderStatData.Add("Renders For: " + FormattedDate);
+            RenderStatData.Add("1");
+         } else {
+            RenderStatData[DateIndex + 1] = "" + (int.Parse(RenderStatData[DateIndex + 1]) + 1);
+         }
+         using (System.IO.StreamWriter sw = new System.IO.StreamWriter(Path)) {
+            int Coun = RenderStatData.Count;
+            for(int i = 0; i < Coun; i++) {
+               sw.WriteLine(RenderStatData[i]);
+            }
+         }
+        #endif
       }
         public enum ImageGenType {NULL, Panorama, LargeScreenShot, TurnTable, TimedScreenShot, TimelineShooter};
         [SerializeField] public ImageGenType SelectedFunctionality = ImageGenType.NULL;

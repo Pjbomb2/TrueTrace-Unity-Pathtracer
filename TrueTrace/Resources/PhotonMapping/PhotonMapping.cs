@@ -68,6 +68,7 @@ namespace TrueTrace {
         }
 
         public void Init() {
+            PerLightVisSize = 128;
             analyticPhotons = 2000000;
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");

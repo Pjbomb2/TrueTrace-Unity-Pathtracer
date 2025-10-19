@@ -79,11 +79,6 @@ namespace TrueTrace {
 
                     RayMaster.TossCamera(camera);
 
-#if TTDisableCustomMotionVectors
-                    Texture motionVectorsTex = Shader.GetGlobalTexture("_MotionVectorTexture");
-                    nativeCmd.SetGlobalTexture(Shader.PropertyToID("_CameraMotionVectorsTexture"), motionVectorsTex);
-#endif
-
                     RayMaster.RenderImage(MainTex, nativeCmd);
 
                     ctx.cmd.SetRenderTarget(data.cameraColorHandle);

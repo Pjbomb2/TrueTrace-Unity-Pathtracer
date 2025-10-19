@@ -1,9 +1,7 @@
 // #define HardwareRT
 // #define HDRP
 // #define DX11
-#define UseBindless
 #define UseSGTree
-#define TTCustomMotionVectors
 #define TTReflectionMotionVectors
 // #define MultiMapScreenshot
 // #define RasterizedDirect

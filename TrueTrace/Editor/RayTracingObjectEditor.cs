@@ -947,12 +947,14 @@ namespace TrueTrace {
 
                             EditorGUILayout.EndVertical();
     
-                            EditorGUILayout.Space();
-                            EditorGUILayout.Space();
-                            EditorGUILayout.BeginVertical();
-                                Color EmissCol = EditorGUILayout.ColorField("MatCap Color", new Color(t.LocalMaterials[Selected].MatCapColor.x, t.LocalMaterials[Selected].MatCapColor.y, t.LocalMaterials[Selected].MatCapColor.z, 1));
-                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("MatCapColor").vector3Value = new Vector3(EmissCol.r, EmissCol.g, EmissCol.b);
-                            EditorGUILayout.EndVertical();
+                            #if TTAdvancedSettings
+                                EditorGUILayout.Space();
+                                EditorGUILayout.Space();
+                                EditorGUILayout.BeginVertical();
+                                    Color EmissCol = EditorGUILayout.ColorField("MatCap Color", new Color(t.LocalMaterials[Selected].MatCapColor.x, t.LocalMaterials[Selected].MatCapColor.y, t.LocalMaterials[Selected].MatCapColor.z, 1));
+                                    serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("MatCapColor").vector3Value = new Vector3(EmissCol.r, EmissCol.g, EmissCol.b);
+                                EditorGUILayout.EndVertical();
+                            #endif
 
 
 
@@ -1148,9 +1150,10 @@ namespace TrueTrace {
 
                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Tag").intValue = Flag;
 
-
-                bool A = EditorGUILayout.ToggleLeft("Override All Local \"Invisible\" Flags", t.InvisibleOverride, GUILayout.MaxWidth(225));
-                serializedObject.FindProperty("InvisibleOverride").boolValue = A;
+                #if TTAdvancedSettings
+                    bool A = EditorGUILayout.ToggleLeft("Override All Local \"Invisible\" Flags", t.InvisibleOverride, GUILayout.MaxWidth(225));
+                    serializedObject.FindProperty("InvisibleOverride").boolValue = A;
+                #endif
 
                 bool MaterialWasChanged = false;
                 if(EditorGUI.EndChangeCheck()) {

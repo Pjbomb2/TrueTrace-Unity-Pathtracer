@@ -216,7 +216,7 @@ Texture2D<half> Heightmap;
 
 SamplerState my_trilinear_repeat_sampler;
 SamplerState my_point_repeat_sampler;
-#if defined(UseBindless) && !defined(DX11)
+#if !defined(DX11)
 	Texture2D<float4> _BindlessTextures[2048] : register(t31);
 #endif
 
@@ -258,7 +258,7 @@ inline void HandleRotation(inout float2 UV, float Rotation) {
 
 float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat MatTex) {
 	float4 FinalCol = 0;
-	#if !defined(UseBindless) || defined(DX11)
+	#if defined(DX11)
 		switch(TextureType) {
 			case SampleAlbedo:
 				#ifdef PointFiltering
@@ -334,7 +334,7 @@ float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat Mat
 
 inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData MatTex) {
 	float4 FinalCol = 0;
-	#if !defined(UseBindless) || defined(DX11)
+	#if defined(DX11)
 		switch(TextureType) {
 			case SampleAlbedo:
 				#ifdef PointFiltering

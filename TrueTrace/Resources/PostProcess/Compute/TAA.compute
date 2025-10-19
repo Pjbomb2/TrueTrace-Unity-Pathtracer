@@ -9,11 +9,7 @@ int screen_width;
 int screen_height;
 
 
-#if defined(HDRP) && !defined(TTCustomMotionVectors)
-	Texture2DArray<float4> MotionVectors;
-#else
-	Texture2D<float4> MotionVectors;
-#endif
+Texture2D<float4> MotionVectors;
 
 
 #pragma kernel kernel_taa_prepare
@@ -111,11 +107,7 @@ float4 TAAA(int2 id) {
 		// ColorOut[id.xy] = colour;
 		return float4(ycocg_to_rgb(colour.xyz), colour.w);
 	}
-	#if defined(HDRP) && !defined(TTCustomMotionVectors)
-		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors[int3(id.xy,0)].xy) * 2.0f - 1.0f;
-	#else
-		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy) * 2.0f - 1.0f;
-	#endif
+	float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy) * 2.0f - 1.0f;
 	id.xy += (Offsets[Samples_Accumulated % 16] - 0.5f);// / float2(screen_width, screen_height);
 	// Convert from [-1, 1] to [0, 1]
 	float u_prev = 0.5f + 0.5f * screen_position_prev.x;

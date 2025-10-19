@@ -61,11 +61,7 @@ inline float4x4 inverse(float4x4 m) {
 #else
     Texture2D<float> Depth;
 #endif
-#if defined(HDRP) && !defined(TTCustomMotionVectors)
-	Texture2DArray<float2> TEX_PT_MOTION;
-#else
-	Texture2D<float2> TEX_PT_MOTION;
-#endif
+Texture2D<float2> TEX_PT_MOTION;
 
 RWTexture2D<float4> TEX_PT_COLOR_LF_SHWrite;
 Texture2D<float4> TEX_PT_COLOR_LF_SH;
@@ -257,11 +253,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 		Pixel.PrimaryNEERay = 0;
 	}
 
-	#if defined(HDRP) && !defined(TTCustomMotionVectors)
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(id.xy,0) / float3(screen_width, screen_height, 1), 0).xy;
-	#else
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy;
-	#endif
+	float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy;
 	
 	float2 pos_prev = ((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion) * float2(screen_width, screen_height)));
 	bool InvalidReprojection = (any(pos_prev < 0 || pos_prev >= float2(screen_width, screen_height))) || !(((ReflRefracB[pos_prev] << 4) >> 4) == (((ScreenInfo.w << 4) >> 4)));
@@ -349,11 +341,7 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 	s_reprojected_pixels[local_pos.y][local_pos.x] = 0;
 
 	// Compute the previous frame position of this surface
-	#if defined(HDRP) && !defined(TTCustomMotionVectors)
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(p,0) / float3(screen_width, screen_height, 1), 0).xy;
-	#else
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), 0).xy;
-	#endif
+	float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), 0).xy;
 	float2 pos_prev = ((float2(p)+0.5) * float2(rcp(screen_width), rcp(screen_height)) + motion.xy) * float2(screen_width, screen_height);
 	int2 pp = int2(floor(pos_prev));
 
@@ -495,8 +483,6 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	Ray PrevCamRay2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	// if(ipos.x > screen_width / 2) PrevCamRay.origin = PrevCamRay2.origin;
-#if !defined(TTReflectionMotionVectors) || !defined(TTCustomMotionVectors)
-#endif
 	PrevCamRay.origin = PrevCamRay2.origin;
 	uint4 Target = PrimaryTriData[found_pos_prev];
 	// Ray Ray2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
@@ -568,11 +554,7 @@ inline float get_gradient(float l_curr, float l_prev)
 inline float2 get_lf_gradient(int2 ipos)
 {
 	// Find the same surface on the pvreious frame
-	#if defined(HDRP) && !defined(TTCustomMotionVectors)
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
-	#else
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
-	#endif
+	float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
 
 	int2 pos_prev = int2(floor(((float2(ipos)+0.5) * float2((rcp(screen_width)), rcp(screen_height)) + motion.xy) * float2(screen_width, screen_height)));
 
@@ -800,11 +782,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	GroupMemoryBarrierWithGroupSync();
 
 	int2 ipos = gl_GlobalInvocationID.xy;
-	#if defined(HDRP) && !defined(TTCustomMotionVectors)
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
-	#else
-		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
-	#endif
+	float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
 
 
 	float2 pos_prev = ((((float2(ipos)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion.xy) * float2(screen_width, screen_height)));// + (random(54, gl_GlobalInvocationID) - 0.5f) * 0.2f;
@@ -878,7 +856,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 			float dist_depth = (abs(depth_curr.x - depth_prev) - CameraDist) / min(depth_curr.x, depth_prev);// * max(depth_curr.y,0.25f);
 			float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 
-			if(MatIndex == ((ReflRefracB[p] << 4) >> 4))
+			if(UseBackupPointSelection || MatIndex == ((ReflRefracB[p] << 4) >> 4))
 			[branch]if(!ReflectedRefracted && !ReflectedRefractedPrev) {
 				if (dist_depth < 0.1)
 				{

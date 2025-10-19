@@ -48,11 +48,7 @@ namespace TrueTrace {
                     Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBufferTexture0"));
                     Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBufferTexture1"));
                 }
-    #if TTDisableCustomMotionVectors
-            ctx.hdCamera.camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
-    #else
-            ctx.hdCamera.camera.depthTextureMode = DepthTextureMode.None;
-    #endif
+                ctx.hdCamera.camera.depthTextureMode = DepthTextureMode.None;
                 ctx.cmd.BeginSample("TrueTrace");
                 RayMaster.RenderImage(MainTex, ctx.cmd);
                 ctx.propertyBlock.SetTexture("_MainTex", MainTex);

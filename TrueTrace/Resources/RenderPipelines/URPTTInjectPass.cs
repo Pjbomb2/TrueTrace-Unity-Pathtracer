@@ -35,10 +35,6 @@ namespace TrueTrace
                 camera.forceIntoRenderTexture = true;
                 camera.depthTextureMode |= DepthTextureMode.Depth;
 
-#if TTDisableCustomMotionVectors
-                camera.depthTextureMode |= DepthTextureMode.MotionVectors;
-#endif
-
                 renderer.EnqueuePass(m_PathTracingPass);
             }
         }

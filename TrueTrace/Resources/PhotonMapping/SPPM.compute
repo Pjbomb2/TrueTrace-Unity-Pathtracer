@@ -609,7 +609,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
             float3 CalcedDir = LightDir;
 
-            LightPos = SelectedLight.Direction * 100.0f;
+            LightPos = SelectedLight.Direction * 100.0f + CamPos;
             LightDir = PlaneDir;
             RandVec = random(115, pixel_index);//(random(115, pixel_index) - 0.5f) * 3.0f;
 
