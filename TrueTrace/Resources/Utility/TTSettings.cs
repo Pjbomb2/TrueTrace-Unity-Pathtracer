@@ -103,6 +103,8 @@ namespace TrueTrace {
         [SerializeField] public float PhotonMapRadiusCoverage = 8;
         [SerializeField] public float CausticIntensityMultiplier = 1;
         [SerializeField] public float PhotonGuidingRatio = 0.15f;
+        [SerializeField] public int PhotonGuidingPerLightGuidingResolution = 128;
+        [SerializeField] public int PhotonGuidingTotalPhotonsPerFrame = 2000000;
 
     }
 

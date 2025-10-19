@@ -68,8 +68,8 @@ namespace TrueTrace {
         }
 
         public void Init() {
-            PerLightVisSize = 128;
-            analyticPhotons = 2000000;
+            PerLightVisSize = RayTracingMaster.RayMaster.LocalTTSettings.PhotonGuidingPerLightGuidingResolution;
+            analyticPhotons = RayTracingMaster.RayMaster.LocalTTSettings.PhotonGuidingTotalPhotonsPerFrame;
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;

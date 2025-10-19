@@ -106,3 +106,5 @@ MonoBehaviour:
   PhotonMapRadiusCoverage: 12
   CausticIntensityMultiplier: 1
   PhotonGuidingRatio: 0.15
+  PhotonGuidingPerLightGuidingResolution: 128
+  PhotonGuidingTotalPhotonsPerFrame: 2000000

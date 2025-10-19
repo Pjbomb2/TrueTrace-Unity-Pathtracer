@@ -966,35 +966,38 @@ namespace TrueTrace {
                 NativeArray<float> PrioritiesArray = new NativeArray<float>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
                 float* Priorities = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(PrioritiesArray);
 
-                for (int i = 0; i < Coun; i++)
-                {
+                for (int i = 0; i < Coun; i++) {
                     triangle = AggTriangles[i];
                     Priorities[i] = Priority(new AABB(triangle), triangle);
                     totalPriority += Priorities[i];
                 }
 
                 int referenceCount = 0;
-                for (int i = 0; i < Coun; i++)
-                {
+                for (int i = 0; i < Coun; i++) {
                     int splitCount = GetSplitCount(Priorities[i], totalPriority, Coun);
                     referenceCount += splitCount;
                 }
                 PrioritiesArray.Dispose();
 
                 Splits = referenceCount - Coun;
-
                 TrianglesArray = new NativeArray<AABB>(referenceCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
                 Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
 
-                int[] originalTriIds = new int[referenceCount];
-                Vector3[] centers = new Vector3[referenceCount];
-                CudaTriangle[] NewTris = new CudaTriangle[referenceCount];
-                int[] ReverseIndexes = new int[Coun];
+                NativeArray<CudaTriangle> NewTrisArray = new NativeArray<CudaTriangle>(referenceCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                CudaTriangle* NewTris = (CudaTriangle*)NativeArrayUnsafeUtility.GetUnsafePtr(NewTrisArray);
+
+                int Coun2 = LightTriangles.Count;
+                bool HasLightTriangles = Coun2 > 0;
+                NativeArray<int> ReverseIndexesArray = default;
+                int* ReverseIndexes = default;
+                if(HasLightTriangles) {
+                    ReverseIndexesArray = new NativeArray<int>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                    ReverseIndexes = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(ReverseIndexesArray);
+                }
                 int counter = 0;
 
                 SplitData[] stack = new SplitData[64];
-                for (int i = 0; i < Coun; i++)
-                {
+                for (int i = 0; i < Coun; i++) {
                     triangle = AggTriangles[i];
                     AABB triBox = new AABB(triangle);
 
@@ -1003,17 +1006,13 @@ namespace TrueTrace {
 
                     int stackPtr = 0;
                     stack[stackPtr++] = new SplitData() {box = triBox, splitsLeft = splitCount};
-                    while (stackPtr > 0)
-                    {
+                    while (stackPtr > 0) {
                         SplitData TempSplit = stack[--stackPtr];
 
-                        if (TempSplit.splitsLeft == 1)
-                        {
+                        if (TempSplit.splitsLeft == 1) {
                             Triangles[counter] = TempSplit.box;
                             NewTris[counter] = triangle;
-                            ReverseIndexes[i] = counter;
-                            originalTriIds[counter] = i;
-                            centers[counter] = (TempSplit.box.BBMax + TempSplit.box.BBMin) * 0.5f; 
+                            if(HasLightTriangles) ReverseIndexes[i] = counter;
                             counter++;
                             continue;
                         }
@@ -1024,19 +1023,13 @@ namespace TrueTrace {
                         float depth = (float)System.Math.Min(-1.0f, (float)System.Math.Floor((float)System.Math.Log(largestExtent / globalSize[splitAxis], 2)));
                         float cellSize = (float)System.Math.Pow(2f, depth) * globalSize[splitAxis];
                         
-                        // int floatBits = Unsafe.BitCast<float, int>(largestExtent / globalSize[splitAxis]);
-                        // floatBits &= 255 << 23;
-
-                        // float cellSize = Unsafe.BitCast<int, float>(floatBits);
-                        if (cellSize + 0.0001f >= largestExtent)
-                        {
+                        if (cellSize + 0.0001f >= largestExtent) {
                             cellSize *= 0.5f;
                         }
 
                         float midPos = (TempSplit.box.BBMin[splitAxis] + TempSplit.box.BBMax[splitAxis]) * 0.5f;
                         float splitPos = aabb_untransformed.BBMin[splitAxis] + (float)System.Math.Round((midPos - aabb_untransformed.BBMin[splitAxis]) / cellSize) * cellSize;
-                        if (splitPos <= TempSplit.box.BBMin[splitAxis] || splitPos >= TempSplit.box.BBMax[splitAxis])
-                        {
+                        if (splitPos <= TempSplit.box.BBMin[splitAxis] || splitPos >= TempSplit.box.BBMax[splitAxis]) {
                             splitPos = midPos;
                         }
 
@@ -1063,20 +1056,21 @@ namespace TrueTrace {
                         stack[stackPtr++] = B;
                     }
                 }
+                AggTriangles = NewTrisArray.ToArray();
+                NewTrisArray.Dispose();
 
                 for(int i = 0; i < referenceCount; i++) {
                     Triangles[i].Validate(ParentScale);
                 }
-                int Coun2 = LightTriangles.Count;
-                for(int i = 0; i < Coun2; i++) {
-                    LightTriData TempTri = LightTriangles[i];
-                    TempTri.TriTarget = (uint)ReverseIndexes[TempTri.TriTarget];
-                    LightTriangles[i] = TempTri;                
+                if(HasLightTriangles) {
+                    for(int i = 0; i < Coun2; i++) {
+                        LightTriData TempTri = LightTriangles[i];
+                        TempTri.TriTarget = (uint)ReverseIndexes[TempTri.TriTarget];
+                        LightTriangles[i] = TempTri;                
+                    }
+                    ReverseIndexesArray.Dispose();
                 }
 
-
-
-                AggTriangles = NewTris;
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Stop("Triangle Presplitting for " + Splits + " new triangles");
 #endif
@@ -1118,8 +1112,7 @@ namespace TrueTrace {
             #endif
                     // Debug.LogError("Allocated: " + BVH.PrevAlloc + ", Actual: " + BVH.cwbvhnode_count + ", Orig Tri Count: " + PrevLength);
 
-            if (IsSkinnedGroup || IsDeformable)
-            {
+            if (IsSkinnedGroup || IsDeformable) {
                 WorkingSetCWBVH = new List<Layer2>();
                 TotalCounter = 0;
                 DocumentNodes(0, 0);

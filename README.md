@@ -44,8 +44,8 @@
   <li>Lambert or EON diffuse models</li>
   <li>Chromatic Aberation, Saturation, Colored Vignette</li>
   <li>Full Multiscatter Fog(Not realtime)</li>
-  <li>Orthographic Camera</li>
-  <li>Optional Photon Mapping for fast(but not realtime) caustics</li>
+  <li>Orthographic Camera Support</li>
+  <li>Photon Mapping for fast(but not realtime) caustics</li>
   <li>Animatable Material Properties</li> 
 </ul>
 
@@ -105,11 +105,12 @@ for bringing bindless textures to unity!
   <li>DX12 is recommended, as it enables use of OIDN, Bindless texturing, RT Cores, and higher performance</li>
   <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds(Turn on Truetrace Settings -> Functionality Settings</li>
-  <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
+  <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to be rebuilt for them</li>
   <li>Emissive meshes need to be have a non-zero emissive value when they are built or rebuilt to work with NEE, but after that can have their emissiveness changed at will</li>
   <li>To set up PBR with the DEFAULT BIRP material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
+  <li>Some settings will be hidden behind an "Advanced Mode" toggle found in "Functionality Settings"</li>
 </ul>
 
 ## Animating TT Materials
@@ -147,14 +148,12 @@ for bringing bindless textures to unity!
 
 ## Functionality Settings Contents
 <ul>
-  <li>NOTE FIRST: MOST OF THESE IN THIS TABLE NOW HAVE TOOLTIPS THAT APPEAR IF YOU HOVER OVER THEM!</li>
+  <li>NOTES 1: MOST OF THESE IN THIS TABLE HAVE TOOLTIPS THAT APPEAR IF YOU HOVER OVER THEM!</li>
+  <li>NOTES 2: SOME OF THESE ARE HIDDEN BEHIND TTAdvancedMode, WHICH CAN BE TOGGLED IN THIS MENU.</li>
   <li>Enable RT Cores - (DX12 Only, REQUIRES UNITY 2023 OR HIGHER)Enables Hardware RT for cards that support it.</li>
-  <li>Disable Bindless Textures - DX11(/vulkan/metal) compatability, Disables bindless texturing, and uses the atlas fallback(Limits resolution).</li>
   <li>Use Old Light BVH Instead of Gaussian Tree - Disables the Gaussian Tree for higher performance but worse light sampling on metallics.</li>
-  <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11(/vulkan/metal).</li>
   <li>Enable OIDN - (DX12 Only) Adds the OIDN denoiser to the Denoiser list in "Main Options"</li>
   <li>FULLY Disable Radiance Cache - Will free the memory(RAM/VRAM) usually used by the Radiance Cache</li>
-  <li>Enable TrueTrace Motion Vectors - Truetrace will create its own motion vectors, reccomended to leave ON</li>
   <li>Use Rasterized Lighting For Direct - Experimental, only known to work in BIRP, Forces truetrace to only render indirect</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
   <li>Enable Verbose Logging - Truetrace will yell more information into the console.</li>
@@ -231,10 +230,7 @@ GlobalDefines.cginc Description -
   <ul>
     <li>HardwareRT - This is handled from the CPU side under Functionality Settings</li>
     <li>HDRP - This is handled from the CPU side automatically</li>
-    <li>DX11 - This is handled from the CPU side automatically/Under Functionality Settings</li>
-    <li>UseBindless - This is handled from the CPU side automatically/Under Functionality Settings</li>
     <li>UseSGTree - This is handled from the CPU side under Functionality Settings</li>
-    <li>TTCustomMotionVectors - This is handled from the CPU side under Functionality Settings; named "Remove Rasterization Requirement"</li>
     <li>MultiMapScreenshot - This is handled from the CPU side under Functionality Settings; named "Save Multiple Maps On Screenshot"; Truetrace will also save images of material ID and mesh ID maps when using TTAdvancedImageGen or the Screenshot button</li>
   </ul>
   <li>These are fine to modify yourself:</li>
@@ -258,14 +254,12 @@ GlobalDefines.cginc Description -
     <li>Fog - Toggles multiscatter fog, not denoiser compatable(also accessable from Functionality Settings)</li>
     <li>RadCache - Quick toggle for the Radiance Cache(also accessable from Functionality Settings)</li>
     <li>ClampRoughnessToBounce - Clamps the material roughness to be higher for each bounce, helps fight fireflies</li>
-    <li>RasterizedDirect - Experimental, BIRP only, will make truetrace only contribnute to indirect, and use unity rasterization for direct</li>
     <li>ReSTIRSampleReduction - Experiemental, only pathtraces half the rays and lets ReSTIR fill in the gaps</li>
-    <li>ReSTIRRestrictSpatial - Experiemental option to allow for cleaner reflections in near-mirrors</li>
-    <li>SmartRestriction - Additional cleanup ontop of previous define</li>
-    <li>ReSTIRAdditionalAO - Adds fake AO through restir, can help with brightened corners</li>
+    <li>ReSTIRReflectionRefinement - Experiemental option to allow for cleaner reflections in near-mirrors</li>
     <li>ShadowGlassAttenuation - Advancement of "StainedGlassShadow"; still experimental</li>
     <li>DisableNormalMaps - Debug thing</li>
     <li>ClayMetalOverride - Allows for clay mode to also define a constant metallic/roughness</li>
+    <li>MoreAO - Adds fake AO, can help with brightened corners</li>
   </ul>
 </ul>
 

@@ -1569,10 +1569,24 @@ namespace TrueTrace {
                 MainContainer.Add(SamplesPerFrameField);
 
 #if EnablePhotonMapping
+                 VisualElement SpacerA = new VisualElement();
+                 SpacerA.style.height = 10;
+                MainContainer.Add(SpacerA);
+
                 FloatField DirectionalLightCoverageRadiusField = new FloatField("Photon Mapping Radius Coverage");
                 DirectionalLightCoverageRadiusField.value = t.LocalTTSettings.PhotonMapRadiusCoverage;
                 DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonMapRadiusCoverage = evt.newValue;});
                 MainContainer.Add(DirectionalLightCoverageRadiusField);
+
+                IntegerField PerLightGuidingResolutionField = new IntegerField("Photon Mapping Per-Light Guiding Resolution");
+                PerLightGuidingResolutionField.value = t.LocalTTSettings.PhotonGuidingPerLightGuidingResolution;
+                PerLightGuidingResolutionField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingPerLightGuidingResolution = evt.newValue;});
+                MainContainer.Add(PerLightGuidingResolutionField);
+
+                IntegerField TotalPhotonsField = new IntegerField("Photon Mapping Total Photons Per Frame");
+                TotalPhotonsField.value = t.LocalTTSettings.PhotonGuidingTotalPhotonsPerFrame;
+                TotalPhotonsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingTotalPhotonsPerFrame = evt.newValue;});
+                MainContainer.Add(TotalPhotonsField);
 
                 FloatField CausticIntensityMultiplierField = new FloatField("Caustic Intensity Multiplier");
                 CausticIntensityMultiplierField.value = t.LocalTTSettings.CausticIntensityMultiplier;
@@ -1583,6 +1597,10 @@ namespace TrueTrace {
                 PhotonRatioField.value = t.LocalTTSettings.PhotonGuidingRatio;
                 PhotonRatioField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingRatio = Mathf.Clamp(evt.newValue, 0.001f, 0.999f);});
                 MainContainer.Add(PhotonRatioField);
+                
+                VisualElement SpacerB = new VisualElement();
+                SpacerB.style.height = 10;
+                MainContainer.Add(SpacerB);
 #endif
 
                 Toggle DebugTexToggle = new Toggle() {value = t.EnableDebugTexture, text = "Enable Debug Texture"};
