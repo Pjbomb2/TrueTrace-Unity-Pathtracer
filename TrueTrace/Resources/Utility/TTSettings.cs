@@ -11,7 +11,7 @@ namespace TrueTrace {
     [System.Serializable] public class TTSettings : ScriptableObject {
         [SerializeField] public string SceneName = "TestA";
         [SerializeField] public float IndirectBoost = 1.0f;
-        [SerializeField] public int bouncecount = 12;
+        [SerializeField] public int bouncecount = 10;
         [SerializeField] public bool ClayMode = false;
         [SerializeField] public bool UseRussianRoulette = true;
         [SerializeField] public bool UseNEE = true;

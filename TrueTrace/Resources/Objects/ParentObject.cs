@@ -138,12 +138,16 @@ namespace TrueTrace {
         [HideInInspector] public int MaxRecur = 0;
 
         [HideInInspector] public AABB tempAABB;
-
-        public int NodeOffset;
-        public int TriOffset;
-        public int SkinnedOffset;
-        public int LightTriOffset;
-        public int LightNodeOffset;
+        
+        public int GlobalNodeOffset;
+        public int GlobalTriOffset;
+        public int GlobalSkinnedOffset;
+        public int GlobalLightTriOffset;
+        public int GlobalLightNodeOffset;
+        public int LocalTriCount;
+        public int LocalNodeCount;
+        public int LocalLightTriCount;
+        public int LocalLightNodeCount;
 
         #if HardwareRT
             public Renderer[] Renderers;
@@ -260,43 +264,35 @@ namespace TrueTrace {
 #endif
         }
         private bool NeedsToResetBuffers = true;
-        public void SetUpBuffers()
-        {
-            if (NeedsToResetBuffers)
-            {
+        public void SetUpBuffers() {
+            if (NeedsToResetBuffers) {
+
                 if (LightTriBuffer != null) LightTriBuffer.Release();
                 if (TriBuffer != null) TriBuffer.Release();
                 if (BVHBuffer != null) BVHBuffer.Release();
                 if (LightTreeBuffer != null) LightTreeBuffer.Release();
                   if(AggTriangles != null) {
                     if(LightTriangles.Count == 0) {
-                        LightTriBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<LightTriData>());
+                        CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, 1, CommonFunctions.GetStride<LightTriData>());
 #if !DontUseSGTree
-                        LightTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<GaussianTreeNode>());
+                        CommonFunctions.CreateDynamicBuffer(ref LightTreeBuffer, 1, CommonFunctions.GetStride<GaussianTreeNode>());
 #else
-                        LightTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<CompactLightBVHData>());
+                        CommonFunctions.CreateDynamicBuffer(ref LightTreeBuffer, 1, CommonFunctions.GetStride<CompactLightBVHData>());
 #endif
                     } else {
-                        LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), CommonFunctions.GetStride<LightTriData>());
+                        CommonFunctions.CreateComputeBuffer(ref LightTriBuffer, LightTriangles);
 #if !DontUseSGTree
-                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.SGTree.Length,1), CommonFunctions.GetStride<GaussianTreeNode>());
+                        CommonFunctions.CreateComputeBuffer(ref LightTreeBuffer, LBVH.SGTree);
 #else
-                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), CommonFunctions.GetStride<CompactLightBVHData>());
+                        CommonFunctions.CreateComputeBuffer(ref LightTreeBuffer, LBVH.nodes);
 #endif
                     }
-                    TriBuffer = new ComputeBuffer(AggTriangles.Length, CommonFunctions.GetStride<CudaTriangle>());
-                    BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
-                    if(HasLightTriangles) {
-                        LightTriBuffer.SetData(LightTriangles);
-#if !DontUseSGTree
-                        LightTreeBuffer.SetData(LBVH.SGTree);
-#else
-                        LightTreeBuffer.SetData(LBVH.nodes);
-#endif
-
-                    }
-                    TriBuffer.SetData(AggTriangles);
-                    BVHBuffer.SetData(AggNodes);
+                    CommonFunctions.CreateComputeBuffer(ref TriBuffer, AggTriangles);
+                    CommonFunctions.CreateComputeBuffer(ref BVHBuffer, AggNodes);
+                    LocalLightNodeCount = LightTreeBuffer.count;
+                    LocalLightTriCount = LightTriBuffer.count;
+                    LocalTriCount = TriBuffer.count;
+                    LocalNodeCount = BVHBuffer.count;
                 }
             }
         }
@@ -615,6 +611,10 @@ namespace TrueTrace {
         }
         public List<Transform> ChildObjectTransforms;
         public unsafe void LoadData() {
+            GlobalTriOffset = -1;
+            GlobalNodeOffset = -1;
+            GlobalLightTriOffset = -1;
+            GlobalLightNodeOffset = -1;
             HasLightTriangles = false;
             NeedsToResetBuffers = true;
             ClearAll();
@@ -1232,9 +1232,9 @@ namespace TrueTrace {
                         VertexBuffers[i] = DeformableMeshes[i].sharedMesh.GetVertexBuffer(0);
                     }
                 }
-                cmd.SetComputeIntParam(MeshRefit, "TriBuffOffset", TriOffset);
-                cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", LightTriOffset);
-                cmd.SetComputeIntParam(MeshRefit, "SkinnedOffset", SkinnedOffset);
+                cmd.SetComputeIntParam(MeshRefit, "TriBuffOffset", GlobalTriOffset);
+                cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", GlobalLightTriOffset);
+                cmd.SetComputeIntParam(MeshRefit, "SkinnedOffset", GlobalSkinnedOffset);
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh");
                 if(HasLightTriangles) {
                     cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightTriangles", RealizedLightTriBuffer);
@@ -1286,7 +1286,7 @@ namespace TrueTrace {
 
                 if(LightTriangles.Count != 0) {
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightRefitter");
-                    cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", LightNodeOffset);
+                    cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", GlobalLightNodeOffset);
                     cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
 #if !DontUseSGTree
                     cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "SGTreeWrite", RealizedLightNodeBuffer);
@@ -1294,7 +1294,7 @@ namespace TrueTrace {
                     cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBuffer);
 #endif
                     cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
-                    int ObjectOffset = LightNodeOffset;
+                    int ObjectOffset = GlobalLightNodeOffset;
                     for(int i = WorkingBufferLightBVH.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
                         var SetCount = WorkingBufferLightBVH[i].count;
@@ -1310,7 +1310,7 @@ namespace TrueTrace {
 
                 #if !HardwareRT
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit");
-                    cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
+                    cmd.SetComputeIntParam(MeshRefit, "NodeOffset", GlobalNodeOffset);
                     for (int i = MaxRecur; i >= 0; i--) {
                         if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit: " + i);
                         var NodeCount2 = WorkingBufferCWBVH[i].count;

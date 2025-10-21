@@ -519,6 +519,15 @@ namespace CommonVars
             BBMin = Vector3.Min(Vector3.Min(Tri.pos0, Tri.pos0 + Tri.posedge1), Tri.pos0 + Tri.posedge2);
             // this.Validate(new Vector3(0.1f,0.1f,0.1f));
         }
+        public void TransformAABB(Matrix4x4 Mat) { 
+            Vector3 center = 0.5f * (BBMin + BBMax);
+            Vector3 extent = 0.5f * (BBMax - BBMin);
+            Vector3 new_center = CommonFunctions.transform_position(Mat, center);
+            Vector3 new_extent = CommonFunctions.transform_direction(Mat, extent);
+
+            BBMin = new_center - new_extent;
+            BBMax = new_center + new_extent;
+        }
         public int LargestAxis() {
             Vector3 Sizes = BBMax - BBMin;
             int Lorge = 0;
@@ -1011,6 +1020,15 @@ namespace CommonVars
         public static void ReleaseSafe(this ComputeBuffer Buff)
         {
             if (Buff != null) {Buff.Release(); Buff = null;}
+        }
+
+        public static void ReleaseSafe(this ComputeBuffer[] Buff)
+        {
+            if (Buff != null) {
+                int BuffLength = Buff.Length;
+                for(int i = 0; i < BuffLength; i++)
+                    if(Buff[i] != null) Buff[i].Release();
+            }
         }
 
         public static void ReleaseSafe(this GraphicsBuffer Buff)

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 12
+  bouncecount: 10
   ClayMode: 0
   UseRussianRoulette: 1
   UseNEE: 1

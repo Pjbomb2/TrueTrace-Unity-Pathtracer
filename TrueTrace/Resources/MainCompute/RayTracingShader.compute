@@ -178,8 +178,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
 #endif
     if(CurBounce == 0 && UseASVGF && !(hitDat.metallic == 1 && hitDat.roughness < 0.05f) && hitDat.specTrans != 1 && RandomNums[id].w == 1) {
-        Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
-        norm = i_octahedral_32(asuint(PrevScreenData.y));
+        // Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
+        // norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
 #if DebugView == DVGeomNorm
     if(CurBounce == 0) _DebugTex[id.xy] = float4(Geomnorm, 0);
@@ -1404,6 +1404,7 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
         float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+        reflprojection *= dot(reflprojection * float2(screen_width, screen_height), reflprojection * float2(screen_width, screen_height)) > 0.00001f;
         int2 NeighbPos = id.xy + reflprojection * int2(screen_width, screen_height);
         if(any(NeighbPos < 0 || NeighbPos >= int2(screen_width, screen_height))) return;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
@@ -1445,6 +1446,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+        reflprojection *= dot(reflprojection * float2(screen_width, screen_height), reflprojection * float2(screen_width, screen_height)) > 0.00001f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
             CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
             MVTexture[id.xy] = (reflprojection);
