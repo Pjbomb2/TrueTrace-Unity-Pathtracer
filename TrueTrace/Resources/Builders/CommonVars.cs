@@ -33,7 +33,7 @@ namespace CommonVars
     [System.Serializable]
     public struct GaussianTreeNode {
         public BoundingSphere S;
-        public Vector3 axis;
+        public uint axis;
         public float variance;
         public float sharpness;
         public float intensity;

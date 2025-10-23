@@ -570,7 +570,7 @@ inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianT
     float w_left = phi_left / (phi_left + phi_right);
     float w_right = phi_right / (phi_left + phi_right);
     
-    float3 V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+    float3 V = w_left * i_octahedral_32(LeftNode.axis) * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * i_octahedral_32(RightNode.axis) * VMFSharpnessToAxisLength(RightNode.sharpness);//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
 
     float3 mean = w_left * LeftNode.position + w_right * RightNode.position;
     float variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * dot(LeftNode.position - RightNode.position, LeftNode.position - RightNode.position);
@@ -586,7 +586,7 @@ inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianT
 	float sharpness = min(VMFAxisLengthToSharpness(saturate(AxisLength)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
 
 
-	GaussianTreeNode Dat = {mean, radius, V, variance, sharpness, intensity, Left};
+	GaussianTreeNode Dat = {mean, radius, octahedral_32(V), variance, sharpness, intensity, Left};
     return Dat;
 }
 
@@ -611,12 +611,12 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].W2L);
         float3 ExtendedCenter = transform_position(TransfMat, SGTreeWrite[StartIndex].position + float3(SGTreeWrite[StartIndex].radius, 0, 0));
         float3 center = transform_position(TransfMat, SGTreeWrite[StartIndex].position);
-        float3 axis = transform_direction(TransfMat, SGTreeWrite[StartIndex].axis);
+        float3 axis = transform_direction(TransfMat, i_octahedral_32(SGTreeWrite[StartIndex].axis));
         float Scale = length(center - ExtendedCenter) / SGTreeWrite[StartIndex].radius;
 
         SGTreeWrite[Index].position = center;
         SGTreeWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(VMFSharpnessToAxisLength(SGTreeWrite[StartIndex].sharpness))), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-        SGTreeWrite[Index].axis = axis;
+        SGTreeWrite[Index].axis = octahedral_32(axis);
         SGTreeWrite[Index].variance = SGTreeWrite[StartIndex].variance * Scale;        
 
         SGTreeWrite[Index].radius = SGTreeWrite[StartIndex].radius * Scale;
@@ -718,7 +718,7 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         SGTreeWrite[Index].radius = radius;
         SGTreeWrite[Index].intensity = intensity;
         SGTreeWrite[Index].variance = variance;
-        SGTreeWrite[Index].axis = V;
+        SGTreeWrite[Index].axis = octahedral_32(V);
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left + TotalNodeOffset];

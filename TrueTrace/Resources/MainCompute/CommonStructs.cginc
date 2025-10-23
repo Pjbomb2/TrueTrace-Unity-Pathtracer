@@ -34,7 +34,7 @@ struct AABB {
 struct GaussianTreeNode {
 	float3 position;
 	float radius;
-	float3 axis;
+	uint axis;
 	float variance;
 	float sharpness;
 	float intensity;

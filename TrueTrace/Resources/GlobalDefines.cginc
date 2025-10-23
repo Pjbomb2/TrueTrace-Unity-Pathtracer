@@ -34,6 +34,7 @@
 // #define IgnoreBackfacingEmissive
 // #define AltFadeMapping
 // #define MoreAO
+// #define ORIGSGTREE
 
 
 //END OF DEFINES

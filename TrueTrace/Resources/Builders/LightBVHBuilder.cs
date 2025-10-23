@@ -407,12 +407,19 @@ namespace TrueTrace {
             ParentBound = nodes2[0];
             nodes2Array.Dispose();
 #if !DontUseSGTree
+                float MaxIntensity = -999999;
+                float MinIntensity = 999999;
+                float MaxSharpness = -999999;
+                float MinSharpness = 999999;
+                float MaxVariance = -999999;
+                float MinVariance = 999999;
             {
                 SGTree = new GaussianTreeNode[nodes.Length];
                 Set = new List<int>[MaxDepth];
                 for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
                 Refit2(0, 0);
                 GaussianTreeNode TempNode = new GaussianTreeNode();
+
                 for(int i = MaxDepth - 1; i >= 0; i--) {
                     int SetCount = Set[i].Count;
                     for(int j = 0; j < SetCount; j++) {
@@ -442,7 +449,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            V = w_left * CommonFunctions.UnpackOctahedral(LeftNode.axis) * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * CommonFunctions.UnpackOctahedral(RightNode.axis) * VMFSharpnessToAxisLength(RightNode.sharpness);
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
                             variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
@@ -454,17 +461,27 @@ namespace TrueTrace {
                         if(AxisLength == 0) V = new Vector3(0,1,0);
                         else V /= AxisLength;
                         TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness((float)System.Math.Clamp((double)AxisLength, 0.0d, 1.0d)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-                        TempNode.axis = V;
+                        TempNode.axis = CommonFunctions.PackOctahedral(V);
                         TempNode.S.Center = mean;
                         TempNode.variance = variance;
                         TempNode.intensity = intensity;
                         TempNode.S.Radius = radius;
+
+                        MaxIntensity = Mathf.Max(MaxIntensity, TempNode.intensity);
+                        MinIntensity = Mathf.Min(MinIntensity, TempNode.intensity);
+                        MinSharpness = Mathf.Min(MinSharpness, TempNode.sharpness);
+                        MaxSharpness = Mathf.Max(MaxSharpness, TempNode.sharpness);
+                        MaxVariance = Mathf.Max(MaxVariance, TempNode.variance);
+                        MinVariance = Mathf.Min(MinVariance, TempNode.variance);
 
                         TempNode.left = LBVHNode.left;
                         SGTree[WriteIndex] = TempNode;
                     }
                 }
             }
+            Debug.Log("MAX/MIN Intensity: " + MaxIntensity + " : " + MinIntensity);
+            Debug.Log("MAX/MIN Sharpness: " + MaxSharpness + " : " + MinSharpness);
+            Debug.Log("MAX/MIN Variance: " + MaxVariance + " : " + MinVariance);
 
             CommonFunctions.DeepClean(ref nodes);
 #endif
@@ -570,10 +587,10 @@ namespace TrueTrace {
                             TempNode = SGTreeNodes[-(LBVHNode.left+1)];
                             Vector3 ExtendedCenter = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center + new Vector3(TempNode.S.Radius, 0, 0), 1));
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
-                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
+                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(CommonFunctions.UnpackOctahedral(TempNode.axis), 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-                            TempNode.axis = Axis;
+                            TempNode.axis = CommonFunctions.PackOctahedral(Axis);
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
                             TempNode.S.Radius *= Scale;
@@ -587,7 +604,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            V = w_left * CommonFunctions.UnpackOctahedral(LeftNode.axis) * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * CommonFunctions.UnpackOctahedral(RightNode.axis) * VMFSharpnessToAxisLength(RightNode.sharpness);
                             // V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
@@ -601,7 +618,7 @@ namespace TrueTrace {
                             else V /= AxisLength;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
 
-                            TempNode.axis = V;
+                            TempNode.axis = CommonFunctions.PackOctahedral(V);
                             TempNode.S.Center = mean;
                             TempNode.variance = variance;
                             TempNode.intensity = intensity;
@@ -708,10 +725,10 @@ namespace TrueTrace {
                             TempNode = SGTreeNodes[-(LBVHNode.left+1)];
                             Vector3 ExtendedCenter = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center + new Vector3(TempNode.S.Radius, 0, 0), 1));
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
-                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
+                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(CommonFunctions.UnpackOctahedral(TempNode.axis), 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-                            TempNode.axis = Axis;
+                            TempNode.axis = CommonFunctions.PackOctahedral(Axis);
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
                             TempNode.S.Radius *= Scale;
@@ -725,7 +742,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            V = w_left * CommonFunctions.UnpackOctahedral(LeftNode.axis) * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * CommonFunctions.UnpackOctahedral(RightNode.axis) * VMFSharpnessToAxisLength(RightNode.sharpness);
                             // V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
@@ -739,7 +756,7 @@ namespace TrueTrace {
                             else V /= AxisLength;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
 
-                            TempNode.axis = V;
+                            TempNode.axis = CommonFunctions.PackOctahedral(V);
                             TempNode.S.Center = mean;
                             TempNode.variance = variance;
                             TempNode.intensity = intensity;

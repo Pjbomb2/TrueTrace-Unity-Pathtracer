@@ -1669,7 +1669,7 @@ bool IsFinite(float x)
 {
     return (asuint(x) & 0x7F800000) != 0x7F800000;
 }
-
+#ifdef ORIGSGTREE
 inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3 reflecVec, const float3x3 tangentFrame, float metallic) {
 	// if(TargetNode.intensity <= 0) return 0;	
 	float3 to_light = TargetNode.position - p;
@@ -1696,7 +1696,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 
 	to_light = normalize(to_light);
-	const SGLobe LightLobe = sg_product((TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
+	const SGLobe LightLobe = sg_product(i_octahedral_32(TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
 
 	const float emissive = (TargetNode.intensity) / (Variance * SGIntegral(TargetNode.sharpness));
 
@@ -1739,6 +1739,59 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 	return max(emissive * (diffuseIllumination + metallic * specularIllumination), 0.f);
 }
+#else
+inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3 reflecVec, const float3x3 tangentFrame, float metallic) {
+	float3 to_light = TargetNode.position - p;
+	const float squareddist = dot(to_light, to_light);
+
+	to_light *= rsqrt(squareddist);
+	const float c = max(dot(n, -(to_light)),0);
+
+	float Variance = max(TargetNode.variance, (0.00001f) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+
+	const SGLobe LightLobe = sg_product(i_octahedral_32(TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
+
+	const float emissive = (TargetNode.intensity) / (Variance * SGIntegral(TargetNode.sharpness));
+
+	const float amplitude = exp(LightLobe.logAmplitude);
+	const float cosine = (dot(LightLobe.axis, n));
+	const float diffuseIllumination = amplitude * SGClampedCosineProductIntegralOverPi2024(cosine, LightLobe.sharpness);
+[branch]if(metallic > 0) {
+	const float vlen = length(viewDirTS.xz);
+	const float2 v = (vlen != 0.0) ? (viewDirTS.xz / vlen) : float2(1.0, 0.0);
+	const float2x2 reflecJacobianMat = mul(float2x2(v.x, -v.y, v.y, v.x), float2x2(0.5, 0.0, 0.0, 0.5f / viewDirTS.y));
+
+	// Compute JJ^T matrix.
+	const float2x2 jjMat = mul(reflecJacobianMat, transpose(reflecJacobianMat));
+	const float detJJ4 = rcp(4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
+
+	const float LightLobeVariance = rcp(LightLobe.sharpness);
+	// if(id.y > screen_height / 2 + screen_height / 4) LightLobeVariance = LightLobeVariance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	
+	const float2x2 filteredProjRoughnessMat = float2x2(projRoughness2.x, 0.0, 0.0, projRoughness2.y) + 2.0 * LightLobeVariance * jjMat;
+
+	// Compute determinant(filteredProjRoughnessMat) in a numerically stable manner.
+	// See the supplementary document (Section 5.2) of the paper for the derivation.
+	const float det = projRoughness2.x * projRoughness2.y + 2.0 * LightLobeVariance * (projRoughness2.x * jjMat._11 + projRoughness2.y * jjMat._22) + LightLobeVariance * LightLobeVariance * detJJ4;
+
+	// NDF filtering in a numerically stable manner.
+	// See the supplementary document (Section 5.2) of the paper for the derivation.
+	const float tr = filteredProjRoughnessMat._11 + filteredProjRoughnessMat._22;
+	const float2x2 filteredRoughnessMat = min(filteredProjRoughnessMat + float2x2(det, 0.0, 0.0, det), FLT_MAX) * rcp(1.0 + tr + det);//IsFinite(1.0 + tr + det) ? min(filteredProjRoughnessMat + float2x2(det, 0.0, 0.0, det), FLT_MAX) / (1.0 + tr + det) : (float2x2(min(filteredProjRoughnessMat._11, FLT_MAX) / min(filteredProjRoughnessMat._11 + 1.0, FLT_MAX), 0.0, 0.0, min(filteredProjRoughnessMat._22, FLT_MAX) / min(filteredProjRoughnessMat._22 + 1.0, FLT_MAX)));
+
+	// Evaluate the filtered distribution.
+	const float3 halfvecUnormalized = viewDirTS + mul(tangentFrame, LightLobe.axis);
+	const float3 halfvec = halfvecUnormalized * rsqrt(max(dot(halfvecUnormalized, halfvecUnormalized), EPSILON));
+	float pdf = SGGXReflectionPDF(viewDirTS, halfvec, filteredRoughnessMat);
+
+	return max(emissive * (diffuseIllumination + metallic * pdf * amplitude * SGIntegral(LightLobe.sharpness)), 0.f);
+} else
+	return max(emissive * (diffuseIllumination), 0.f);
+}
+
+
+#endif
 
 
 
@@ -1913,15 +1966,13 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
 				p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
 			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
-			    // float scalex = length(mul(Inverse, float3(1,0,0)));
-			    // float scaley = length(mul(Inverse, float3(0,1,0)));
-			    // float scalez = length(mul(Inverse, float3(0,0,1)));
-			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
 				n = normalize(mul(Inverse, n).xyz);
+[branch]if(metallic > 0) {				
 				viewDir = normalize(mul(Inverse, viewDir).xyz);
 				tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
 				viewDirTS = mul(tangentFrame, viewDir);
 				reflecVec = reflect(-viewDir, n) * reflecSharpness;
+			}
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
@@ -1961,7 +2012,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 #else
 	LightBVHData node = NodeBuffer[0];
 #endif
-	while(Reps < 622) {
+	while(Reps < 100) {
 		Reps++;
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
@@ -2008,16 +2059,14 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
 				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
 			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
-			    // float scalex = length(mul(Inverse, float3(1,0,0)));
-			    // float scaley = length(mul(Inverse, float3(0,1,0)));
-			    // float scalez = length(mul(Inverse, float3(0,0,1)));
-			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
 				n = normalize(mul(Inverse, n).xyz);
-				viewDir = normalize(mul(Inverse, viewDir).xyz);
-				tangentFrame = GetTangentSpace2(n);
-				viewDirTS = mul(tangentFrame, viewDir);
-				reflecVec = reflect(-viewDir, n) * reflecSharpness;
+				[branch]if(metallic.x > 0) {
+					viewDir = normalize(mul(Inverse, viewDir).xyz);
+					tangentFrame = GetTangentSpace2(n);
+					viewDirTS = mul(tangentFrame, viewDir);
+					reflecVec = reflect(-viewDir, n) * reflecSharpness;
+				}
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
