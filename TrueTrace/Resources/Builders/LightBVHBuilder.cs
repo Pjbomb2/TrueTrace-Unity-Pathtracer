@@ -407,12 +407,6 @@ namespace TrueTrace {
             ParentBound = nodes2[0];
             nodes2Array.Dispose();
 #if !DontUseSGTree
-                float MaxIntensity = -999999;
-                float MinIntensity = 999999;
-                float MaxSharpness = -999999;
-                float MinSharpness = 999999;
-                float MaxVariance = -999999;
-                float MinVariance = 999999;
             {
                 SGTree = new GaussianTreeNode[nodes.Length];
                 Set = new List<int>[MaxDepth];
@@ -467,21 +461,11 @@ namespace TrueTrace {
                         TempNode.intensity = intensity;
                         TempNode.S.Radius = radius;
 
-                        MaxIntensity = Mathf.Max(MaxIntensity, TempNode.intensity);
-                        MinIntensity = Mathf.Min(MinIntensity, TempNode.intensity);
-                        MinSharpness = Mathf.Min(MinSharpness, TempNode.sharpness);
-                        MaxSharpness = Mathf.Max(MaxSharpness, TempNode.sharpness);
-                        MaxVariance = Mathf.Max(MaxVariance, TempNode.variance);
-                        MinVariance = Mathf.Min(MinVariance, TempNode.variance);
-
                         TempNode.left = LBVHNode.left;
                         SGTree[WriteIndex] = TempNode;
                     }
                 }
             }
-            Debug.Log("MAX/MIN Intensity: " + MaxIntensity + " : " + MinIntensity);
-            Debug.Log("MAX/MIN Sharpness: " + MaxSharpness + " : " + MinSharpness);
-            Debug.Log("MAX/MIN Variance: " + MaxVariance + " : " + MinVariance);
 
             CommonFunctions.DeepClean(ref nodes);
 #endif

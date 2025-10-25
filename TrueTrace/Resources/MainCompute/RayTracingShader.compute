@@ -233,7 +233,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #ifndef UseBRDFLights
             UseBSDFLight = UseBSDFLight || GetBounceData(asuint(PSRScreenData.w)) == 0;
         #endif
-        if (UseBSDFLight) {
+        [branch]if (UseBSDFLight) {
             #ifdef PhotonMapping
                 if (CurBounce == 0) Color.Direct += EmissCol;
                 else if (CurBounce == 1) Color.Indirect += EmissCol;
@@ -248,40 +248,46 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     Color.Indirect += Color.throughput * EmissCol;
                 #endif
             }
-        } else {
-            float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
-            float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
-            float a = AreaOfTriangle(float3(0,0,0), a1, a2);
-            float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
-            float light_pdf = 1.0f / (SA * LightMeshCount);
-            #if defined(LBVH)
-                #ifdef DoubleBufferSGTree
-                    [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
-                    else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
-                #else
-                    CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
-                #endif
-            #else
-                light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
-            #endif
-            float w = power_heuristic(max(last_pdf,0), light_pdf);
-            if (CurBounce == 0) Color.Direct += EmissCol;
-            #ifdef UseBRDFLights
-                #ifdef PhotonMapping
-                    else if (CurBounce == 1) Color.Indirect += EmissCol * w;
-                #else
-                    else if (CurBounce == 1) Color.Direct += EmissCol * w;
-                #endif
-                else {
-                    #ifdef RadCache
-                        if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
-                        else Color.Indirect += Color.throughput * EmissCol * w;
-                    #else
-                        Color.Indirect += Color.throughput * EmissCol * w;
-                    #endif
-                }
-            #endif
         }
+        #ifdef UseBRDFLights
+        else {
+            [branch]if (CurBounce == 0) {
+                Color.Direct += EmissCol;
+            } else {
+                float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
+                float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
+                float a = AreaOfTriangle(float3(0,0,0), a1, a2);
+                float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
+                float light_pdf = 1.0f / (SA * LightMeshCount);
+                #if defined(LBVH)
+                    #ifdef DoubleBufferSGTree
+                        [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
+                        else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+                    #else
+                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+                    #endif
+                #else
+                    light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
+                #endif
+                float w = power_heuristic(max(last_pdf,0), light_pdf);
+                    #ifdef PhotonMapping
+                        if (CurBounce == 1) Color.Indirect += EmissCol * w;
+                        else
+                    #else
+                        if (CurBounce == 1) Color.Direct += EmissCol * w;
+                        else
+                    #endif
+                    {
+                        #ifdef RadCache
+                            if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
+                            else Color.Indirect += Color.throughput * EmissCol * w;
+                        #else
+                            Color.Indirect += Color.throughput * EmissCol * w;
+                        #endif
+                    }
+                }
+        }
+        #endif
         [branch]if(UseReSTIRGI && CurBounce == 1 && FromColorSpecPacked(Color.MetRoughIsSpec).x == 1 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) {
             PrevScreenData.z = -100000.0f;
             PSRScreenData.z = -100000.0f;

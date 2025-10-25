@@ -2057,9 +2057,6 @@ Toolbar toolbar;
          AOContainer.Add(AORadiusField);
          AOContainer.Add(AOStrengthField);
 
-         #if TTAdvancedSettings
-            PlayContainer.Add(CustomToggle("Accurate Mirror Motion Vectors(Experiemental)", "TTReflectionMotionVectors", "A better way to calculate motion vectors for reflections in mirrors and such for ASVGF, requires \"RemoveRasterizationRequirement\""));
-         #endif
          PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping", "Allows for fade mapping"));
          PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows", "Simulates colored glass coloring shadow rays - Stained glass effect"));
          PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing", "Backfacing triangles wont get rendered"));
@@ -2070,6 +2067,7 @@ Toolbar toolbar;
          #if TTAdvancedSettings
             PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "DX12 Only - Uses a higher texture LOD for each bounce, which can help performance"));
             PlayContainer.Add(CustomToggle("Double Buffer Light Tree", "DoubleBufferSGTree", "Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but hurts performance"));
+            PlayContainer.Add(CustomToggle("Use BSDF Lights", "UseBRDFLights", "Toggle for BSDF lights, Turning off can help with fireflies"));
             PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
          #endif
          PlayContainer.Add(CustomToggle("More AO", "MoreAO", "If you want yet more AO", AOContainer, PlayContainer));
@@ -2167,6 +2165,19 @@ Toolbar toolbar;
          TimelineBox.Add(TimelineAbsolutePath);
 
 
+         VisualElement CounterBox = new VisualElement();
+         CounterBox.style.flexDirection = FlexDirection.Row;
+         Label CounterLabel = new Label() {text = "Counter Path: "};
+         CounterLabel.style.color = Color.black;
+         if(System.IO.Directory.Exists(PlayerPrefs.GetString("CounterPath"))) CounterLabel.style.backgroundColor = Color.green;
+         else CounterLabel.style.backgroundColor = Color.red;
+         TextField CounterAbsolutePath = new TextField();
+         CounterAbsolutePath.value = PlayerPrefs.GetString("CounterPath");
+         CounterAbsolutePath.RegisterValueChangedCallback(evt => {if(System.IO.Directory.Exists(evt.newValue)) {CounterLabel.style.backgroundColor = Color.green;} else {CounterLabel.style.backgroundColor = Color.red;} PlayerPrefs.SetString("CounterPath", evt.newValue);});
+         CounterBox.Add(CounterLabel);
+         CounterBox.Add(CounterAbsolutePath);
+
+
          Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "(Debug Button)Correct Mat Options"};
 
 
@@ -2208,6 +2219,7 @@ Toolbar toolbar;
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);
          HardSettingsMenu.Add(TimelineBox);
+         HardSettingsMenu.Add(CounterBox);
          // HardSettingsMenu.Add(CorrectMatOptionsButton);
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          
@@ -2683,8 +2695,7 @@ Toolbar toolbar;
 
       public static void IncrementRenderCounter() {
          #if TTIncrementRenderCounter
-            string Path = Application.persistentDataPath + "/TTStats.txt";
-            Debug.Log(Path);
+            string Path = PlayerPrefs.GetString("CounterPath") + "/TTStats.txt";
             List<string> RenderStatData = new List<string>();
             DateTime CurrentDate = DateTime.Now;
             string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
@@ -2764,6 +2775,9 @@ Slider AperatureSlider;
             }
             if(!PlayerPrefs.HasKey("TimelinePath")) {
                PlayerPrefs.SetString("TimelinePath",  BasePath + "/TrueTrace/TimelineFrames");
+            }
+            if(!PlayerPrefs.HasKey("CounterPath")) {
+               PlayerPrefs.SetString("CounterPath",  Application.persistentDataPath);
             }
             if(!PlayerPrefs.HasKey("TurnTablePath")) {
                PlayerPrefs.SetString("TurnTablePath",  BasePath + "/TrueTrace/TurnTables");

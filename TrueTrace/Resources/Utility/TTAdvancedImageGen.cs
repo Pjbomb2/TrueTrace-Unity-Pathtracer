@@ -43,9 +43,7 @@ namespace TrueTrace {
 
       public static void IncrementRenderCounter() {
         #if TTIncrementRenderCounter
-
-         string Path = Application.persistentDataPath + "/TTStats.txt";
-         Debug.Log(Path);
+         string Path = PlayerPrefs.GetString("CounterPath") + "/TTStats.txt";
          List<string> RenderStatData = new List<string>();
          DateTime CurrentDate = DateTime.Now;
          string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
