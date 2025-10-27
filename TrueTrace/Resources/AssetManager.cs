@@ -1797,12 +1797,14 @@ namespace TrueTrace {
              if(LightAABBs != null && LightAABBs.Length != 0 && LBVHTLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 CommonFunctions.DeepClean(ref LBVHLeaves);
                 CommonFunctions.DeepClean(ref ParentList);
+                    LBVHLeaves = new List<int>();
 #if !DontUseSGTree
                     ParentList = new Vector2Int[SGTree.Length];
+                    if(SGTree.Length != 0);
 #else
                     ParentList = new Vector2Int[LBVH.nodes.Length];
+                    if(LBVH.nodes.Length != 0);
 #endif
-                    LBVHLeaves = new List<int>();
                     Refit2(0,0);
                     int LBVHLeaveCount = LBVHLeaves.Count;
                     for(int i = 0; i < LBVHLeaveCount; i++) {
@@ -2190,12 +2192,14 @@ namespace TrueTrace {
                 #endif
                     CommonFunctions.DeepClean(ref LBVHLeaves);
                     CommonFunctions.DeepClean(ref ParentList);
+                    LBVHLeaves = new List<int>();
 #if !DontUseSGTree
                     ParentList = new Vector2Int[SGTree.Length];
+                    if(SGTree.Length != 0)
 #else
                     ParentList = new Vector2Int[LBVH.nodes.Length];
+                    if(LBVH.nodes.Length != 0)
 #endif
-                    LBVHLeaves = new List<int>();
                     Refit2(0,0);
                     int LBVHLeaveCount = LBVHLeaves.Count;
                     for(int i = 0; i < LBVHLeaveCount; i++) {
