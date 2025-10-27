@@ -1555,7 +1555,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float amplitude = exp(LightLobe.logAmplitude);
 	const float cosine = (dot(LightLobe.axis, n));
 	const float diffuseIllumination = amplitude * SGClampedCosineProductIntegralOverPi2024(cosine, LightLobe.sharpness);
-	[branch]if(metallic > 0) {
+	[branch]if(metallic > 0.001f) {
 		const float LightLobeVariance = rcp(LightLobe.sharpness);
 		const float2x2 filteredProjRoughnessMat = float2x2(projRoughness2.x, 0.0, 0.0, projRoughness2.y) + 2.0 * LightLobeVariance * jjMat;
 		const float det = projRoughness2.x * projRoughness2.y + 2.0 * LightLobeVariance * (projRoughness2.x * jjMat._11 + projRoughness2.y * jjMat._22) + LightLobeVariance * LightLobeVariance * detJJ4;
@@ -1643,9 +1643,9 @@ float3 DominantVisibleGGXNormal(const float3 wi, const float2 roughness)
 }
 
 #ifdef UseSGTree
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const uint LightPathFlag, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #else
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const uint LightPathFlag, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #endif
 	int node_index = 0;
 	int Reps = 0;
@@ -1674,9 +1674,10 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 	LightBVHData node = NodeBuffer[node_index];
 #endif
 	uint PathFlags = MeshBuffer[MeshIndex].PathFlags;
-	while(Reps < 100) {
-		Reps++;
+	int DepthAfterTLAS = 0;
+	while(Reps < 200) {
 		[branch]if(node.left >= 0) {
+			Reps++;
 #ifdef UseSGTree
 			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
 			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
@@ -1692,7 +1693,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				Importance(p, n, NodeB, HasHitTLAS)
 			);
 #endif
-			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
+			// if(ci.x == 0 && ci.y == 0) {lightPDF = 0; return;}
 
 		    float sumweights = (ci.x + ci.y);
             float up = RandNum * sumweights;
@@ -1707,29 +1708,38 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 
 
 			int Index;
-			if(!HasHitTLAS && Reps < 32) {
-				Index = (PathFlags >> Reps) & 0x1;
+			if(!HasHitTLAS && Reps < 33) {
+				Index = (PathFlags >> (Reps - 1)) & 0x1;
 			} else {
+#ifdef UseSGTree
+				[branch]if((Reps - DepthAfterTLAS - 1 <= 31)) {
+					Index = (LightPathFlag >> (Reps - DepthAfterTLAS - 1)) & 0x1;
+				} else {
+#endif
+					Index = CalcInside(NodeA, NodeB, p2, offset);
 
-				Index = CalcInside(NodeA, NodeB, p2, offset);
-
-				if(Index == -1) {
-					if(stacksize == 0) {return;}
-					float3 tempstack = stack[--stacksize];
-					node_index = tempstack.x;
-					lightPDF = tempstack.y;
-					RandNum = tempstack.z;
-					node = NodeBuffer[node_index];
-					continue;
+					if(Index == -1) {
+						if(stacksize == 0) {return;}
+						float3 tempstack = stack[--stacksize];
+						node_index = tempstack.x;
+						lightPDF = tempstack.y;
+						RandNum = tempstack.z;
+						node = NodeBuffer[node_index];
+						continue;
+					}
+					if(Index >= 2) {
+						Index -= 2;
+						if(stacksize < 10)
+						stack[stacksize++] = float3(node.left + NodeOffset + !Index, lightPDF * (ci[!Index] / sumweights), min((up - sum) / ci[!Index], 1.0f - (1e-6)));
+					}
+					// Index = RandNum >= (ci.x / sumweights);
+#ifdef UseSGTree
 				}
-				if(Index >= 2) {
-					Index -= 2;
-					stack[stacksize++] = float3(node.left + NodeOffset + !Index, lightPDF * (ci[!Index] / sumweights), min((up - sum) / ci[!Index], 1.0f - (1e-6)));
-				}
+#endif
 			}
             RandNum = min((up - sum) / ci[Index], 1.0f - (1e-6));
             node_index = node.left + Index + NodeOffset;
-            lightPDF *= ci[Index] / sumweights;
+            if(sumweights != 0) lightPDF *= ci[Index] / sumweights;
 			if(Index) node = NodeB;
 			else node = NodeA;
 		} else {
@@ -1752,6 +1762,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 					jjMat = mul(reflecJacobianMat2, transpose(reflecJacobianMat2));//so this can all be precomputed, but thats actually slower for some reaon??
 					detJJ4 = rcp(4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
 				}
+				DepthAfterTLAS = Reps;
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
@@ -1784,7 +1795,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	const float2 ProjRoughness2 = roughness2 / max(1.0 - roughness2, EPSILON);
 	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
 	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
-	float RandNum = random(264 + Reps, pixel_index).x;
+	float RandNum = random(264, pixel_index).x;
 	const float vlen = length(viewDirTS.xz);
 	const float2 v = (vlen != 0.0) ? (viewDirTS.xz / vlen) : float2(1.0, 0.0);
 	const float2x2 reflecJacobianMat = mul(float2x2(v.x, -v.y, v.y, v.x), float2x2(0.5, 0.0, 0.0, 0.5f / viewDirTS.y));

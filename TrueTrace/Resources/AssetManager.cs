@@ -1795,6 +1795,26 @@ namespace TrueTrace {
             #endif
 
              if(LightAABBs != null && LightAABBs.Length != 0 && LBVHTLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
+                CommonFunctions.DeepClean(ref LBVHLeaves);
+                CommonFunctions.DeepClean(ref ParentList);
+#if !DontUseSGTree
+                    ParentList = new Vector2Int[SGTree.Length];
+#else
+                    ParentList = new Vector2Int[LBVH.nodes.Length];
+#endif
+                    LBVHLeaves = new List<int>();
+                    Refit2(0,0);
+                    int LBVHLeaveCount = LBVHLeaves.Count;
+                    for(int i = 0; i < LBVHLeaveCount; i++) {
+#if !DontUseSGTree
+                        int Index = LightMeshes[-(SGTree[LBVHLeaves[i]].left+1)].LockedMeshIndex;
+#else
+                        int Index = LightMeshes[-(LBVH.nodes[LBVHLeaves[i]].left+1)].LockedMeshIndex;
+#endif
+                    MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
+                    TempDat.PathFlags = CalcBitField(LBVHLeaves[i]);
+                    MyMeshesCompacted[Index] = TempDat;
+                }
                 if(LightMeshCount > 0) {
                     int RendQueCount = RenderQue.Count;
                     for (int i = 0; i < LightMeshCount; i++) {
@@ -1855,31 +1875,68 @@ namespace TrueTrace {
                 }
         }
 
-        private void Refit3(int Depth, int CurrentIndex, uint LRPath) {
-#if !DontUseSGTree
-            if(CurrentIndex >= SGTree.Length) return;
-            if(SGTree[CurrentIndex].left < 0) {
-                int Index = LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex;
-                MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
-#else
-            if(LBVH == null || LBVH.nodes == null || CurrentIndex >= LBVH.nodes.Length) return;
-            if(LBVH.nodes[CurrentIndex].left < 0) {
-                int Index = LightMeshes[-(LBVH.nodes[CurrentIndex].left+1)].LockedMeshIndex;
-                MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
+        public Vector2Int[] ParentList;
+        public List<int> LBVHLeaves;
 
+        public uint CalcBitField(int Index) {
+            int Parent = ParentList[Index].x;
+#if !DontUseSGTree
+            bool IsLeft = SGTree[Parent].left == Index;
+#else
+            bool IsLeft = LBVH.nodes[Parent].left == Index;
 #endif
-                TempDat.PathFlags = LRPath;
-                MyMeshesCompacted[Index] = TempDat;
+            uint Flag = (IsLeft ? 0u : 1u) << ParentList[Index].y;
+            if(ParentList[Index].y == 0) return Flag;
+            return Flag | CalcBitField(ParentList[Index].x);
+        }
+
+        private void Refit2(int Depth, int CurrentIndex) {
+#if !DontUseSGTree
+            if(SGTree[CurrentIndex].left < 0) {
+                LBVHLeaves.Add(CurrentIndex);
                 return;
             }
-#if !DontUseSGTree
-            Refit3(Depth + 1, SGTree[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
-            Refit3(Depth + 1, SGTree[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
+            ParentList[SGTree[CurrentIndex].left] = new Vector2Int(CurrentIndex, Depth);
+            ParentList[SGTree[CurrentIndex].left + 1] = new Vector2Int(CurrentIndex, Depth);
+            Refit2(Depth + 1, SGTree[CurrentIndex].left);
+            Refit2(Depth + 1, SGTree[CurrentIndex].left + 1);
 #else
-            Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
-            Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
+            if(LBVH.nodes[CurrentIndex].left < 0) {
+                LBVHLeaves.Add(CurrentIndex);
+                return;
+            }
+            ParentList[LBVH.nodes[CurrentIndex].left] = new Vector2Int(CurrentIndex, Depth);
+            ParentList[LBVH.nodes[CurrentIndex].left + 1] = new Vector2Int(CurrentIndex, Depth);
+            Refit2(Depth + 1, LBVH.nodes[CurrentIndex].left);
+            Refit2(Depth + 1, LBVH.nodes[CurrentIndex].left + 1);
 #endif
         }
+
+//         private void Refit3(int Depth, int CurrentIndex, uint LRPath) {
+// #if !DontUseSGTree
+//             if(CurrentIndex >= SGTree.Length) return;
+//             if(SGTree[CurrentIndex].left < 0) {
+//                 int Index = LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex;
+//                 MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
+// #else
+//             if(LBVH == null || LBVH.nodes == null || CurrentIndex >= LBVH.nodes.Length) return;
+//             if(LBVH.nodes[CurrentIndex].left < 0) {
+//                 int Index = LightMeshes[-(LBVH.nodes[CurrentIndex].left+1)].LockedMeshIndex;
+//                 MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
+
+// #endif
+//                 TempDat.PathFlags = LRPath;
+//                 MyMeshesCompacted[Index] = TempDat;
+//                 return;
+//             }
+// #if !DontUseSGTree
+//             Refit3(Depth + 1, SGTree[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
+//             Refit3(Depth + 1, SGTree[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
+// #else
+//             Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
+//             Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
+// #endif
+//         }
 
         private bool ChangedLastFrame = true;
         private RayTracingMaster RayMaster;
@@ -2131,7 +2188,27 @@ namespace TrueTrace {
                 #if !HardwareRT
                     BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, BVHNodeCount);
                 #endif
-                Refit3(0,0,0);
+                    CommonFunctions.DeepClean(ref LBVHLeaves);
+                    CommonFunctions.DeepClean(ref ParentList);
+#if !DontUseSGTree
+                    ParentList = new Vector2Int[SGTree.Length];
+#else
+                    ParentList = new Vector2Int[LBVH.nodes.Length];
+#endif
+                    LBVHLeaves = new List<int>();
+                    Refit2(0,0);
+                    int LBVHLeaveCount = LBVHLeaves.Count;
+                    for(int i = 0; i < LBVHLeaveCount; i++) {
+#if !DontUseSGTree
+                        int Index = LightMeshes[-(SGTree[LBVHLeaves[i]].left+1)].LockedMeshIndex;
+#else
+                        int Index = LightMeshes[-(LBVH.nodes[LBVHLeaves[i]].left+1)].LockedMeshIndex;
+#endif
+                        MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
+                        TempDat.PathFlags = CalcBitField(LBVHLeaves[i]);
+                        MyMeshesCompacted[Index] = TempDat;
+                    }
+                // Refit3(0,0,0);
                 CommonFunctions.CreateComputeBuffer(ref MeshDataBufferA, MyMeshesCompacted);
                 CommonFunctions.CreateComputeBuffer(ref MeshDataBufferB, MyMeshesCompacted);
                 #if HardwareRT

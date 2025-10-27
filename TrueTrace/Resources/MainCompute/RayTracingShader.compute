@@ -229,7 +229,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         hitDat.emission *= Tr;// / pdf3;// / pdf;
 #endif
         float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
-        bool UseBSDFLight = !UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0;
+        #ifdef UseSGTree
+            bool UseBSDFLight = !UseNEE || (AggTrisB[hit.triangle_id].IsEmissive == 0 && _MeshData[hit.mesh_id].LightTriCount == 0);
+        #else
+            bool UseBSDFLight = !UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0;
+        #endif
         #ifndef UseBRDFLights
             UseBSDFLight = UseBSDFLight || GetBounceData(asuint(PSRScreenData.w)) == 0;
         #endif
@@ -258,15 +262,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
                 float a = AreaOfTriangle(float3(0,0,0), a1, a2);
                 float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
-                float light_pdf = 1.0f / (SA * LightMeshCount);
+                float light_pdf = 1.0f / (SA);
                 #if defined(LBVH)
                     #ifdef DoubleBufferSGTree
-                        [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
-                        else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+                        [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, AggTrisB[hit.triangle_id].IsEmissive, SGTreePrev, _MeshDataPrev);
+                        else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, AggTrisB[hit.triangle_id].IsEmissive, SGTree, _MeshData);
                     #else
-                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, AggTrisB[hit.triangle_id].IsEmissive, SGTree, _MeshData);
                     #endif
                 #else
+                    light_pdf /= (float)LightMeshCount;
                     light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
                 #endif
                 float w = power_heuristic(max(last_pdf,0), light_pdf);

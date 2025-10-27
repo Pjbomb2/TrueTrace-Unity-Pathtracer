@@ -951,8 +951,9 @@ namespace TrueTrace {
 
         unsafe public void Construct()
         {
-
 #if TTTriSplitting && !HardwareRT
+            NativeArray<int> ReverseIndexesLightCounterArray = default;
+            int* ReverseIndexesLightCounter = default;
             if(!IsSkinnedGroup && !IsDeformable) {
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Start();
@@ -990,9 +991,15 @@ namespace TrueTrace {
                 bool HasLightTriangles = Coun2 > 0;
                 NativeArray<int> ReverseIndexesArray = default;
                 int* ReverseIndexes = default;
+                NativeArray<int> ReverseIndexesCounterArray = default;
+                int* ReverseIndexesCounter = default;
                 if(HasLightTriangles) {
-                    ReverseIndexesArray = new NativeArray<int>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                    ReverseIndexesLightCounterArray = new NativeArray<int>(Coun2, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                    ReverseIndexesLightCounter = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(ReverseIndexesLightCounterArray);
+                    ReverseIndexesArray = new NativeArray<int>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
                     ReverseIndexes = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(ReverseIndexesArray);
+                    ReverseIndexesCounterArray = new NativeArray<int>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
+                    ReverseIndexesCounter = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(ReverseIndexesCounterArray);
                 }
                 int counter = 0;
 
@@ -1012,7 +1019,10 @@ namespace TrueTrace {
                         if (TempSplit.splitsLeft == 1) {
                             Triangles[counter] = TempSplit.box;
                             NewTris[counter] = triangle;
-                            if(HasLightTriangles) ReverseIndexes[i] = counter;
+                            if(HasLightTriangles) {
+                                if(ReverseIndexes[i] == 0) ReverseIndexes[i] = counter + 1;
+                                ReverseIndexesCounter[i]++;
+                            }
                             counter++;
                             continue;
                         }
@@ -1065,10 +1075,12 @@ namespace TrueTrace {
                 if(HasLightTriangles) {
                     for(int i = 0; i < Coun2; i++) {
                         LightTriData TempTri = LightTriangles[i];
-                        TempTri.TriTarget = (uint)ReverseIndexes[TempTri.TriTarget];
-                        LightTriangles[i] = TempTri;                
+                        ReverseIndexesLightCounter[i] = ReverseIndexesCounter[TempTri.TriTarget];            
+                        TempTri.TriTarget = (uint)ReverseIndexes[TempTri.TriTarget] - 1;
+                        LightTriangles[i] = TempTri;    
                     }
                     ReverseIndexesArray.Dispose();
+                    ReverseIndexesCounterArray.Dispose();
                 }
 
 #if TTExtraVerbose && TTVerbose
@@ -1123,7 +1135,12 @@ namespace TrueTrace {
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Start();
 #endif
+#if TTTriSplitting && !HardwareRT
+                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles, ReverseIndexesLightCounter);
+                ReverseIndexesLightCounterArray.Dispose();
+#else
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles);
+#endif
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Stop("Light BVH for " + LightTriangles.Count + " Emissive triangles");
 #endif

@@ -269,6 +269,40 @@ namespace TrueTrace {
             Refit(Depth + 1, nodes2[CurrentIndex].left + 1);
         }
 
+        public Vector2Int[] ParentList;
+
+        public uint CalcBitField(int Index) {
+            int Parent = ParentList[Index].x;
+            bool IsLeft = nodes[Parent].left == Index;
+            uint Flag = (ParentList[Index].y <= 31) ? ((IsLeft ? 0u : 1u) << ParentList[Index].y) : 0u;
+            if(ParentList[Index].y == 0) return Flag;
+            return Flag | CalcBitField(ParentList[Index].x);
+        }
+        List<LightTriData> Tris2;
+        public uint TestBitField(int Depth, int Index, uint BitField, uint DesiredIndex) {
+            if(Depth > 31) {
+                Debug.LogError("BROKE");
+                return 0;
+            }
+            if(nodes[Index].left < 0) {
+                if(Tris2[-(nodes[Index].left+1)].TriTarget == DesiredIndex) return 1;
+                Debug.LogError("STUFF: " + Tris2[-(nodes[Index].left+1)].TriTarget + " : " + DesiredIndex);
+                return 0;
+            }
+            bool IsLeft = ((BitField >> Depth) & 0x1) == 0u;
+            return TestBitField(Depth + 1, IsLeft ? nodes[Index].left : (nodes[Index].left + 1), BitField, DesiredIndex);
+        }
+
+        private void Refit3(int Depth, int CurrentIndex) {
+            if((float)System.Math.Cos((double)(2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f)) == 0) return;
+            Set[Depth].Add(CurrentIndex);
+            if(nodes[CurrentIndex].left < 0) return;
+            ParentList[nodes[CurrentIndex].left] = new Vector2Int(CurrentIndex, Depth);
+            ParentList[nodes[CurrentIndex].left + 1] = new Vector2Int(CurrentIndex, Depth);
+            Refit3(Depth + 1, nodes[CurrentIndex].left);
+            Refit3(Depth + 1, nodes[CurrentIndex].left + 1);
+        }
+
         private void Refit2(int Depth, int CurrentIndex) {
             if((float)System.Math.Cos((double)(2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f)) == 0) return;
             Set[Depth].Add(CurrentIndex);
@@ -326,9 +360,14 @@ namespace TrueTrace {
 
 
 
+#if TTTriSplitting && !HardwareRT
+        public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles, int* ReverseIndexesLightCounter) {//need to make sure incomming is transformed to world space already
+#else
         public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles) {//need to make sure incomming is transformed to world space already
+#endif
             PrimCount = Tris.Count;          
             MaxDepth = 0;
+            Tris2 = Tris;
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             
             nodes2Array = new NativeArray<NodeBounds>(PrimCount * 2, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
@@ -407,13 +446,14 @@ namespace TrueTrace {
             ParentBound = nodes2[0];
             nodes2Array.Dispose();
 #if !DontUseSGTree
+
             {
                 SGTree = new GaussianTreeNode[nodes.Length];
                 Set = new List<int>[MaxDepth];
                 for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
-                Refit2(0, 0);
+                ParentList = new Vector2Int[nodes.Length];
+                Refit3(0, 0);
                 GaussianTreeNode TempNode = new GaussianTreeNode();
-
                 for(int i = MaxDepth - 1; i >= 0; i--) {
                     int SetCount = Set[i].Count;
                     for(int j = 0; j < SetCount; j++) {
@@ -427,6 +467,28 @@ namespace TrueTrace {
                         if(LBVHNode.left < 0) {
                             LightTriData ThisLight = Tris[-(LBVHNode.left+1)];
                             CudaTriangle TempTri = AggTriangles[ThisLight.TriTarget];
+                            TempTri.IsEmissive = CalcBitField(WriteIndex);
+#if TTTriSplitting && !HardwareRT
+                            int CounterCoun = ReverseIndexesLightCounter[-(LBVHNode.left+1)];
+                            for(int k = 0; k < CounterCoun; k++) {
+                                AggTriangles[ThisLight.TriTarget + k] = TempTri;
+                            }
+#else
+                            AggTriangles[ThisLight.TriTarget] = TempTri;
+#endif
+                            // string temp = "";
+                            // for(int i4 = 0; i4 < 32; i4++) {
+                            //     if(((TempTri.IsEmissive >> i4) & 0x1) == 0u) temp += "0";
+                            //     else temp += "1";
+                            // }
+                            // char[] charArray = temp.ToCharArray();
+                            // Array.Reverse(charArray);
+                            // temp = new string(charArray);
+                            // Debug.Log("PATH: " + temp);
+
+                            // Debug.Log
+                            // if(TestBitField(0, 0, TempTri.IsEmissive, ThisLight.TriTarget) == 0u) Debug.LogError("BROKE AT: ");
+
                             float area = AreaOfTriangle(TempTri.pos0, TempTri.pos0 + TempTri.posedge1, TempTri.pos0 + TempTri.posedge2);
 
                             intensity = ThisLight.SourceEnergy * area;
@@ -770,6 +832,7 @@ namespace TrueTrace {
             // SAHArray.Dispose();
             // indices_going_left_array.Dispose();
             // tempArray.Dispose();
+            CommonFunctions.DeepClean(ref ParentList);
             CommonFunctions.DeepClean(ref FinalIndices);
             CommonFunctions.DeepClean(ref nodes);
 #if !DontUseSGTree
