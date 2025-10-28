@@ -951,9 +951,9 @@ namespace TrueTrace {
 
         unsafe public void Construct()
         {
-#if TTTriSplitting && !HardwareRT
             NativeArray<int> ReverseIndexesLightCounterArray = default;
             int* ReverseIndexesLightCounter = default;
+#if TTTriSplitting && !HardwareRT
             if(!IsSkinnedGroup && !IsDeformable) {
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Start();
@@ -1095,7 +1095,7 @@ namespace TrueTrace {
 #endif
 #if TTTriSplitting && !HardwareRT
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles, ReverseIndexesLightCounter, IsSkinnedGroup || IsDeformable);
-                ReverseIndexesLightCounterArray.Dispose();
+                if(ReverseIndexesLightCounterArray != null && ReverseIndexesLightCounterArray.IsCreated) ReverseIndexesLightCounterArray.Dispose();
 #else
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles);
 #endif
