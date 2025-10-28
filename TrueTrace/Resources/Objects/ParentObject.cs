@@ -1089,6 +1089,21 @@ namespace TrueTrace {
             }
 #endif
 
+            if(LightTriangles.Count > 0) {
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Start();
+#endif
+#if TTTriSplitting && !HardwareRT
+                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles, ReverseIndexesLightCounter, IsSkinnedGroup || IsDeformable);
+                ReverseIndexesLightCounterArray.Dispose();
+#else
+                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles);
+#endif
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Stop("Light BVH for " + LightTriangles.Count + " Emissive triangles");
+#endif
+            }
+
             tempAABB = new AABB();
             MaxRecur = 0;
             int PrevLength = TrianglesArray.Length;
@@ -1128,22 +1143,6 @@ namespace TrueTrace {
                 WorkingSetCWBVH = new List<Layer2>();
                 TotalCounter = 0;
                 DocumentNodes(0, 0);
-            }
-
-
-            if(LightTriangles.Count > 0) {
-#if TTExtraVerbose && TTVerbose
-                MainWatch.Start();
-#endif
-#if TTTriSplitting && !HardwareRT
-                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles, ReverseIndexesLightCounter);
-                ReverseIndexesLightCounterArray.Dispose();
-#else
-                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles);
-#endif
-#if TTExtraVerbose && TTVerbose
-                MainWatch.Stop("Light BVH for " + LightTriangles.Count + " Emissive triangles");
-#endif
             }
 
             int LightTriLength = LightTriangles.Count;

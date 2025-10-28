@@ -672,80 +672,6 @@ float3 unpackRGBE(uint x)
     return v;
 }
 
-float encode_diamond(float2 p)
-{
-    // Project to the unit diamond, then to the x-axis.
-    float x = p.x / (abs(p.x) + abs(p.y));
-
-    // Contract the x coordinate by a factor of 4 to represent all 4 quadrants in
-    // the unit range and remap
-    float py_sign = sign(p.y);
-    return -py_sign * 0.25f * x + 0.5f + py_sign * 0.25f;
-}
-
-float2 decode_diamond(float p)
-{
-    float2 v;
-
-    // Remap p to the appropriate segment on the diamond
-    float p_sign = sign(p - 0.5f);
-    v.x = -p_sign * 4.f * p + 1.f + p_sign * 2.f;
-    v.y = p_sign * (1.f - abs(v.x));
-
-    // Normalization extends the point on the diamond back to the unit circle
-    return normalize(v);
-}
-
-// Given a normal and tangent vector, encode the tangent as a single float that can be
-// subsequently quantized.
-float encode_tangent(float3 normal, float3 tangent)
-{
-    // First, find a canonical direction in the tangent plane
-    float3 t1;
-    if (abs(normal.y) > abs(normal.z))
-    {
-        // Pick a canonical direction orthogonal to n with z = 0
-        t1 = float3(normal.y, -normal.x, 0.f);
-    }
-    else
-    {
-        // Pick a canonical direction orthogonal to n with y = 0
-        t1 = float3(normal.z, 0.f, -normal.x);
-    }
-    t1 = normalize(t1);
-
-    // Construct t2 such that t1 and t2 span the plane
-    float3 t2 = cross(t1, normal);
-
-    // Decompose the tangent into two coordinates in the canonical basis
-    float2 packed_tangent = float2(dot(tangent, t1), dot(tangent, t2));
-
-    // Apply our diamond encoding to our two coordinates
-    return encode_diamond(packed_tangent);
-}
-
-float3 decode_tangent(float3 normal, float diamond_tangent)
-{
-    // As in the encode step, find our canonical tangent basis span(t1, t2)
-    float3 t1;
-    if (abs(normal.y) > abs(normal.z))
-    {
-        t1 = float3(normal.y, -normal.x, 0.f);
-    }
-    else
-    {
-        t1 = float3(normal.z, 0.f, -normal.x);
-    }
-    t1 = normalize(t1);
-
-    float3 t2 = cross(t1, normal);
-
-    // Recover the coordinates used with t1 and t2
-    float2 packed_tangent = decode_diamond(diamond_tangent);
-
-    return packed_tangent.x * t1 + packed_tangent.y * t2;
-}
-
 
 bool IsOrtho;
 float OrthoSize;
@@ -1538,7 +1464,27 @@ bool IsFinite(float x) {
     return (asuint(x) & 0x7F800000) != 0x7F800000;
 }
 
-inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3x3 tangentFrame, const float metallic, const float2x2 jjMat, const float detJJ4) {
+float SGImportanceDiffuse(const GaussianTreeNode TargetNode, const float3 p, const float3 n) {
+	float3 to_light = TargetNode.position - p;
+	const float squareddist = dot(to_light, to_light);
+
+	to_light *= rsqrt(squareddist);
+	const float c = max(dot(n, -(to_light)),0);
+
+	float Variance = max(TargetNode.variance, (0.00001f) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+
+	const SGLobe LightLobe = sg_product(i_octahedral_32(TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
+
+	const float emissive = (TargetNode.intensity) / (Variance * SGIntegral(TargetNode.sharpness));
+
+	const float amplitude = exp(LightLobe.logAmplitude);
+	const float cosine = (dot(LightLobe.axis, n));
+	const float diffuseIllumination = amplitude * SGClampedCosineProductIntegralOverPi2024(cosine, LightLobe.sharpness);
+	return max(emissive * (diffuseIllumination), 0.f);
+}
+
+float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3x3 tangentFrame, const float metallic, const float2x2 jjMat, const float detJJ4) {
 	float3 to_light = TargetNode.position - p;
 	const float squareddist = dot(to_light, to_light);
 
@@ -1581,7 +1527,7 @@ inline float sinSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b,
 	return sinTheta_a * cosTheta_b - cosTheta_a * sinTheta_b;
 }
 
-float Importance(const float3 p, const float3 n, LightBVHData node, bool HasHitTLAS)
+float Importance(const float3 p, const float3 n, LightBVHData node)
 {//Taken straight from pbrt
 	float cosTheta_o = (2.0f * ((float)(node.cosTheta_oe & 0x0000FFFF) / 32767.0f) - 1.0f);
     float3 pc = (node.BBMax + node.BBMin) / 2.0f;
@@ -1637,15 +1583,10 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	} else return -1;
 }
 
-float3 DominantVisibleGGXNormal(const float3 wi, const float2 roughness)
-{
-	return normalize(float3(roughness * roughness * wi.xy, wi.z + length(float3(roughness * wi.xy, wi.z))));
-}
-
 #ifdef UseSGTree
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const uint LightPathFlag, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const uint LightPathFlag, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #else
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const uint LightPathFlag, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const uint LightPathFlag, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #endif
 	int node_index = 0;
 	int Reps = 0;
@@ -1656,18 +1597,6 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 	float RandNum = random(264, pixel_index).x;
 	
 
-	float3x3 tangentFrame = GetTangentSpace2(n);
-	const float2 roughness2 = sharpness * sharpness;
-	const float2 ProjRoughness2 = roughness2 / max(1.0 - roughness2, EPSILON);
-	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
-	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
-	const float vlen = length(viewDirTS.xz);
-	const float2 v = (vlen != 0.0) ? (viewDirTS.xz / vlen) : float2(1.0, 0.0);
-	const float2x2 reflecJacobianMat = mul(float2x2(v.x, -v.y, v.y, v.x), float2x2(0.5, 0.0, 0.0, 0.5f / viewDirTS.y));
-
-	// Compute JJ^T matrix.
-	float2x2 jjMat = mul(reflecJacobianMat, transpose(reflecJacobianMat));//so this can all be precomputed, but thats actually slower for some reaon??
-	float detJJ4 = rcp(4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
 #ifdef UseSGTree
 	GaussianTreeNode node = NodeBuffer[node_index];
 #else
@@ -1682,15 +1611,15 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
 			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				SGImportance(NodeA, viewDirTS, p, n, ProjRoughness2, tangentFrame, metallic, jjMat, detJJ4),
-				SGImportance(NodeB, viewDirTS, p, n, ProjRoughness2, tangentFrame, metallic, jjMat, detJJ4)
+				SGImportanceDiffuse(NodeA, p, n),
+				SGImportanceDiffuse(NodeB, p, n)
 			);
 #else
 			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
 			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				Importance(p, n, NodeA, HasHitTLAS),
-				Importance(p, n, NodeB, HasHitTLAS)
+				Importance(p, n, NodeA),
+				Importance(p, n, NodeB)
 			);
 #endif
 			// if(ci.x == 0 && ci.y == 0) {lightPDF = 0; return;}
@@ -1712,8 +1641,8 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				Index = (PathFlags >> (Reps - 1)) & 0x1;
 			} else {
 #ifdef UseSGTree
-				[branch]if((Reps - DepthAfterTLAS - 1 <= 31)) {
-					Index = (LightPathFlag >> (Reps - DepthAfterTLAS - 1)) & 0x1;
+				[branch]if((Reps < 33)) {
+					Index = (LightPathFlag >> (Reps - 1)) & 0x1;
 				} else {
 #endif
 					Index = CalcInside(NodeA, NodeB, p2, offset);
@@ -1743,29 +1672,18 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 			if(Index) node = NodeB;
 			else node = NodeA;
 		} else {
-			if(HasHitTLAS) {
+			[branch]if(HasHitTLAS) {
 				return;	
 			} else {
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
 				p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
-			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
+			    float3x3 Inverse = inverse(MeshBuffer[MeshIndex].W2L);
 				n = normalize(mul(Inverse, n).xyz);
-				[branch]if(metallic > 0) {				
-					viewDir = normalize(mul(Inverse, viewDir).xyz);
-					tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
-					viewDirTS = mul(tangentFrame, viewDir);
-					const float vlen2 = length(viewDirTS.xz);
-					const float2 v2 = (vlen2 != 0.0) ? (viewDirTS.xz / vlen2) : float2(1.0, 0.0);
-					const float2x2 reflecJacobianMat2 = mul(float2x2(v2.x, -v2.y, v2.y, v2.x), float2x2(0.5, 0.0, 0.0, 0.5f / viewDirTS.y));
-
-					// Compute JJ^T matrix.
-					jjMat = mul(reflecJacobianMat2, transpose(reflecJacobianMat2));//so this can all be precomputed, but thats actually slower for some reaon??
-					detJJ4 = rcp(4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
-				}
 				DepthAfterTLAS = Reps;
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
+				Reps = 0;
 				node = NodeBuffer[node_index];
 
 			}
@@ -1822,32 +1740,31 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
 			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
+				Importance(p, n, NodeA),
+				Importance(p, n, NodeB)
 			);
 #endif
 			if(ci.x == 0 && ci.y == 0) break;
 
 
 		    float sumweights = (ci.x + ci.y);
-            float up = RandNum * sumweights;
-            if (up == sumweights)
-            {
-                up = asfloat(asuint(up) - 1);
-            }
-            int offset = 0;
-            float sum = 0;
-            if(sum + ci[offset] <= up) sum += ci[offset++];
-            if(sum + ci[offset] <= up) sum += ci[offset++];
-			
-			bool Index = RandNum >= (ci.x / sumweights);
-            RandNum = min((up - sum) / ci[Index], 1.0f - (1e-6));
+			float prob0 = ci.x * rcp(sumweights);  // Use rcp for division optimization
+	        int Index = (RandNum < prob0) ? 0 : 1;
+	        float prob = (Index == 0) ? prob0 : (1.0f - prob0);
+	        pmf /= prob;
 
-			pmf /= ((ci[Index] / sumweights));
-			node_index = node.left + Index + NodeOffset;
+	        if (Index == 0) {
+	            RandNum /= prob0;
+	        } else {
+	            RandNum = (RandNum - prob0) / (1.0f - prob0);
+	        }
+	        RandNum = min(RandNum, 1.0f - 1e-6f);
+
+	        node_index = node.left + Index + NodeOffset;
 			if(Index) node = NodeB;
 			else node = NodeA;
-			
+
+
 		} else {
 			[branch]if(HasHitTLAS) {
 				return -(node.left+1) + StartIndex;	
@@ -1857,7 +1774,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
 				n = normalize(mul(Inverse, n).xyz);
-				[branch]if(metallic.x > 0) {
+				[branch]if(metallic.x > 0.001f) {
 					viewDir = normalize(mul(Inverse, viewDir).xyz);
 					tangentFrame = GetTangentSpace2(n);
 					viewDirTS = mul(tangentFrame, viewDir);

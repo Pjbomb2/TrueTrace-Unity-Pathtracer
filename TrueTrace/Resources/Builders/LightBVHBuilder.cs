@@ -278,20 +278,20 @@ namespace TrueTrace {
             if(ParentList[Index].y == 0) return Flag;
             return Flag | CalcBitField(ParentList[Index].x);
         }
-        List<LightTriData> Tris2;
-        public uint TestBitField(int Depth, int Index, uint BitField, uint DesiredIndex) {
-            if(Depth > 31) {
-                Debug.LogError("BROKE");
-                return 0;
-            }
-            if(nodes[Index].left < 0) {
-                if(Tris2[-(nodes[Index].left+1)].TriTarget == DesiredIndex) return 1;
-                Debug.LogError("STUFF: " + Tris2[-(nodes[Index].left+1)].TriTarget + " : " + DesiredIndex);
-                return 0;
-            }
-            bool IsLeft = ((BitField >> Depth) & 0x1) == 0u;
-            return TestBitField(Depth + 1, IsLeft ? nodes[Index].left : (nodes[Index].left + 1), BitField, DesiredIndex);
-        }
+        // List<LightTriData> Tris2;
+        // public uint TestBitField(int Depth, int Index, uint BitField, uint DesiredIndex) {
+        //     if(Depth > 31) {
+        //         Debug.LogError("BROKE");
+        //         return 0;
+        //     }
+        //     if(nodes[Index].left < 0) {
+        //         if(Tris2[-(nodes[Index].left+1)].TriTarget == DesiredIndex) return 1;
+        //         Debug.LogError("STUFF: " + Tris2[-(nodes[Index].left+1)].TriTarget + " : " + DesiredIndex);
+        //         return 0;
+        //     }
+        //     bool IsLeft = ((BitField >> Depth) & 0x1) == 0u;
+        //     return TestBitField(Depth + 1, IsLeft ? nodes[Index].left : (nodes[Index].left + 1), BitField, DesiredIndex);
+        // }
 
         private void Refit3(int Depth, int CurrentIndex) {
             if((float)System.Math.Cos((double)(2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f)) == 0) return;
@@ -361,13 +361,13 @@ namespace TrueTrace {
 
 
 #if TTTriSplitting && !HardwareRT
-        public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles, int* ReverseIndexesLightCounter) {//need to make sure incomming is transformed to world space already
+        public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles, int* ReverseIndexesLightCounter, bool IsSkinned) {//need to make sure incomming is transformed to world space already
 #else
         public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles) {//need to make sure incomming is transformed to world space already
 #endif
             PrimCount = Tris.Count;          
             MaxDepth = 0;
-            Tris2 = Tris;
+            // Tris2 = Tris;
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             
             nodes2Array = new NativeArray<NodeBounds>(PrimCount * 2, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
@@ -469,9 +469,13 @@ namespace TrueTrace {
                             CudaTriangle TempTri = AggTriangles[ThisLight.TriTarget];
                             TempTri.IsEmissive = CalcBitField(WriteIndex);
 #if TTTriSplitting && !HardwareRT
-                            int CounterCoun = ReverseIndexesLightCounter[-(LBVHNode.left+1)];
-                            for(int k = 0; k < CounterCoun; k++) {
-                                AggTriangles[ThisLight.TriTarget + k] = TempTri;
+                            if(!IsSkinned) {
+                                int CounterCoun = ReverseIndexesLightCounter[-(LBVHNode.left+1)];
+                                for(int k = 0; k < CounterCoun; k++) {
+                                    AggTriangles[ThisLight.TriTarget + k] = TempTri;
+                                }
+                            } else {
+                                AggTriangles[ThisLight.TriTarget] = TempTri;
                             }
 #else
                             AggTriangles[ThisLight.TriTarget] = TempTri;

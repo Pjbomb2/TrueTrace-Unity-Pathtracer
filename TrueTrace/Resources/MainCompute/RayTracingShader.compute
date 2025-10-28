@@ -265,10 +265,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float light_pdf = 1.0f / (SA);
                 #if defined(LBVH)
                     #ifdef DoubleBufferSGTree
-                        [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, AggTrisB[hit.triangle_id].IsEmissive, SGTreePrev, _MeshDataPrev);
-                        else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, AggTrisB[hit.triangle_id].IsEmissive, SGTree, _MeshData);
+                        [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, AggTrisB[hit.triangle_id].IsEmissive, SGTreePrev, _MeshDataPrev);
+                        else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, AggTrisB[hit.triangle_id].IsEmissive, SGTree, _MeshData);
                     #else
-                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, AggTrisB[hit.triangle_id].IsEmissive, SGTree, _MeshData);
+                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, AggTrisB[hit.triangle_id].IsEmissive, SGTree, _MeshData);
                     #endif
                 #else
                     light_pdf /= (float)LightMeshCount;
@@ -320,7 +320,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             hitDat.metallic = ClayMetalOverrideValue;
             hitDat.roughness = ClayRoughnessOverrideValue;
         }
-
 #else
         hitDat.metallic = 0;
 #endif
