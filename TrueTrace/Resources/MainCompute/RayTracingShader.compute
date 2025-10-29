@@ -1642,9 +1642,8 @@ inline void calcFinalColor_non_term(SmallerRay ray, inout ColData Color, Materia
 #endif
         uint index2;//Congrats, the ray will continue its path
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
-        // ReindexingBuffer[index2] = index2;
-        [branch]if(CurBounce % 2 == 0) index2 += screen_width * screen_height;
         const RayData GlobalRay = {ray.origin, pixel_index, ray.direction, pdf,set2(hit)};
+        [branch]if(CurBounce % 2 == 0) index2 += screen_width * screen_height;
         GlobalRays[index2] = GlobalRay;
     }
 }
@@ -1654,9 +1653,7 @@ inline void calcFinalColor_non_term(SmallerRay ray, inout ColData Color, Materia
 void kernel_shade_non_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
     if ((id.x >= BufferSizes[CurBounce].TracedRayNonTerm)) return;
-    id.x += screen_width * screen_height;
-    id.x = ReindexingBufferRead[id.x];
-    [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
+    id.x = ReindexingBufferRead[id.x + screen_width * screen_height];
     const RayData GlobRay = GlobalRays[id.x];
     uint pixel_index = GlobRay.PixelIndex;
     id.xy = uint2(pixel_index % screen_width, pixel_index / screen_width);
@@ -1897,18 +1894,12 @@ inline void calcFinalColor_term(SmallerRay ray, inout ColData Color, MaterialDat
     bool validBSDFSample;
 
     float3 throughput = Color.throughput;
-    [branch] if (TerrainExists && hit.mesh_id == 9999999) {
-        Geomnorm = GetHeightmapNormal(pos, hit.triangle_id);
-        Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
-        USGNorm = Geomnorm;
-    } else {
-        Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
-        USGNorm = mul(Inverse, cross(normalize(AggTrisA[hit.triangle_id].posedge1), normalize(AggTrisA[hit.triangle_id].posedge2)));
-        float wldScale = rsqrt(dot(USGNorm, USGNorm));
-        USGNorm = -mul(wldScale, USGNorm);
-        if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
-        if(hitDat.MatType == CutoutIndex) USGNorm = Geomnorm;
-    }
+    Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
+    USGNorm = mul(Inverse, cross(normalize(AggTrisA[hit.triangle_id].posedge1), normalize(AggTrisA[hit.triangle_id].posedge2)));
+    float wldScale = rsqrt(dot(USGNorm, USGNorm));
+    USGNorm = -mul(wldScale, USGNorm);
+    if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
+    if(hitDat.MatType == CutoutIndex) USGNorm = Geomnorm;
 
     bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
     if (GotFlipped) {USGNorm *= -1.0f; Geomnorm *= -1.0f;}//Backfacing surface
@@ -2023,9 +2014,7 @@ void kernel_shade_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupI
 
     if ((id.x >= BufferSizes[CurBounce].traceraysterm)) return;
     id.x = (2 * screen_width * screen_height) - id.x;
-    id.x = ReindexingBufferRead[id.x];
-    [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
-    const RayData GlobRay = GlobalRays[id.x];
+    const RayData GlobRay = GlobalRays[ReindexingBufferRead[id.x]];
     uint pixel_index = GlobRay.PixelIndex;
     id.xy = uint2(pixel_index % screen_width, pixel_index / screen_width);
     SmallerRay ray;
@@ -2316,11 +2305,9 @@ void TransferKernel(uint3 id : SV_DispatchThreadID) {
         BufferData[1] = uint3(ceil(BufferSizes[CurBounce+1].tracerays / (float)InitialKernelSize), 1, 1);
         BufferData[2] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 64.0f), 1, 1);
         BufferSizes[CurBounce].tracerays = BufferSizes[CurBounce+1].tracerays;
-    } else if(Type == 2) {
+    } else {
         BufferData[1] = uint3(ceil(BufferSizes[CurBounce].traceraysterm / 64.0f), 1, 1);
         BufferData[0] = uint3(ceil(BufferSizes[CurBounce].TracedRayNonTerm / 64.0f), 1, 1);
-    } else if(Type == 3) {
-    } else {
     }
 
 }
@@ -2426,15 +2413,17 @@ void SeperateKernel(uint3 id : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadI
     int NonTermedRays = 0;
     const int A = BufferSizes[CurBounce].tracerays;
     const int BaseIndex = (GTid.x+1) * LoopFactor;
+    int Offset = 0;
+    [branch]if(CurBounce % 2 == 1) Offset += screen_width * screen_height;
     [unroll]for(int i = 0; i < LoopFactor; i++) {
         int Index = id.x * LoopFactor + i;
         if ((Index >= A)) break;
         Index = ReindexingBufferWrite[Index];
         [branch] if(Index < 0) {
-            LocalRays[BaseIndex - TermedRays - 1] = -Index - 1;
+            LocalRays[BaseIndex - TermedRays - 1] = (-Index - 1) + Offset;
             TermedRays++;
         } else {
-            LocalRays[BaseIndex - LoopFactor + NonTermedRays] = Index;
+            LocalRays[BaseIndex - LoopFactor + NonTermedRays] = Index + Offset;
             NonTermedRays++;
         }
     }
