@@ -116,11 +116,13 @@ struct BufferSizeData {
 	int shadow_rays;
 	int heighmap_rays;
 	int heightmap_shadow_rays;
-	int TracedRays;
-	int TracedRaysShadow;
+	int TracedRayNonTerm;
+	int traceraysterm;
 };
 
 globallycoherent RWStructuredBuffer<BufferSizeData> BufferSizes;
+
+RWStructuredBuffer<bool> SortingIndices;
 
 
 
