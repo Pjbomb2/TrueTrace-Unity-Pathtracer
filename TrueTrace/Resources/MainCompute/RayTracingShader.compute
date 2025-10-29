@@ -1642,7 +1642,7 @@ inline void calcFinalColor_non_term(SmallerRay ray, inout ColData Color, Materia
 #endif
         uint index2;//Congrats, the ray will continue its path
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
-        ReindexingBuffer[index2] = index2;
+        // ReindexingBuffer[index2] = index2;
         [branch]if(CurBounce % 2 == 0) index2 += screen_width * screen_height;
         const RayData GlobalRay = {ray.origin, pixel_index, ray.direction, pdf,set2(hit)};
         GlobalRays[index2] = GlobalRay;

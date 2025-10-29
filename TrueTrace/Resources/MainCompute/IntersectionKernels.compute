@@ -323,9 +323,10 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         }
                         if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
                         set(rayidx, bestHit);
-                        if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) ReindexingBuffer[origindex] = origindex * -1 - 1;
-                        else ReindexingBuffer[origindex] = origindex;
-                        return;
+                        int temp = origindex;
+                        [branch]if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) origindex = origindex * -1 - 1;
+                        ReindexingBuffer[temp] = origindex;
+                        break;
                     }
 
                     if (stack_size == tlas_stack_size) {
