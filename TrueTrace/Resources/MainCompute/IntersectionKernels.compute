@@ -75,7 +75,9 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
 
 void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
-        if(ray_index >= BufferSizes[CurBounce].tracerays) return;
+        if(ray_index2 >= BufferSizes[CurBounce].tracerays) return;
+        int origindex = ray_index;
+        ray_index = ReindexingBuffer[ray_index];
     #endif
     RayHit bestHit;
     SmallerRay ray;
@@ -109,13 +111,13 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             int FinalMatIndex = -1;
             // [branch]if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
             GlobalRay = GlobalRays[ray_index];
-            RandNum = random(43, GlobalRay.PixelIndex).x;
+            RandNum = random(43, ray_index).x;
             if(CurBounce == 0) bestHit.t = asfloat(GlobalRay.hits.z);
             const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
             UnityRayQuery<rayFlags> q;
             RayDesc myRay;
-            myRay.Origin = GlobalRays[ray_index].origin;
-            myRay.Direction = GlobalRays[ray_index].direction;
+            myRay.Origin = GlobalRay.origin;
+            myRay.Direction = GlobalRay.direction;
             ray.origin = myRay.Origin;
             ray.direction = myRay.Direction;
             myRay.TMin = 0;
@@ -175,21 +177,21 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             }
 
 
-            int PixIndex = GlobalRay.PixelIndex;
-            uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+            // int PixIndex = GlobalRay.PixelIndex;
+            uint2 TempUv = uint2(ray_index % screen_width, ray_index / screen_width);
             int2 Indexes = int2(bestHit.mesh_id & 0x1FFFFFF, bestHit.mesh_id >> 25);
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
 #ifdef AltFadeMapping
-                GlobalColors[PixIndex].Flags = packRGBE(throughput);
+                GlobalColors[ray_index].Flags = packRGBE(throughput);
 #endif
-            } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
+            } else if(GetBounceData(GlobalColors[ray_index].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[ray_index].MetRoughIsSpec)) {
                 _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(asuint(ray.direction * bestHit.t + ray.origin), 99993)));
             }
 
             if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
             set(ray_index, bestHit);
-            SortingIndices[ray_index] = (FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0);
+            if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) ReindexingBuffer[origindex] = ReindexingBuffer[origindex] * -1 - 1;
         #else
             const static int A = BufferSizes[CurBounce].tracerays;
                 current_group.y = (uint)0x80000000;
@@ -197,6 +199,8 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                 uint2 triangle_group = 0;
                 int rayidx = ray_index;
                 if(rayidx >= A) return;
+                int origindex = rayidx;
+                rayidx = ReindexingBuffer[rayidx];
                 // [branch]if(CurBounce % 2 == 1) rayidx += screen_width * screen_height;
                 GlobalRay = GlobalRays[rayidx];
                 RandNum = random(43, GlobalRay.PixelIndex).x;
@@ -319,7 +323,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         }
                         if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
                         set(rayidx, bestHit);
-                        SortingIndices[rayidx] = (FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0);
+                        if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) ReindexingBuffer[origindex] = ReindexingBuffer[origindex] * -1 - 1;
                         return;
                     }
 
@@ -336,7 +340,6 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #endif
                 }
             }
-        SortingIndices[rayidx] = true;//(bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0;
     #endif
 
 }

@@ -28,6 +28,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
+    ReindexingBuffer[pixel_index] = pixel_index;
 }
 
 #pragma kernel GeneratePanorama

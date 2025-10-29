@@ -128,7 +128,8 @@ namespace TrueTrace {
         private ComputeBuffer _ShadowBuffer;
         private ComputeBuffer CurBounceInfoBuffer;
         private ComputeBuffer CDFTotalBuffer;
-        private ComputeBuffer SortingBuffer;
+        // private ComputeBuffer SortingBuffer;
+        private ComputeBuffer ReIndexingBuffer;
 
         #if UseOIDN
             private GraphicsBuffer ColorBuffer;
@@ -409,7 +410,8 @@ namespace TrueTrace {
             ReSTIRInitialized = false;
             if(TTPostProc != null) TTPostProc.ClearAll();
             _RayBuffer.ReleaseSafe();
-            SortingBuffer.ReleaseSafe();
+            // SortingBuffer.ReleaseSafe();
+            ReIndexingBuffer.ReleaseSafe();
             LightingBuffer.ReleaseSafe();
             _BufferSizes.ReleaseSafe();
             _ShadowBuffer.ReleaseSafe();
@@ -528,7 +530,7 @@ namespace TrueTrace {
             if(CurBounceInfoBuffer != null) CurBounceInfoBuffer.ReleaseSafe();
             CurBounceInfoBuffer = new ComputeBuffer(1, 12);
             if(_RayBuffer == null || _RayBuffer.count != SourceWidth * SourceHeight) {
-                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
+                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
             }
@@ -643,8 +645,12 @@ namespace TrueTrace {
             }
             cmd.SetBufferData(_BufferSizes, BufferSizes);
             ShadingShader.SetBuffer(SortingKernel, "BufferSizes", _BufferSizes);
-            ShadingShader.SetBuffer(SortingKernel, "SortingIndices", SortingBuffer);
-            IntersectionShader.SetBuffer(TraceKernel, "SortingIndices", SortingBuffer);
+            // ShadingShader.SetBuffer(SortingKernel, "SortingIndices", SortingBuffer);
+            ShadingShader.SetBuffer(SortingKernel, "ReindexingBuffer", ReIndexingBuffer);
+            ShadingShader.SetBuffer(ShadeKernel, "ReindexingBuffer", ReIndexingBuffer);
+            ShadingShader.SetBuffer(ShadeKernelTerminated, "ReindexingBuffer", ReIndexingBuffer);
+            // IntersectionShader.SetBuffer(TraceKernel, "SortingIndices", SortingBuffer);
+            IntersectionShader.SetBuffer(TraceKernel, "ReindexingBuffer", ReIndexingBuffer);
             ShadingShader.SetBuffer(ShadeKernel, "BufferSizes", _BufferSizes);
             ShadingShader.SetBuffer(ShadeKernelTerminated, "BufferSizes", _BufferSizes);
             ShadingShader.SetBuffer(TransferKernel, "BufferSizes", _BufferSizes);
@@ -655,6 +661,7 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(TransferKernel, "BufferData", CurBounceInfoBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "BufferData", CurBounceInfoBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernelTerminated, "BufferData", CurBounceInfoBuffer);
+            GenerateShader.SetBuffer(GenKernel, "ReindexingBuffer", ReIndexingBuffer);
 
             var EA = CamToWorldPrev;
             var EB = CamInvProjPrev;
@@ -1039,8 +1046,9 @@ namespace TrueTrace {
                 TTPostProc.init(SourceWidth, SourceHeight);
 
                 InitRenderTexture(true);
-                CommonFunctions.CreateDynamicBuffer(ref SortingBuffer, SourceWidth * SourceHeight, 4);
-                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
+                CommonFunctions.CreateDynamicBuffer(ref ReIndexingBuffer, SourceWidth * SourceHeight * 2, 4);
+                // CommonFunctions.CreateDynamicBuffer(ref SortingBuffer, SourceWidth * SourceHeight, 4);
+                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
                 #if !DisableRadianceCache
@@ -1071,7 +1079,7 @@ namespace TrueTrace {
                         VoxelDataBufferB.ReleaseSafe();
                     #endif
 
-                    SortingBuffer.ReleaseSafe();
+                    // SortingBuffer.ReleaseSafe();
                     _RayBuffer.ReleaseSafe();
                     _ShadowBuffer.ReleaseSafe();
                     LightingBuffer.ReleaseSafe();

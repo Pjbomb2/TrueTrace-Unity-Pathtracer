@@ -24,7 +24,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-#define RadCache
+// #define RadCache
 #define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
 #define ReSTIRReflectionRefinement

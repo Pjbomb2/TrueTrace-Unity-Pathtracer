@@ -1642,8 +1642,9 @@ inline void calcFinalColor_non_term(SmallerRay ray, inout ColData Color, Materia
 #endif
         uint index2;//Congrats, the ray will continue its path
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
+        ReindexingBuffer[index2] = pixel_index;
         const RayData GlobalRay = {ray.origin, pixel_index, ray.direction, pdf,set2(hit)};
-        GlobalRays[index2] = GlobalRay;
+        GlobalRays[pixel_index] = GlobalRay;
     }
 }
 
@@ -1653,8 +1654,9 @@ void kernel_shade_non_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_Gr
 
     if ((id.x >= BufferSizes[CurBounce].TracedRayNonTerm)) return;
     id.x += screen_width * screen_height;
+    id.x = ReindexingBuffer[id.x];
     const RayData GlobRay = GlobalRays[id.x];
-    uint pixel_index = GlobRay.PixelIndex;
+    uint pixel_index = id.x;
     id.xy = uint2(pixel_index % screen_width, pixel_index / screen_width);
     SmallerRay ray;
     RayHit bestHit = get2(GlobRay.hits);
@@ -2019,8 +2021,9 @@ void kernel_shade_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupI
 
     if ((id.x >= BufferSizes[CurBounce].traceraysterm)) return;
     id.x = (2 * screen_width * screen_height) - id.x;
+    id.x = ReindexingBuffer[id.x];
     const RayData GlobRay = GlobalRays[id.x];
-    uint pixel_index = GlobRay.PixelIndex;
+    uint pixel_index = id.x;
     id.xy = uint2(pixel_index % screen_width, pixel_index / screen_width);
     SmallerRay ray;
     RayHit bestHit = get2(GlobRay.hits);
@@ -2409,7 +2412,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
 
 
 
-groupshared RayData LocalRays[KernelSize * LoopFactor];
+groupshared int LocalRays[KernelSize * LoopFactor];
 
 #pragma kernel SeperateKernel
 [numthreads(KernelSize, 1, 1)]
@@ -2421,11 +2424,11 @@ void SeperateKernel(uint3 id : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadI
     [unroll]for(int i = 0; i < LoopFactor; i++) {
         int Index = id.x * LoopFactor + i;
         if ((Index >= A)) break;
-        [branch] if(SortingIndices[Index]) {
-            LocalRays[BaseIndex - TermedRays - 1] = GlobalRays[Index];
+        [branch] if(ReindexingBuffer[Index] < 0) {
+            LocalRays[BaseIndex - TermedRays - 1] = -ReindexingBuffer[Index] - 1;
             TermedRays++;
         } else {
-            LocalRays[BaseIndex - LoopFactor + NonTermedRays] = GlobalRays[Index];
+            LocalRays[BaseIndex - LoopFactor + NonTermedRays] = ReindexingBuffer[Index];
             NonTermedRays++;
         }
     }
@@ -2439,12 +2442,12 @@ void SeperateKernel(uint3 id : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadI
     [unroll]for(int i = 0; i < LoopFactor; i++) {
         int Index = id.x * LoopFactor + i;
         if ((Index >= A)) return;
-        [branch] if(SortingIndices[Index]) {
-            GlobalRays[(2 * screen_width * screen_height) - WriteIndexTermed] = LocalRays[BaseIndex - TermedRays - 1];
+        [branch] if(ReindexingBuffer[Index] < 0) {
+            ReindexingBuffer[(2 * screen_width * screen_height) - WriteIndexTermed] = LocalRays[BaseIndex - TermedRays - 1];
             WriteIndexTermed++;
             TermedRays++;
         } else {
-            GlobalRays[(screen_width * screen_height) + WriteIndexNonTermed] = LocalRays[BaseIndex - LoopFactor + NonTermedRays];
+            ReindexingBuffer[(screen_width * screen_height) + WriteIndexNonTermed] = LocalRays[BaseIndex - LoopFactor + NonTermedRays];
             WriteIndexNonTermed++;
             NonTermedRays++;
         }
