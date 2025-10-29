@@ -122,8 +122,8 @@ struct BufferSizeData {
 
 globallycoherent RWStructuredBuffer<BufferSizeData> BufferSizes;
 
-RWStructuredBuffer<bool> SortingIndices;
-RWStructuredBuffer<int> ReindexingBuffer;
+RWStructuredBuffer<int> ReindexingBufferWrite;
+StructuredBuffer<int> ReindexingBufferRead;
 
 
 

@@ -1655,7 +1655,7 @@ void kernel_shade_non_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_Gr
 
     if ((id.x >= BufferSizes[CurBounce].TracedRayNonTerm)) return;
     id.x += screen_width * screen_height;
-    id.x = ReindexingBuffer[id.x];
+    id.x = ReindexingBufferRead[id.x];
     [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
     const RayData GlobRay = GlobalRays[id.x];
     uint pixel_index = GlobRay.PixelIndex;
@@ -2023,7 +2023,7 @@ void kernel_shade_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupI
 
     if ((id.x >= BufferSizes[CurBounce].traceraysterm)) return;
     id.x = (2 * screen_width * screen_height) - id.x;
-    id.x = ReindexingBuffer[id.x];
+    id.x = ReindexingBufferRead[id.x];
     [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
     const RayData GlobRay = GlobalRays[id.x];
     uint pixel_index = GlobRay.PixelIndex;
@@ -2300,7 +2300,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
     Result[id.xy] = float4(res, 1.0f);
 }
 
-#define LoopFactor 4
+#define LoopFactor 8
 #define InitialKernelSize 256
 #define KernelSize (InitialKernelSize / LoopFactor)
 
@@ -2310,15 +2310,17 @@ int Type;
 void TransferKernel(uint3 id : SV_DispatchThreadID) {
     if(Type == 0) {
         BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 64.0f), 1, 1);
-        if(CurBounce != 0) BufferSizes[CurBounce - 1].tracerays = BufferSizes[CurBounce].tracerays;
+        BufferData[1] = uint3(ceil(BufferSizes[CurBounce].tracerays / (float)InitialKernelSize), 1, 1);
     } else if(Type == 1) {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 64.0f), 1, 1);
+        BufferData[0] = uint3(ceil(BufferSizes[CurBounce+1].tracerays / 64.0f), 1, 1);
+        BufferData[1] = uint3(ceil(BufferSizes[CurBounce+1].tracerays / (float)InitialKernelSize), 1, 1);
+        BufferData[2] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 64.0f), 1, 1);
+        BufferSizes[CurBounce].tracerays = BufferSizes[CurBounce+1].tracerays;
     } else if(Type == 2) {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].traceraysterm / 64.0f), 1, 1);
-    } else if(Type == 3) {
+        BufferData[1] = uint3(ceil(BufferSizes[CurBounce].traceraysterm / 64.0f), 1, 1);
         BufferData[0] = uint3(ceil(BufferSizes[CurBounce].TracedRayNonTerm / 64.0f), 1, 1);
+    } else if(Type == 3) {
     } else {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / (float)InitialKernelSize), 1, 1);
     }
 
 }
@@ -2427,11 +2429,12 @@ void SeperateKernel(uint3 id : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadI
     [unroll]for(int i = 0; i < LoopFactor; i++) {
         int Index = id.x * LoopFactor + i;
         if ((Index >= A)) break;
-        [branch] if(ReindexingBuffer[Index] < 0) {
-            LocalRays[BaseIndex - TermedRays - 1] = -ReindexingBuffer[Index] - 1;
+        Index = ReindexingBufferWrite[Index];
+        [branch] if(Index < 0) {
+            LocalRays[BaseIndex - TermedRays - 1] = -Index - 1;
             TermedRays++;
         } else {
-            LocalRays[BaseIndex - LoopFactor + NonTermedRays] = ReindexingBuffer[Index];
+            LocalRays[BaseIndex - LoopFactor + NonTermedRays] = Index;
             NonTermedRays++;
         }
     }
@@ -2445,12 +2448,12 @@ void SeperateKernel(uint3 id : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadI
     [unroll]for(int i = 0; i < LoopFactor; i++) {
         int Index = id.x * LoopFactor + i;
         if ((Index >= A)) return;
-        [branch] if(ReindexingBuffer[Index] < 0) {
-            ReindexingBuffer[(2 * screen_width * screen_height) - WriteIndexTermed] = LocalRays[BaseIndex - TermedRays - 1];
+        [branch] if(ReindexingBufferWrite[Index] < 0) {
+            ReindexingBufferWrite[(2 * screen_width * screen_height) - WriteIndexTermed] = LocalRays[BaseIndex - TermedRays - 1];
             WriteIndexTermed++;
             TermedRays++;
         } else {
-            ReindexingBuffer[(screen_width * screen_height) + WriteIndexNonTermed] = LocalRays[BaseIndex - LoopFactor + NonTermedRays];
+            ReindexingBufferWrite[(screen_width * screen_height) + WriteIndexNonTermed] = LocalRays[BaseIndex - LoopFactor + NonTermedRays];
             WriteIndexNonTermed++;
             NonTermedRays++;
         }

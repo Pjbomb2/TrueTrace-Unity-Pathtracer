@@ -77,7 +77,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
         if(ray_index >= BufferSizes[CurBounce].tracerays) return;
         int origindex = ray_index;
-        ray_index = ReindexingBuffer[ray_index];
+        // ray_index = ReindexingBuffer[ray_index];
     #endif
     RayHit bestHit;
     SmallerRay ray;
@@ -109,7 +109,8 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 
         #ifdef HardwareRT
             int FinalMatIndex = -1;
-            // [branch]if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
+
+            [branch]if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
             GlobalRay = GlobalRays[ray_index];
             RandNum = random(43, ray_index).x;
             if(CurBounce == 0) bestHit.t = asfloat(GlobalRay.hits.z);
@@ -191,7 +192,9 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 
             if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
             set(ray_index, bestHit);
-            if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) ReindexingBuffer[origindex] = ReindexingBuffer[origindex] * -1 - 1;
+            int temp = origindex;
+            [branch]if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) origindex = origindex * -1 - 1;
+            ReindexingBufferWrite[temp] = origindex;
         #else
             const static int A = BufferSizes[CurBounce].tracerays;
                 current_group.y = (uint)0x80000000;
@@ -325,7 +328,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         set(rayidx, bestHit);
                         int temp = origindex;
                         [branch]if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) origindex = origindex * -1 - 1;
-                        ReindexingBuffer[temp] = origindex;
+                        ReindexingBufferWrite[temp] = origindex;
                         break;
                     }
 

@@ -528,7 +528,7 @@ namespace TrueTrace {
 
 
             if(CurBounceInfoBuffer != null) CurBounceInfoBuffer.ReleaseSafe();
-            CurBounceInfoBuffer = new ComputeBuffer(1, 12);
+            CurBounceInfoBuffer = new ComputeBuffer(3, 12);
             if(_RayBuffer == null || _RayBuffer.count != SourceWidth * SourceHeight) {
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
@@ -646,11 +646,11 @@ namespace TrueTrace {
             cmd.SetBufferData(_BufferSizes, BufferSizes);
             ShadingShader.SetBuffer(SortingKernel, "BufferSizes", _BufferSizes);
             // ShadingShader.SetBuffer(SortingKernel, "SortingIndices", SortingBuffer);
-            ShadingShader.SetBuffer(SortingKernel, "ReindexingBuffer", ReIndexingBuffer);
-            ShadingShader.SetBuffer(ShadeKernel, "ReindexingBuffer", ReIndexingBuffer);
-            ShadingShader.SetBuffer(ShadeKernelTerminated, "ReindexingBuffer", ReIndexingBuffer);
+            ShadingShader.SetBuffer(SortingKernel, "ReindexingBufferWrite", ReIndexingBuffer);
+            ShadingShader.SetBuffer(ShadeKernel, "ReindexingBufferRead", ReIndexingBuffer);
+            ShadingShader.SetBuffer(ShadeKernelTerminated, "ReindexingBufferRead", ReIndexingBuffer);
             // IntersectionShader.SetBuffer(TraceKernel, "SortingIndices", SortingBuffer);
-            IntersectionShader.SetBuffer(TraceKernel, "ReindexingBuffer", ReIndexingBuffer);
+            IntersectionShader.SetBuffer(TraceKernel, "ReindexingBufferWrite", ReIndexingBuffer);
             ShadingShader.SetBuffer(ShadeKernel, "BufferSizes", _BufferSizes);
             ShadingShader.SetBuffer(ShadeKernelTerminated, "BufferSizes", _BufferSizes);
             ShadingShader.SetBuffer(TransferKernel, "BufferSizes", _BufferSizes);
@@ -661,7 +661,7 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(TransferKernel, "BufferData", CurBounceInfoBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "BufferData", CurBounceInfoBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernelTerminated, "BufferData", CurBounceInfoBuffer);
-            GenerateShader.SetBuffer(GenKernel, "ReindexingBuffer", ReIndexingBuffer);
+            GenerateShader.SetBuffer(GenKernel, "ReindexingBufferWrite", ReIndexingBuffer);
 
             var EA = CamToWorldPrev;
             var EB = CamInvProjPrev;
@@ -1289,10 +1289,12 @@ namespace TrueTrace {
                                 cmd.SetComputeTextureParam(IntersectionShader, HeightmapKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                             }
                             SetInt("CurBounce", bouncebounce, cmd);
-                            if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel: " + i);
-                            cmd.SetComputeIntParam(ShadingShader, "Type", 0);
-                            cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
-                            if(DoKernelProfiling) cmd.EndSample("Transfer Kernel: " + i);
+                            if(bouncebounce == 0) {
+                                if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel: " + i);
+                                    cmd.SetComputeIntParam(ShadingShader, "Type", 0);
+                                    cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
+                                if(DoKernelProfiling) cmd.EndSample("Transfer Kernel: " + i);
+                            }
 
                             if(DoKernelProfiling) cmd.BeginSample("Trace Kernel: " + i);
                             #if DX11Only
@@ -1314,13 +1316,13 @@ namespace TrueTrace {
                             }
 
 
-                            if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel 4: " + i);
-                            cmd.SetComputeIntParam(ShadingShader, "Type", 4);
-                            cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
-                            if(DoKernelProfiling) cmd.EndSample("Transfer Kernel 4: " + i);
+                            // if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel 4: " + i);
+                            // cmd.SetComputeIntParam(ShadingShader, "Type", 4);
+                            // cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
+                            // if(DoKernelProfiling) cmd.EndSample("Transfer Kernel 4: " + i);
 
                             if(DoKernelProfiling) cmd.BeginSample("Seperation Kernel: " + i);
-                                cmd.DispatchCompute(ShadingShader, SortingKernel, CurBounceInfoBuffer, 0);
+                                cmd.DispatchCompute(ShadingShader, SortingKernel, CurBounceInfoBuffer, 12);
                             if(DoKernelProfiling) cmd.EndSample("Seperation Kernel: " + i);
 
 
@@ -1333,14 +1335,14 @@ namespace TrueTrace {
                             #if DX11Only
                                 cmd.DispatchCompute(ShadingShader, ShadeKernelTerminated, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
-                                cmd.DispatchCompute(ShadingShader, ShadeKernelTerminated, CurBounceInfoBuffer, 0);
+                                cmd.DispatchCompute(ShadingShader, ShadeKernelTerminated, CurBounceInfoBuffer, 12);
                             #endif
                             if(DoKernelProfiling) cmd.EndSample("Shading Kernel Term: " + i);
 
-                            if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel 3: " + i);
-                            cmd.SetComputeIntParam(ShadingShader, "Type", 3);
-                            cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
-                            if(DoKernelProfiling) cmd.EndSample("Transfer Kernel 3: " + i);
+                            // if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel 3: " + i);
+                            // cmd.SetComputeIntParam(ShadingShader, "Type", 3);
+                            // cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
+                            // if(DoKernelProfiling) cmd.EndSample("Transfer Kernel 3: " + i);
 
                             if(DoKernelProfiling) cmd.BeginSample("Shading Kernel: " + i);
                             #if DX11Only
@@ -1361,7 +1363,7 @@ namespace TrueTrace {
                                 #if DX11Only
                                     cmd.DispatchCompute(IntersectionShader, ShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                                 #else
-                                    cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 0);
+                                    cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 24);
                                 #endif
                                 if(DoKernelProfiling) cmd.EndSample("Shadow Kernel: " + i);
                             }
@@ -1370,7 +1372,7 @@ namespace TrueTrace {
                                 #if DX11Only
                                     cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                                 #else
-                                    cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, CurBounceInfoBuffer, 0);
+                                    cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, CurBounceInfoBuffer, 24);
                                 #endif
                                 if(DoKernelProfiling) cmd.EndSample("Heightmap Shadow Kernel: " + i);
                             }
