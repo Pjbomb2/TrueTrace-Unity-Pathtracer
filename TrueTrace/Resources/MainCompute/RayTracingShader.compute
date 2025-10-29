@@ -1642,9 +1642,10 @@ inline void calcFinalColor_non_term(SmallerRay ray, inout ColData Color, Materia
 #endif
         uint index2;//Congrats, the ray will continue its path
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
-        ReindexingBuffer[index2] = pixel_index;
+        ReindexingBuffer[index2] = index2;
+        [branch]if(CurBounce % 2 == 0) index2 += screen_width * screen_height;
         const RayData GlobalRay = {ray.origin, pixel_index, ray.direction, pdf,set2(hit)};
-        GlobalRays[pixel_index] = GlobalRay;
+        GlobalRays[index2] = GlobalRay;
     }
 }
 
@@ -1655,8 +1656,9 @@ void kernel_shade_non_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_Gr
     if ((id.x >= BufferSizes[CurBounce].TracedRayNonTerm)) return;
     id.x += screen_width * screen_height;
     id.x = ReindexingBuffer[id.x];
+    [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
     const RayData GlobRay = GlobalRays[id.x];
-    uint pixel_index = id.x;
+    uint pixel_index = GlobRay.PixelIndex;
     id.xy = uint2(pixel_index % screen_width, pixel_index / screen_width);
     SmallerRay ray;
     RayHit bestHit = get2(GlobRay.hits);
@@ -2022,8 +2024,9 @@ void kernel_shade_terminated(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupI
     if ((id.x >= BufferSizes[CurBounce].traceraysterm)) return;
     id.x = (2 * screen_width * screen_height) - id.x;
     id.x = ReindexingBuffer[id.x];
+    [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
     const RayData GlobRay = GlobalRays[id.x];
-    uint pixel_index = id.x;
+    uint pixel_index = GlobRay.PixelIndex;
     id.xy = uint2(pixel_index % screen_width, pixel_index / screen_width);
     SmallerRay ray;
     RayHit bestHit = get2(GlobRay.hits);

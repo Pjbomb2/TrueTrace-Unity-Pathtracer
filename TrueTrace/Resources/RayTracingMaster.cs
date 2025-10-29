@@ -530,7 +530,7 @@ namespace TrueTrace {
             if(CurBounceInfoBuffer != null) CurBounceInfoBuffer.ReleaseSafe();
             CurBounceInfoBuffer = new ComputeBuffer(1, 12);
             if(_RayBuffer == null || _RayBuffer.count != SourceWidth * SourceHeight) {
-                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 48);
+                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
             }
@@ -1048,7 +1048,7 @@ namespace TrueTrace {
                 InitRenderTexture(true);
                 CommonFunctions.CreateDynamicBuffer(ref ReIndexingBuffer, SourceWidth * SourceHeight * 2, 4);
                 // CommonFunctions.CreateDynamicBuffer(ref SortingBuffer, SourceWidth * SourceHeight, 4);
-                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 48);
+                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
                 #if !DisableRadianceCache

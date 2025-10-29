@@ -200,8 +200,8 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                 int rayidx = ray_index;
                 if(rayidx >= A) return;
                 int origindex = rayidx;
-                rayidx = ReindexingBuffer[rayidx];
-                // [branch]if(CurBounce % 2 == 1) rayidx += screen_width * screen_height;
+                // rayidx = ReindexingBuffer[rayidx];
+                [branch]if(CurBounce % 2 == 1) rayidx += screen_width * screen_height;
                 GlobalRay = GlobalRays[rayidx];
                 RandNum = random(43, GlobalRay.PixelIndex).x;
                 bestHit = CreateRayHit();
@@ -323,7 +323,8 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         }
                         if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
                         set(rayidx, bestHit);
-                        if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) ReindexingBuffer[origindex] = ReindexingBuffer[origindex] * -1 - 1;
+                        if(FinalMatIndex == -1 || (bestHit.t == FarPlane) || _Materials[FinalMatIndex].emission > 0) ReindexingBuffer[origindex] = origindex * -1 - 1;
+                        else ReindexingBuffer[origindex] = origindex;
                         return;
                     }
 
