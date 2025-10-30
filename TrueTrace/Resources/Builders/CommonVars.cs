@@ -425,6 +425,7 @@ namespace CommonVars
         public int mesh_data_bvh_offsets;
         public int LightTriCount;
         public int LightNodeOffset;
+        public int LightNodeSkinnedOffset;
         public uint PathFlags;
         public int SkinnedOffset;
     }

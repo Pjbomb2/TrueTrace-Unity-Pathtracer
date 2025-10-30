@@ -760,3 +760,21 @@ void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
 
     LightNodesWrite[Index] = Union(LeftNode, LightNodesWrite[Node.left + 1 + TotalNodeOffset], Node.left);
 }
+
+#pragma kernel BLASCopyNodeDataKernel
+
+#ifdef UseSGTree
+	RWStructuredBuffer<GaussianTreeNode> LightNodesWriteB;
+#else
+	RWStructuredBuffer<LightBVHData> LightNodesWriteB;
+#endif
+
+int TargetOffset;
+int Count;
+[numthreads(256,1,1)]
+void BLASCopyNodeDataKernel (uint3 id : SV_DispatchThreadID)
+{
+	if(id.x >= Count) return;
+	LightNodesWriteB[id.x + TargetOffset] = LightNodesWriteB[id.x + TotalNodeOffset];
+
+}

@@ -1584,9 +1584,9 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 }
 
 #ifdef UseSGTree
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const uint LightPathFlag, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+inline void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const float4x4 W2L, const uint LightPathFlag, const int Offset2, const uint PathFlags) {
 #else
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const uint LightPathFlag, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const float4x4 W2L, const uint LightPathFlag, const int Offset2, const uint PathFlags) {
 #endif
 	int node_index = 0;
 	int Reps = 0;
@@ -1598,25 +1598,24 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 	
 
 #ifdef UseSGTree
-	GaussianTreeNode node = NodeBuffer[node_index];
+	GaussianTreeNode node = SGTree[node_index];
 #else
-	LightBVHData node = NodeBuffer[node_index];
+	LightBVHData node = SGTree[node_index];
 #endif
-	uint PathFlags = MeshBuffer[MeshIndex].PathFlags;
 	int DepthAfterTLAS = 0;
 	while(Reps < 200) {
 		[branch]if(node.left >= 0) {
 			Reps++;
 #ifdef UseSGTree
-			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
-			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
+			const GaussianTreeNode NodeA = SGTree[node.left + NodeOffset];
+			const GaussianTreeNode NodeB = SGTree[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
 				SGImportanceDiffuse(NodeA, p, n),
 				SGImportanceDiffuse(NodeB, p, n)
 			);
 #else
-			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
-			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
+			const LightBVHData NodeA = SGTree[node.left + NodeOffset];
+			const LightBVHData NodeB = SGTree[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
 				Importance(p, n, NodeA),
 				Importance(p, n, NodeB)
@@ -1653,7 +1652,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 						node_index = tempstack.x;
 						lightPDF = tempstack.y;
 						RandNum = tempstack.z;
-						node = NodeBuffer[node_index];
+						node = SGTree[node_index];
 						continue;
 					}
 					if(Index >= 2) {
@@ -1675,16 +1674,16 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 			[branch]if(HasHitTLAS) {
 				return;	
 			} else {
-				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
-				p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
-			    float3x3 Inverse = inverse(MeshBuffer[MeshIndex].W2L);
+				p = mul(W2L, float4(p,1));
+				p2 = mul(W2L, float4(p2,1));
+			    float3x3 Inverse = inverse(W2L);
 				n = normalize(mul(Inverse, n).xyz);
 				DepthAfterTLAS = Reps;
-				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
+				NodeOffset = Offset2;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				Reps = 0;
-				node = NodeBuffer[node_index];
+				node = SGTree[node_index];
 
 			}
 		}
@@ -1698,9 +1697,9 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 
 
 #ifdef UseSGTree
-inline int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const StructuredBuffer<GaussianTreeNode> NodeBuffer, const StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+inline int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const bool UsePrev) {
 #else
-int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const StructuredBuffer<LightBVHData> NodeBuffer, const StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const bool UsePrev) {
 #endif
 	int node_index = 0;
 	int Reps = 0;
@@ -1722,23 +1721,23 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	float2x2 jjMat = mul(reflecJacobianMat, transpose(reflecJacobianMat));//so this can all be precomputed, but thats actually slower for some reaon??
 	float detJJ4 = rcp(4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
 #ifdef UseSGTree
-	GaussianTreeNode node = NodeBuffer[0];
+	GaussianTreeNode node = SGTree[0];
 #else
-	LightBVHData node = NodeBuffer[0];
+	LightBVHData node = SGTree[0];
 #endif
 	while(Reps < 233) {
 		Reps++;
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
-			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
-			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
+			const GaussianTreeNode NodeA = SGTree[node.left + NodeOffset];
+			const GaussianTreeNode NodeB = SGTree[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
 				SGImportance(NodeA, viewDirTS, p, n, ProjRoughness2, tangentFrame, metallic, jjMat, detJJ4),
 				SGImportance(NodeB, viewDirTS, p, n, ProjRoughness2, tangentFrame, metallic, jjMat, detJJ4)
 			);
 #else
-			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
-			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
+			const LightBVHData NodeA = SGTree[node.left + NodeOffset];
+			const LightBVHData NodeB = SGTree[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
 				Importance(p, n, NodeA),
 				Importance(p, n, NodeB)
@@ -1771,8 +1770,8 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 			} else {
 				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
 				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
-			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
-				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
+			    float3x3 Inverse = adjoint(UsePrev ? _MeshDataPrev[MeshIndex].W2L : _MeshData[MeshIndex].W2L);
+				p = mul(UsePrev ? _MeshDataPrev[MeshIndex].W2L : _MeshData[MeshIndex].W2L, float4(p,1));
 				n = normalize(mul(Inverse, n).xyz);
 				[branch]if(metallic.x > 0.001f) {
 					viewDir = normalize(mul(Inverse, viewDir).xyz);
@@ -1786,10 +1785,10 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 					jjMat = mul(reflecJacobianMat2, transpose(reflecJacobianMat2));//so this can all be precomputed, but thats actually slower for some reaon??
 					detJJ4 = rcp(4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
 				}
-				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
+				NodeOffset = (UsePrev && _MeshData[MeshIndex].LightNodeSkinnedOffset != -1) ? _MeshData[MeshIndex].LightNodeSkinnedOffset : _MeshData[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
-				node = NodeBuffer[node_index];
+				node = SGTree[node_index];
 			}
 		}
 	}
@@ -2381,10 +2380,10 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
     	#ifdef DoubleBufferSGTree
-			[branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTreePrev, _MeshDataPrev);
-			else MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
+			// [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, true);
+			MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1);
 		#else
-			MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
+			MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, false);
         #endif
         if(MinIndex == -1) return -1;
         MeshTriOffset = _MeshData[MeshIndex].TriOffset;

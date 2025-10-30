@@ -66,6 +66,7 @@ struct MyMeshDataCompacted {
 	int mesh_data_bvh_offsets;//could I convert this an int4?
 	int LightTriCount;
 	int LightNodeOffset;
+	int LightNodeSkinnedOffset;
 	uint PathFlags;
 	int SkinnedOffset;
 };

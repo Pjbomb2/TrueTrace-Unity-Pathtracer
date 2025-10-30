@@ -112,6 +112,7 @@ namespace TrueTrace {
         [HideInInspector] public int RefitLayerKernel;
         [HideInInspector] public int UpdateGlobalBufferAABBKernel;
         [HideInInspector] public int LightBLASRefitKernel;
+        [HideInInspector] public int LightBLASCopyKernel;
 
         [HideInInspector] public int CompactedMeshData;
 
@@ -144,6 +145,7 @@ namespace TrueTrace {
         public int GlobalSkinnedOffset;
         public int GlobalLightTriOffset;
         public int GlobalLightNodeOffset;
+        public int GlobalLightNodeSkinnedOffset;
         public int LocalTriCount;
         public int LocalNodeCount;
         public int LocalLightTriCount;
@@ -262,6 +264,7 @@ namespace TrueTrace {
 #else
             LightBLASRefitKernel = MeshRefit.FindKernel("BLASLightRefitKernel");
 #endif
+            LightBLASCopyKernel = MeshRefit.FindKernel("BLASCopyNodeDataKernel");
         }
         private bool NeedsToResetBuffers = true;
         public void SetUpBuffers() {
@@ -611,10 +614,15 @@ namespace TrueTrace {
         }
         public List<Transform> ChildObjectTransforms;
         public unsafe void LoadData() {
+            CommonFunctions.DeepClean(ref LightTriNorms);
+            CommonFunctions.DeepClean(ref CachedTransforms);
+            CommonFunctions.DeepClean(ref TransformIndexes);
+            CommonFunctions.DeepClean(ref LuminanceWeights);
             GlobalTriOffset = -1;
             GlobalNodeOffset = -1;
             GlobalLightTriOffset = -1;
             GlobalLightNodeOffset = -1;
+            GlobalLightNodeSkinnedOffset = -1;
             HasLightTriangles = false;
             NeedsToResetBuffers = true;
             ClearAll();
@@ -1172,7 +1180,7 @@ namespace TrueTrace {
 #endif
         }
 
-        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, ComputeBuffer BoxesBuffer, int BoxesIndex, ComputeBuffer SkinnedMeshAggTriBufferPrev, CommandBuffer cmd)
+        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBufferA, ComputeBuffer BoxesBuffer, int BoxesIndex, ComputeBuffer SkinnedMeshAggTriBufferPrev, CommandBuffer cmd)
         {
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
@@ -1302,14 +1310,23 @@ namespace TrueTrace {
 
                 if(LightTriangles.Count != 0) {
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightRefitter");
-                    cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", GlobalLightNodeOffset);
+                    var A1 = GlobalLightNodeOffset;
+                    cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", A1);
                     cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
 #if !DontUseSGTree
-                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "SGTreeWrite", RealizedLightNodeBuffer);
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "SGTreeWrite", RealizedLightNodeBufferA);
 #else
-                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBuffer);
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBufferA);
 #endif
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASCopyKernel, "LightNodesWriteB", RealizedLightNodeBufferA);
                     cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightCopier");
+                        cmd.SetComputeIntParam(MeshRefit, "TargetOffset", GlobalLightNodeSkinnedOffset);
+                        cmd.SetComputeIntParam(MeshRefit, "Count", LocalLightNodeCount);
+                        cmd.DispatchCompute(MeshRefit, LightBLASCopyKernel, (int)Mathf.Ceil(LocalLightNodeCount / (float)256.0f), 1, 1);
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("LightCopier");
+
+
                     int ObjectOffset = GlobalLightNodeOffset;
                     for(int i = WorkingBufferLightBVH.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
@@ -1322,6 +1339,7 @@ namespace TrueTrace {
                         ObjectOffset += SetCount;
                     }
                     if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("LightRefitter");
+
                 }
 
                 #if !HardwareRT
@@ -1594,10 +1612,6 @@ namespace TrueTrace {
                 }
                 if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
             #endif
-            CommonFunctions.DeepClean(ref LightTriNorms);
-            CommonFunctions.DeepClean(ref CachedTransforms);
-            CommonFunctions.DeepClean(ref TransformIndexes);
-            CommonFunctions.DeepClean(ref LuminanceWeights);
             HasCompleted = true;
             NeedsToUpdate = false;
 #if TTVerbose
