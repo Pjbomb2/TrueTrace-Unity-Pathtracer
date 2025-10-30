@@ -1324,9 +1324,7 @@ namespace TrueTrace {
                     bool ResizedBVHArray = false;
                     bool ResizedLightTriArray = false;
                     bool ResizedLightBVHArray = false;
-                    // bool ResizedLightBVHSkinnedArray = false;
 #if StrictMemoryReduction
-                    // ResizedLightBVHSkinnedArray = true;
                     ResizedLightBVHArray = true;
                     ResizedLightTriArray = true;
                     ResizedTriArray = true;
@@ -1338,11 +1336,9 @@ namespace TrueTrace {
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
     #if !DontUseSGTree
-                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
-                    // CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
+                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
     #else
-                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
-                    // CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
     #endif
 #else
                     if(BVH8AggregatedBuffer == null || !BVH8AggregatedBuffer.IsValid() || AggNodeCount > BVH8AggregatedBuffer.count) {CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80); ResizedBVHArray = true;}
@@ -1352,10 +1348,8 @@ namespace TrueTrace {
                     if(LightTriBuffer == null || !LightTriBuffer.IsValid() || LightTriCount > LightTriBuffer.count) {CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>()); ResizedLightTriArray = true;}
     #if !DontUseSGTree
                     if(LightTreeBufferA == null || !LightTreeBufferA.IsValid() || AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount > LightTreeBufferA.count) {CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<GaussianTreeNode>()); ResizedLightBVHArray = true;}
-                    // if(LightTreeBufferB == null || !LightTreeBufferB.IsValid() || AggSGTreeSKINNEDNodeCount > LightTreeBufferB.count) {CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<GaussianTreeNode>()); ResizedLightBVHSkinnedArray = true;}
     #else
                     if(LightTreeBufferA == null || !LightTreeBufferA.IsValid() || AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount > LightTreeBufferA.count) {CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<CompactLightBVHData>()); ResizedLightBVHArray = true;}
-                    // if(LightTreeBufferB == null || !LightTreeBufferB.IsValid() || AggSGTreeSKINNEDNodeCount > LightTreeBufferB.count) {CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<CompactLightBVHData>()); ResizedLightBVHSkinnedArray = true;}
     #endif
 #endif
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArrayA", AggTriBufferA);
