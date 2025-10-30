@@ -288,41 +288,41 @@ float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat Mat
 			#ifdef PointFiltering
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
 
@@ -414,41 +414,41 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 			#ifdef PointFiltering
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
 				[branch]if(TextureReadChannel != 4) {
 					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
+						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
 					} 
-				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
 

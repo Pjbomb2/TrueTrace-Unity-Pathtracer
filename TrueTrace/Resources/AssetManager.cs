@@ -1307,6 +1307,11 @@ namespace TrueTrace {
                     bool ResizedLightTriArray = false;
                     bool ResizedLightBVHArray = false;
 #if StrictMemoryReduction
+                    ResizedLightBVHArray = true;
+                    ResizedLightTriArray = true;
+                    ResizedTriArray = true;
+                    ResizedBVHArray = true;
+                    
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
                     CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
