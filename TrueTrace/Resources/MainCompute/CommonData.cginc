@@ -12,7 +12,7 @@ float4x4 CamInvProj;
 float4x4 CamToWorldPrev;
 float4x4 CamInvProjPrev;
 float4x4 viewprojection;
-
+int LightTreePrimaryTLASOffset;
 
 inline float4x4 inverse(float4x4 m) {
     float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
@@ -1584,14 +1584,13 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 }
 
 #ifdef UseSGTree
-inline void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const float4x4 W2L, const uint LightPathFlag, const int Offset2, const uint PathFlags) {
+inline void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const float4x4 W2L, const uint LightPathFlag, const int Offset2, const uint PathFlags, int NodeOffset) {
 #else
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const float4x4 W2L, const uint LightPathFlag, const int Offset2, const uint PathFlags) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const float4x4 W2L, const uint LightPathFlag, const int Offset2, const uint PathFlags, int NodeOffset) {
 #endif
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
-	int NodeOffset = 0;
 	float3 stack[12];
 	int stacksize = 0;
 	float RandNum = random(264, pixel_index).x;
@@ -1704,7 +1703,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
-	int NodeOffset = 0;
+	int NodeOffset = UsePrev ? LightTreePrimaryTLASOffset : 0;
 	int StartIndex = 0;
 
 	float3x3 tangentFrame = GetTangentSpace2(n);
@@ -1785,7 +1784,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 					jjMat = mul(reflecJacobianMat2, transpose(reflecJacobianMat2));//so this can all be precomputed, but thats actually slower for some reaon??
 					detJJ4 = rcp(4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
 				}
-				NodeOffset = (UsePrev && _MeshData[MeshIndex].LightNodeSkinnedOffset != -1) ? _MeshData[MeshIndex].LightNodeSkinnedOffset : _MeshData[MeshIndex].LightNodeOffset;
+				NodeOffset = (UsePrev && _MeshData[MeshIndex].LightNodeSkinnedOffset != -1) ? (_MeshData[MeshIndex].LightNodeSkinnedOffset) : _MeshData[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				node = SGTree[node_index];
@@ -2380,7 +2379,6 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
     	#ifdef DoubleBufferSGTree
-			// [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, true);
 			MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1);
 		#else
 			MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, false);

@@ -21,7 +21,7 @@
 // #define UseTextureLOD
 #define EONDiffuse
 // #define AdvancedBackground
-// #define UseBRDFLights
+#define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
 // #define RadCache

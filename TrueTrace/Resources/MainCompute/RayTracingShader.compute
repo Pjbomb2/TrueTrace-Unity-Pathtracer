@@ -266,17 +266,19 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float4x4 WorldToLoc = _MeshData[hit.mesh_id].W2L;
                 uint Path = _MeshData[hit.mesh_id].PathFlags;
                 int Offset2 = _MeshData[hit.mesh_id].LightNodeOffset;
+                int Offset0 = 0;
                 #if defined(LBVH)
                     #ifdef DoubleBufferSGTree
                         [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) {
                             WorldToLoc = _MeshDataPrev[hit.mesh_id].W2L;
-                            if(_MeshData[hit.mesh_id].LightNodeSkinnedOffset != -1)
+                            Offset0 = LightTreePrimaryTLASOffset;
+                            [branch] if(_MeshData[hit.mesh_id].LightNodeSkinnedOffset != -1)
                                 Offset2 = _MeshData[hit.mesh_id].LightNodeSkinnedOffset;
                         }
 
-                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, WorldToLoc, AggTrisB[hit.triangle_id].IsEmissive, Offset2, Path);
+                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, WorldToLoc, AggTrisB[hit.triangle_id].IsEmissive, Offset2, Path, Offset0);
                     #else
-                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, WorldToLoc, AggTrisB[hit.triangle_id].IsEmissive, Offset2, Path);
+                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, WorldToLoc, AggTrisB[hit.triangle_id].IsEmissive, Offset2, Path, Offset0);
                     #endif
                 #else
                     light_pdf /= (float)LightMeshCount;

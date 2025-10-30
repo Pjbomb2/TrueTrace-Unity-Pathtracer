@@ -596,16 +596,17 @@ struct Transfer {
 };
 
 StructuredBuffer<Transfer> Transfers;
+int LightTreePrimaryTLASOffset;
 
 
-
-
+int Resettled;
 [numthreads(256,1,1)]
 void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x];
     GaussianTreeNode Node = SGTreeWrite[Index];
+    if(Resettled == 0) SGTreeWrite[Index + LightTreePrimaryTLASOffset] = Node;
     if(Node.left < 0) {
         int StartIndex = _MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].LightNodeOffset;
         float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].W2L);
@@ -641,6 +642,7 @@ void TLASLightBVHRefitKernel (uint3 id : SV_DispatchThreadID)
     if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x];
     LightBVHData Node = LightNodesWrite[Index];
+    if(Resettled == 0) LightNodesWrite[Index + LightTreePrimaryTLASOffset] = Node;
     if(Node.left < 0) {
         int StartIndex = _MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].LightNodeOffset;
         float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].W2L);
