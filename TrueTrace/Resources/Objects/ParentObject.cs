@@ -1282,18 +1282,22 @@ namespace TrueTrace {
                         return;
                     }
                     var SkinnedRootBone = IsSkinnedGroup ? SkinnedMeshes[i].rootBone : this.transform;
-                    // if(SkinnedRootBone == null) SkinnedRootBone = SkinnedMeshes[i].gameObject.transform;
+                    if(SkinnedRootBone == null && !IsDeformable) SkinnedRootBone = SkinnedMeshes[i].gameObject.transform;
                     int IndexCount = IndexCounts[i];
 
                     cmd.SetComputeIntParam(MeshRefit, "Stride", VertexBuffers[i].stride / 4);
-                    if(IsSkinnedGroup && SkinnedRootBone != null) {
-                        cmd.SetComputeMatrixParam(MeshRefit, "Transform", transform.worldToLocalMatrix * Matrix4x4.TRS(SkinnedRootBone.position, SkinnedRootBone.rotation, Vector3.one ));
-                        cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.localPosition);
+                    if(IsSkinnedGroup) {
+                        if(SkinnedRootBone != null) {
+                            cmd.SetComputeMatrixParam(MeshRefit, "Transform", transform.worldToLocalMatrix * Matrix4x4.TRS(SkinnedRootBone.position, SkinnedRootBone.rotation, Vector3.one ));
+                            cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.localPosition);
+                        } else {
+                            cmd.SetComputeMatrixParam(MeshRefit, "Transform", transform.worldToLocalMatrix * Matrix4x4.TRS(SkinnedMeshes[i].gameObject.transform.position, SkinnedMeshes[i].gameObject.transform.rotation, SkinnedMeshes[i].gameObject.transform.lossyScale ));
+                            cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedMeshes[i].gameObject.transform.localPosition);
+                        }
                     } else {
-                        cmd.SetComputeMatrixParam(MeshRefit, "Transform", transform.worldToLocalMatrix * Matrix4x4.TRS(SkinnedMeshes[i].gameObject.transform.position, SkinnedMeshes[i].gameObject.transform.rotation, SkinnedMeshes[i].gameObject.transform.lossyScale ));
-                        cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedMeshes[i].gameObject.transform.localPosition);
+                        cmd.SetComputeMatrixParam(MeshRefit, "Transform", Matrix4x4.identity);
+                        cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.localPosition);
                     }
-                    cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.localPosition);
     
                     cmd.SetComputeIntParam(MeshRefit, "VertOffset", CurVertOffset);
                     cmd.SetComputeIntParam(MeshRefit, "gVertexCount", IndexCount);
