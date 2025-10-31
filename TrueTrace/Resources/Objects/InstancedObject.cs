@@ -81,10 +81,12 @@ namespace TrueTrace {
             }
         }
         public void OnParentClear() {
-            AssetManager.Assets.InstanceUpdateQue.Add(this);
             this.ExistsInQue = 3;
-            AssetManager.Assets.ParentCountHasChanged = true;
-            if(!AssetManager.Assets.InstanceAddQue.Contains(this)) AssetManager.Assets.InstanceAddQue.Add(this);
+            if(AssetManager.Assets != null && AssetManager.Assets.InstanceUpdateQue != null) {
+                AssetManager.Assets.InstanceUpdateQue.Add(this);
+                AssetManager.Assets.ParentCountHasChanged = true;
+                if(!AssetManager.Assets.InstanceAddQue.Contains(this)) AssetManager.Assets.InstanceAddQue.Add(this);
+            }
         }
     }
 }

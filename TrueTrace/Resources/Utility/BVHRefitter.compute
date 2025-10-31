@@ -627,8 +627,6 @@ void TLASLightBVHRefitKernel (uint3 id : SV_DispatchThreadID)
 	        LightNodesWrite[Index].radius = LightNodesWrite[StartIndex].radius * Scale;
 	        LightNodesWrite[Index].intensity = LightNodesWrite[StartIndex].intensity * Scale * Scale;
 	    #else
-	        int StartIndex = _MeshData[_LightMeshes[-(NodeLeft+1)].LockedMeshIndex].LightNodeOffset;
-	        float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(NodeLeft+1)].LockedMeshIndex].W2L);
 	        float3 center = transform_position(TransfMat, (LightNodesWrite[StartIndex].BBMax + LightNodesWrite[StartIndex].BBMin) / 2.0f);
 	        float3 extent = transform_direction(TransfMat, (LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f);
 	        LightNodesWrite[Index].BBMax = center + extent;
@@ -734,7 +732,6 @@ void BLASLightTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 #endif
         return;
     }
-    GaussianTreeNode LeftNode = LightNodesWrite[NodeLeft + TotalNodeOffset];
 
 #ifdef UseSGTree
     LightNodesWrite[Index] = UnionSG(LightNodesWrite[NodeLeft + TotalNodeOffset], LightNodesWrite[NodeLeft + 1 + TotalNodeOffset], NodeLeft);
