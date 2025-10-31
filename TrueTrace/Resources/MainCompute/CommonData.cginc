@@ -71,14 +71,6 @@ bool UseNEE;
 bool DoPartialRendering;
 int PartialRenderingFactor;
 
-
-/*
-Quick optimization settings:
-Partial rendering factor to 2
-
-
-*/
-
 int unitylightcount;
 
 //Cam Info
@@ -161,9 +153,6 @@ Texture2D<half4> NEEPosB;
 RWTexture2D<float4> Result;
 Texture2D<float> _AlphaAtlas;
 
-RWStructuredBuffer<SmallerRay> Rays;
-StructuredBuffer<SmallerRay> Rays2;
-
 Texture2D<uint4> PrimaryTriData;
 Texture2D<uint4> PrimaryTriDataPrev;
 StructuredBuffer<int> TLASBVH8Indices;
@@ -175,9 +164,9 @@ struct TrianglePos {
 	float3 posedge2;
 };
 struct TriangleUvs {
-	float2 pos0;
-	float2 posedge1;
-	float2 posedge2;
+	float2 UV0;
+	float2 UV1;
+	float2 UV2;
 };
 
 
@@ -189,20 +178,21 @@ inline TrianglePos triangle_get_positions(const int ID) {
 	return tri;
 }
 
-inline TriangleUvs triangle_get_positions2(const int ID) {
+inline TriangleUvs triangle_get_UVs(const int ID) {
 	TriangleUvs tri;
-	tri.pos0 = TOHALF(AggTrisA.Load(ID).tex0);
-	tri.posedge1 = TOHALF(AggTrisA.Load(ID).texedge1);
-	tri.posedge2 = TOHALF(AggTrisA.Load(ID).texedge2);
+	tri.UV0 = TOHALF(AggTrisA.Load(ID).tex0);
+	tri.UV1 = TOHALF(AggTrisA.Load(ID).texedge1);
+	tri.UV2 = TOHALF(AggTrisA.Load(ID).texedge2);
 	return tri;
 }
 
 SamplerState my_linear_clamp_sampler;
 SamplerState sampler_trilinear_clamp;
 SamplerState my_point_clamp_sampler;
+SamplerState my_trilinear_repeat_sampler;
+SamplerState my_point_repeat_sampler;
 
 Texture2D<half> SingleComponentAtlas;
-RWTexture2D<uint> RandomNumsWrite;
 Texture2D<float4> RandomNums;
 RWTexture2D<float4> _DebugTex;
 
@@ -212,35 +202,20 @@ Texture2D<half2> _NormalAtlas;
 SamplerState sampler_NormalAtlas;
 Texture2D<half4> _EmissiveAtlas;
 Texture2D<half> _IESAtlas;
-Texture2D<half> Heightmap;
 
-SamplerState my_trilinear_repeat_sampler;
-SamplerState my_point_repeat_sampler;
+Texture2D<half> Heightmap;
+Texture2D<float4> TerrainAlphaMap;
+SamplerState sampler_TerrainAlphaMap;
+int TerrainCount;
+bool TerrainExists;
+
+int MaterialCount;
+int LightMeshCount;
+
+
 #if !defined(DX11)
 	Texture2D<float4> _BindlessTextures[2048] : register(t31);
 #endif
-
-inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
-	if(TexDim2.x <= 0) return -1;
-	float4 TexDim;
-    TexDim.xy = float2((float)(((uint)TexDim2.x) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.x >> 15)) / 16384.0f);
-    TexDim.zw = float2((float)(((uint)TexDim2.y) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.y >> 15)) / 16384.0f);
-	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
-	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
-	// BaseUV =fmod(abs(BaseUV), 1.0f);
-	if(Rotation != 0) {
-		float sinc, cosc;
-		sincos(Rotation / 180.0f, sinc, cosc);
-		BaseUV -= 0.5f;
-		float2 tempuv = BaseUV;
-		BaseUV.x = tempuv.x * cosc - tempuv.y * sinc;
-		BaseUV.y = tempuv.x * sinc + tempuv.y * cosc;
-		BaseUV += 0.5f;
-		BaseUV = fmod(abs(BaseUV), 1.0f);
-	}
-	return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
-}
-
 
 inline void HandleRotation(inout float2 UV, float Rotation) {
 	if(Rotation != 0) {
@@ -253,27 +228,46 @@ inline void HandleRotation(inout float2 UV, float Rotation) {
 		UV += 0.5f;
 	}
 }
+inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
+	if(TexDim2.x <= 0) return -1;
+	float4 TexDim;
+    TexDim.xy = float2((float)(((uint)TexDim2.x) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.x >> 15)) / 16384.0f);
+    TexDim.zw = float2((float)(((uint)TexDim2.y) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.y >> 15)) / 16384.0f);
+	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
+	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
+	if(Rotation != 0) {
+		HandleRotation(BaseUV, Rotation);
+		BaseUV = fmod(abs(BaseUV), 1.0f);
+	}
+	return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
+}
 
 
+#ifdef UseTextureLOD
+	#define BindlessLOD CurBounce
+#else
+	#define BindlessLOD 0
+#endif
+#ifdef PointFiltering
+	#ifdef DX11
+		#define TTPrimarySampler my_point_clamp_sampler
+	#else
+		#define TTPrimarySampler my_point_repeat_sampler
+	#endif
+#else 
+	#ifdef DX11
+		#define TTPrimarySampler my_linear_clamp_sampler
+	#else
+		#define TTPrimarySampler my_trilinear_repeat_sampler
+	#endif
+#endif
 
 float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat MatTex) {
 	float4 FinalCol = 0;
 	#if defined(DX11)
 		switch(TextureType) {
-			case SampleAlbedo:
-				#ifdef PointFiltering
-					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
-				#else
-					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
-				#endif
-			break;
-			case SampleAlpha:
-				#ifdef PointFiltering
-					FinalCol = _AlphaAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
-				#else
-					FinalCol = _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
-				#endif
-			break;
+			case SampleAlbedo: FinalCol = _TextureAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0); break;
+			case SampleAlpha: FinalCol = _AlphaAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0); break;
 		}
 	#else//BINDLESS
 		int2 TextureIndexAndChannel = -1;
@@ -284,50 +278,14 @@ float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat Mat
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
 
-		#ifdef UseTextureLOD
-			#ifdef PointFiltering
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
-			#else
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
-			#endif
-		#else
-			#ifdef PointFiltering
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0);
-			#else
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
-			#endif
-		#endif
-
-
-
+		[branch]if(TextureReadChannel != 4) {
+			[branch]switch(TextureReadChannel) {
+				case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).x; break;
+				case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).y; break;
+				case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).z; break;
+				case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).w; break;
+			} 
+		} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD);
 	#endif
 	return FinalCol;
 }
@@ -336,58 +294,19 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 	float4 FinalCol = 0;
 	#if defined(DX11)
 		switch(TextureType) {
-			case SampleAlbedo:
-				#ifdef PointFiltering
-					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
-				#else
-					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
-				#endif
-			break;
-			case SampleMetallic:
-				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryTexScaleOffset, MatTex.MetallicTex, MatTex.RotationSecondary), 0);
-			break;
-			case SampleRoughness:
-				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryTexScaleOffset, MatTex.RoughnessTex, MatTex.RotationSecondary), 0);
-			break;
-			case SampleEmission:
-				FinalCol = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.EmissiveTex, MatTex.Rotation), 0);
-			break;
-			case SampleNormal:
-				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.NormalTexScaleOffset, MatTex.NormalTex, MatTex.RotationNormal), 0).xyxy;
-			break;
-			case SampleAlpha:
-				#ifdef PointFiltering
-					FinalCol = _AlphaAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
-				#else
-					FinalCol = _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
-				#endif
-			break;
-			case SampleMatCap:
-				FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapTex, MatTex.Rotation), 0);
-			break;
-			case SampleMatCapMask:
-				FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapMask, MatTex.Rotation), 0);
-			break;
-			case SampleTerrainAlbedo:
-				UV = AlignUV(UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy, MatTex.AlbedoTexScale, MatTex.AlbedoTex);
-				FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, UV, 0);
-			break;
-			case SampleSecondaryAlbedo:
-				#ifdef PointFiltering
-					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.RotationSecondaryDiffuse), 0);
-				#else
-					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.RotationSecondaryDiffuse), 0);
-				#endif
-			break;
-			case SampleSecondaryAlbedoMask:
-				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.SecondaryAlbedoMask, MatTex.Rotation), 0);
-			break;
-			case SampleDetailNormal:
-				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.SecondaryNormalTexScaleOffset, MatTex.SecondaryNormalTex, MatTex.RotationSecondaryNormal), 0).xyxy;
-			break;
-			case SampleDiffTrans:
-				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.DiffTransTex, MatTex.Rotation), 0);
-			break;
+			case SampleAlbedo: FinalCol = _TextureAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0); break;
+			case SampleMetallic: FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryTexScaleOffset, MatTex.MetallicTex, MatTex.RotationSecondary), 0); break;
+			case SampleRoughness: FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryTexScaleOffset, MatTex.RoughnessTex, MatTex.RotationSecondary), 0); break;
+			case SampleEmission: FinalCol = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.EmissiveTex, MatTex.Rotation), 0); break;
+			case SampleNormal: FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.NormalTexScaleOffset, MatTex.NormalTex, MatTex.RotationNormal), 0).xyxy; break;
+			case SampleAlpha: FinalCol = _AlphaAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0); break;
+			case SampleMatCap: FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapTex, MatTex.Rotation), 0); break;
+			case SampleMatCapMask: FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapMask, MatTex.Rotation), 0); break;
+			case SampleTerrainAlbedo: FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy, MatTex.AlbedoTexScale, MatTex.AlbedoTex), 0); break;
+			case SampleSecondaryAlbedo: FinalCol = _TextureAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.RotationSecondaryDiffuse), 0); break;
+			case SampleSecondaryAlbedoMask: FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.SecondaryAlbedoMask, MatTex.Rotation), 0); break;
+			case SampleDetailNormal: FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.SecondaryNormalTexScaleOffset, MatTex.SecondaryNormalTex, MatTex.RotationSecondaryNormal), 0).xyxy; break;
+			case SampleDiffTrans: FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.DiffTransTex, MatTex.Rotation), 0); break;
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
@@ -410,47 +329,14 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
 
-		#ifdef UseTextureLOD
-			#ifdef PointFiltering
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
-			#else
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
-			#endif
-		#else
-			#ifdef PointFiltering
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_point_repeat_sampler, UV, 0);
-			#else
-				[branch]if(TextureReadChannel != 4) {
-					[branch]switch(TextureReadChannel) {
-						case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
-						case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
-						case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
-						case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
-					} 
-				} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
-			#endif
-		#endif
+		[branch]if(TextureReadChannel != 4) {
+			[branch]switch(TextureReadChannel) {
+				case 0: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).x; break;
+				case 1: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).y; break;
+				case 2: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).z; break;
+				case 3: FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD).w; break;
+			} 
+		} else FinalCol = _BindlessTextures[NonUniformResourceIndex(TextureIndex)].SampleLevel(TTPrimarySampler, UV, BindlessLOD);
 
 		[branch] if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
 			FinalCol.g = 1.0f - FinalCol.g;
@@ -464,17 +350,62 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 	return FinalCol;
 }
 
+// ------- Compression/Decompression Functions --------
+uint packRGBE(float3 v)
+{
+	float3 va = max(0, v);
+	float max_abs = max(va.r, max(va.g, va.b));
+	if (max_abs == 0) return 0;
 
-Texture2D<float4> TerrainAlphaMap;
-SamplerState sampler_TerrainAlphaMap;
-int MaterialCount;
+	float exponent = floor(log2(max_abs));
+
+	uint result = uint(clamp(exponent + 20, 0, 31)) << 27;
+
+	float scale = pow(2, -exponent) * 256.0;
+	uint3 vu = min(511, round(va * scale));
+	result |= vu.r;
+	result |= vu.g << 9;
+	result |= vu.b << 18;
+
+	return result;
+}
+
+float3 unpackRGBE(uint x)
+{
+    int exponent = int(x >> 27) - 20;
+    float scale = pow(2, exponent) / 256.0;
+
+    float3 v;
+    v.r = float(x & 0x1ff) * scale;
+    v.g = float((x >> 9) & 0x1ff) * scale;
+    v.b = float((x >> 18) & 0x1ff) * scale;
+
+    return v;
+}
+uint octahedral_32(float3 nor) {
+	float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
+	float t = saturate(-nor.z);
+	nor.xy = (nor.xy + (nor.xy > 0.0f ? t : -t)) * oct;
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
+}
+
+float3 i_octahedral_32( uint data ) {
+    uint2 iv = uint2( data, data>>16u ) & 65535u; 
+    float2 v = iv/32767.5f - 1.0f;
+    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+    float t = max(-nor.z,0.0);                     // much faster than original
+    nor.xy += (nor.xy>=0.0)?-t:t;                     // implementation of this
+    return normalize( nor );
+}
+// ------- Companion Functions End --------
 
 
 
-int LightMeshCount;
 
-int TerrainCount;
-bool TerrainExists;
+
+
+
 
 float3x3 GetTangentSpace(float3 normal) {
     // Choose a helper floattor for the cross product
@@ -638,41 +569,6 @@ RayHit get2(const uint4 hit) {
 	return ray_hit;
 }
 
-
-
-uint packRGBE(float3 v)
-{
-	float3 va = max(0, v);
-	float max_abs = max(va.r, max(va.g, va.b));
-	if (max_abs == 0) return 0;
-
-	float exponent = floor(log2(max_abs));
-
-	uint result = uint(clamp(exponent + 20, 0, 31)) << 27;
-
-	float scale = pow(2, -exponent) * 256.0;
-	uint3 vu = min(511, round(va * scale));
-	result |= vu.r;
-	result |= vu.g << 9;
-	result |= vu.b << 18;
-
-	return result;
-}
-
-float3 unpackRGBE(uint x)
-{
-    int exponent = int(x >> 27) - 20;
-    float scale = pow(2, exponent) / 256.0;
-
-    float3 v;
-    v.r = float(x & 0x1ff) * scale;
-    v.g = float((x >> 9) & 0x1ff) * scale;
-    v.b = float((x >> 18) & 0x1ff) * scale;
-
-    return v;
-}
-
-
 bool IsOrtho;
 float OrthoSize;
 
@@ -788,12 +684,12 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
         float t = f * dot(tri.posedge2, q);
 
         [branch]if (t > 0 && t < max_distance) {
-		  	const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+		  	const TriangleUvs TriUVs = triangle_get_UVs(tri_id);
 		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
             #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
 				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+	                float2 BaseUv = TriUVs.UV0 * (1.0f - u - v) + TriUVs.UV1 * u + TriUVs.UV2 * v;
         
                     if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
                     	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
@@ -857,12 +753,12 @@ inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout floa
         float t = f * dot(tri.posedge2, q);
 
         [branch]if (t > 0 && t < max_distance) {
-		  	const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+		  	const TriangleUvs TriUVs = triangle_get_UVs(tri_id);
 		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
             #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground)
 				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return; 
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
-	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+	                float2 BaseUv = TriUVs.UV0 * (1.0f - u - v) + TriUVs.UV1 * u + TriUVs.UV2 * v;
                     if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
                     	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
                         if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
@@ -1201,22 +1097,7 @@ inline float power_heuristic(float pdf_f, float pdf_g) {
     return (pdf_f * pdf_f) / (pdf_f * pdf_f + pdf_g * pdf_g); // Power of 2 hardcoded, best empirical results according to Veach
 }
 
-uint octahedral_32(float3 nor) {
-	float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
-	float t = saturate(-nor.z);
-	nor.xy = (nor.xy + (nor.xy > 0.0f ? t : -t)) * oct;
-    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
-    return d.x|(d.y<<16u);
-}
 
-float3 i_octahedral_32( uint data ) {
-    uint2 iv = uint2( data, data>>16u ) & 65535u; 
-    float2 v = iv/32767.5f - 1.0f;
-    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
-    float t = max(-nor.z,0.0);                     // much faster than original
-    nor.xy += (nor.xy>=0.0)?-t:t;                     // implementation of this
-    return normalize( nor );
-}
 
 int RISCount;
 
@@ -1281,8 +1162,6 @@ inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const f
     float3 Normal1 = i_octahedral_32(AggTrisB[TriIndex].norms.y);
     float3 Normal2 = i_octahedral_32(AggTrisB[TriIndex].norms.z);
     return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
-    // float wldScale = rsqrt(dot(Normal2, Normal2));
-    // return mul(wldScale, Normal2);	
 }
 
 inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
@@ -1290,8 +1169,6 @@ inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const 
     float3 Normal1 = i_octahedral_32(AggTrisB[TriIndex].tans.y);
     float3 Normal2 = i_octahedral_32(AggTrisB[TriIndex].tans.z);
     return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
-    // float wldScale = rsqrt(dot(Normal2, Normal2));
-    // return mul(wldScale, Normal2);
 }
 
 inline float GetHeightRaw(float3 CurrentPos, const TerrainData Terrain) {
@@ -1326,8 +1203,7 @@ static const float FLT_EPSILON = 1.192092896e-07f;
 static const float FLT_MIN = 1.175494351e-38f;
 
 
-inline float mulsign(const float x, const float y)
-{
+inline float mulsign(const float x, const float y) {
 	return asfloat((asuint(y) & 0x80000000) ^ asuint(x));
 }
 
@@ -1452,9 +1328,6 @@ inline float SGGX(const float3 m, const float2x2 roughnessMat) {
 inline float SGGXReflectionPDF(const float3 wi, const float3 m, const float2x2 roughnessMat) {
 	return SGGX(m, roughnessMat) * rcp(max(4.0 * sqrt(dot(wi.xz, mul(roughnessMat, wi.xz)) + wi.y * wi.y), EPSILON)); // TODO: Use Kahan's algorithm for precise mul and dot. [https://pharr.org/matt/blog/2019/11/03/difference-of-floats]
 }
-
-
-
 
 inline float SGIntegral(const float sharpness) {
 	return 4.0 * PI * expm1_over_x(-2.0 * sharpness);
@@ -1625,9 +1498,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 		    float sumweights = (ci.x + ci.y);
             float up = RandNum * sumweights;
             if (up == sumweights)
-            {
                 up = asfloat(asuint(up) - 1);
-            }
             int offset = 0;
             float sum = 0;
             if(sum + ci[offset] <= up) sum += ci[offset++];
@@ -1795,18 +1666,6 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 }
 float4x4 prevviewprojection;
 
-float3 LoadSurfaceInfoCurrentInPrev(int2 id) {
-    uint4 Target = PrimaryTriData[id.xy];
-	if(Target.w == 1) return asfloat(Target.xyz);
-    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
-    Target.y += Mesh.TriOffset;
-    float2 TriUV;
-    TriUV.x = asfloat(Target.z);
-    TriUV.y = asfloat(Target.w);
-    float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
-}
-
 float3 LoadSurfaceInfoCurrentInPrev2(int2 id) {
     uint4 Target = PrimaryTriData[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
@@ -1840,38 +1699,6 @@ inline float3 LoadSurfaceInfoPrev2(int2 id) {
 	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
 	}	    
 }
-
-
-float3 LoadSurfaceInfoPrev(int2 id) {
-    uint4 Target = PrimaryTriDataPrev[id.xy];
-	if(Target.w == 1) return asfloat(Target.xyz);
-    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
-    Target.y += Mesh.TriOffset;
-    float2 TriUV;
-    TriUV.x = asfloat(Target.z);
-    TriUV.y = asfloat(Target.w);
-    float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
-}
-
-float3 LoadSurfaceInfoPrev3(int2 id) {
-    uint4 Target = PrimaryTriDataPrev[id.xy];
-	if(Target.w == 1) return asfloat(Target.xyz);
-    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
-    // Target.y += Mesh.TriOffset;
-    float2 TriUV;
-    TriUV.x = asfloat(Target.z);
-    TriUV.y = asfloat(Target.w);
-    float4x4 Inverse = inverse(Mesh.W2L);
-    if(Mesh.SkinnedOffset == -1) {
-	    Target.y += Mesh.TriOffset;
-	    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
-	} else {
-	    Target.y += Mesh.SkinnedOffset;
-	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
-	}	  
-}
-
 
 inline float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
     uint4 Target = PrimaryTriDataPrev[id.xy];
@@ -1938,31 +1765,11 @@ float3 DeSat(float3 In, float Saturation) {
 
 
 
-
-
-#define LAYERS            5.0
-
-#define TAU               (2.0*PI)
-#define TIME              fmod(iTime, 30.0)
-#define TTIME             (TAU*TIME)
-#define RESOLUTION        iResolution
-#define ROT(a)            float2x2(cos(a), sin(a), -sin(a), cos(a))
-
-// License: Unknown, author: nmz (twitter: @stormoid), found: https://www.shadertoy.com/view/NdfyRM
-float sRGB(float t) { return lerp(1.055*pow(t, 1./2.4) - 0.055, 12.92*t, step(t, 0.0031308)); }
-// License: Unknown, author: nmz (twitter: @stormoid), found: https://www.shadertoy.com/view/NdfyRM
-float3 sRGB(in float3 c) { return float3 (sRGB(c.x), sRGB(c.y), sRGB(c.z)); }
-
-// License: Unknown, author: Matt Taylor (https://github.com/64), found: https://64.github.io/tonemapping/
-float3 aces_approx(float3 v) {
-  v = max(v, 0.0);
-  v *= 0.6f;
-  float a = 2.51f;
-  float b = 0.03f;
-  float c = 2.43f;
-  float d = 0.59f;
-  float e = 0.14f;
-  return clamp((v*(a*v+b))/(v*(c*v+d)+e), 0.0f, 1.0f);
+float3 toSpherical(float3 p) {
+  float r   = length(p);
+  float t   = acos(p.z/r);
+  float ph  = atan(p.y / p.x);
+  return float3(r, t, ph);
 }
 
 // License: Unknown, author: Unknown, found: don't remember
@@ -1971,14 +1778,6 @@ float tanh_approx(float x) {
   //  return tanh(x);
   float x2 = x*x;
   return clamp(x*(27.0 + x2)/(27.0+9.0*x2), -1.0, 1.0);
-}
-
-
-// License: WTFPL, author: sam hocevar, found: https://stackoverflow.com/a/17897228/418488
-const float4 hsv2rgb_K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-float3 hsv2rgb(float3 c) {
-  float3 p = abs(frac(c.xxx + hsv2rgb_K.xyz) * 6.0 - hsv2rgb_K.www);
-  return c.z * lerp(hsv2rgb_K.xxx, clamp(p - hsv2rgb_K.xxx, 0.0, 1.0), c.y);
 }
 
 // License: MIT OR CC-BY-NC-4.0, author: mercury, found: https://mercury.sexy/hg_sdf/
@@ -1994,18 +1793,6 @@ float2 hash2(float2 p) {
   return frac(sin(p)*43758.5453123);
 }
 
-float2 shash2(float2 p) {
-  return -1.0+2.0*hash2(p);
-}
-
-float3 toSpherical(float3 p) {
-  float r   = length(p);
-  float t   = acos(p.z/r);
-  float ph  = atan(p.y / p.x);
-  return float3(r, t, ph);
-}
-
-
 // License: CC BY-NC-SA 3.0, author: Stephane Cuillerdier - Aiekick/2015 (twitter:@aiekick), found: https://www.shadertoy.com/view/Mt3GW2
 float3 blackbody(float Temp) {
   float3 col = 255;
@@ -2018,62 +1805,14 @@ float3 blackbody(float Temp) {
   return col;
 }
 
-
-// License: MIT, author: Inigo Quilez, found: https://www.shadertoy.com/view/XslGRr
-float noise(float2 p) {
-  // Found at https://www.shadertoy.com/view/sdlXWX
-  // Which then redirected to IQ shader
-  float2 i = floor(p);
-  float2 f = frac(p);
-  float2 u = f*f*(3.-2.*f);
-  
-  float n =
-         lerp( lerp( dot(shash2(i + float2(0.,0.) ), f - float2(0.,0.)), 
-                   dot(shash2(i + float2(1.,0.) ), f - float2(1.,0.)), u.x),
-              lerp( dot(shash2(i + float2(0.,1.) ), f - float2(0.,1.)), 
-                   dot(shash2(i + float2(1.,1.) ), f - float2(1.,1.)), u.x), u.y);
-
-  return 2.0*n;              
-}
-
-float fbm(float2 p, float o, float s, int iters) {
-  p *= s;
-  p += o;
-
-  const float aa = 0.5;
-  const float2x2 pp = 2.04*ROT(1.0);
-
-  float h = 0.0;
-  float a = 1.0;
-  float d = 0.0;
-  for (int i = 0; i < iters; ++i) {
-    d += a;
-    h += a*noise(p);
-    p += float2(10.7, 8.3);
-    p = mul(p, pp);
-    a *= aa;
-  }
-  h /= d;
-  
-  return h;
-}
-
-float height(float2 p) {
-  float h = fbm(p, 0.0, 5.0, 5);
-  h *= 0.3;
-  h += 0.0;
-  return (h);
-}
-
 float3 stars(float3 ro, float3 rd, float2 sp, float hh) {
   float3 col = 0;
   
-  const float m = LAYERS;
   hh = tanh_approx(20.0*hh);
 
-  for (float i = 0.0; i < m; ++i) {
+  for (float i = 0.0; i < 5; ++i) {
     float2 pp = sp+0.5*i;
-    float s = i/(m-1.0);
+    float s = i/(4.0);
     float2 dim  = (lerp(0.05, 0.003, s)*PI);
     float2 np = mod2(pp, dim);
     float2 h = hash2(np+127.0+i);
@@ -2231,25 +1970,6 @@ inline float3 CalcPos(uint4 TriData) {
 	return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + asfloat(TriData.z) * AggTrisA[TriData.y].posedge1 + asfloat(TriData.w) * AggTrisA[TriData.y].posedge2,1)).xyz;
 }
 
-inline float3 CalcNorm(uint4 TriData) {
-	if(TriData.w == 99993) return -normalize(asfloat(TriData.xyz));
-
-    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
-    TriData.y += Mesh.TriOffset;
-    float4x4 Inverse = inverse(Mesh.W2L);
-    float3 Geomnorm = GetTriangleNormal(TriData.y, asfloat(TriData.zw), Inverse);
-    float3 USGNorm = mul(Inverse, cross(normalize(AggTrisA[TriData.y].posedge1), normalize(AggTrisA[TriData.y].posedge2)));
-    float wldScale = rsqrt(dot(USGNorm, USGNorm));
-    USGNorm = -mul(wldScale, USGNorm);
-    return Geomnorm;
-    // if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
-	// return mul(Inverse, float4(AggTris[TriData.y].pos0 + ((TriData.z & 0xffff) / 65535.0f) * AggTris[TriData.y].posedge1 + ((TriData.z >> 16) / 65535.0f) * AggTris[TriData.y].posedge2,1)).xyz;
-}
-
-
-
-
-
 
 
 inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Norm, float3 Position, float3 RayDir) {
@@ -2311,9 +2031,6 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
                 light.Radiance *= saturate(saturate(dot(to_light, -light.Direction)) * MiscInfo.y + MiscInfo.z);
         	}
             p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * (dot(to_light, Norm) > 0),0);
-        	// float PDF = (((light.Type == DIRECTIONALLIGHT) ? 10.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0));
-            // if(PDF > 0.01f) p_hat = max(luminance(light.Radiance) / PDF,0);
-        	// else p_hat = 0;
         }
         wsum += p_hat;
         if(Rand.y < p_hat / wsum) {
@@ -2445,56 +2162,20 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     return AggTriIndex;
 }
 
-
-inline float3 temperature(float t)
-{
-    const static float3 c[10] = {
-        float3(0.0f / 255.0f, 2.0f / 255.0f, 91.0f / 255.0f),
-        float3(0.0f / 255.0f, 108.0f / 255.0f, 251.0f / 255.0f),
-        float3(0.0f / 255.0f, 221.0f / 255.0f, 221.0f / 255.0f),
-        float3(51.0f / 255.0f, 221.0f / 255.0f, 0.0f / 255.0f),
-        float3(255.0f / 255.0f, 252.0f / 255.0f, 0.0f / 255.0f),
-        float3(255.0f / 255.0f, 180.0f / 255.0f, 0.0f / 255.0f),
-        float3(255.0f / 255.0f, 104.0f / 255.0f, 0.0f / 255.0f),
-        float3(226.0f / 255.0f, 22.0f / 255.0f, 0.0f / 255.0f),
-        float3(191.0f / 255.0f, 0.0f / 255.0f, 83.0f / 255.0f),
-        float3(145.0f / 255.0f, 0.0f / 255.0f, 65.0f / 255.0f)
-    };
-
-    const float s = t * 10.0f;
-
-    const int cur = int(s) <= 9 ? int(s) : 9;
-    const int prv = cur >= 1 ? cur - 1 : 0;
-    const int nxt = cur < 9 ? cur + 1 : 9;
-
-    const float blur = 0.8f;
-
-    const float wc = smoothstep(float(cur) - blur, float(cur) + blur, s) * (1.0f - smoothstep(float(cur + 1) - blur, float(cur + 1) + blur, s));
-    const float wp = 1.0f - smoothstep(float(cur) - blur, float(cur) + blur, s);
-    const float wn = smoothstep(float(cur + 1) - blur, float(cur + 1) + blur, s);
-
-    const float3 r = wc * c[cur] + wp * c[prv] + wn * c[nxt];
-    return float3(clamp(r.x, 0.0f, 1.0f), clamp(r.y, 0.0f, 1.0f), clamp(r.z, 0.0f, 1.0f));
+float3 pal(float t) {
+    float3 a = float3(0.5f, 0.5f, 0.5f);
+    float3 b = float3(0.5f, 0.5f, 0.5f);
+    float3 c = float3(0.8f, 0.8f, 0.8f);
+    float3 d = float3(0.0f, 0.33f, 0.67f) + 0.21f;
+    return a + b*cos( 6.28318*(c*t+d) );
 }
 
-
-
-	float3 pal(float t) {
-	    float3 a = float3(0.5f, 0.5f, 0.5f);
-	    float3 b = float3(0.5f, 0.5f, 0.5f);
-	    float3 c = float3(0.8f, 0.8f, 0.8f);
-	    float3 d = float3(0.0f, 0.33f, 0.67f) + 0.21f;
-	    return a + b*cos( 6.28318*(c*t+d) );
-	}
-
-// #if DebugView != -1
-	float4 HandleDebug(int Index) {
-        static const float one_over_max_unsigned = asfloat(0x2f7fffff);
-        uint hash = pcg_hash(32);
-        float LinearIndex = hash_with(Index, hash) * one_over_max_unsigned;
-        return float4(pal(LinearIndex), 1);
-    }
-// #endif
+float4 HandleDebug(int Index) {
+    static const float one_over_max_unsigned = asfloat(0x2f7fffff);
+    uint hash = pcg_hash(32);
+    float LinearIndex = hash_with(Index, hash) * one_over_max_unsigned;
+    return float4(pal(LinearIndex), 1);
+}
 
 
 
@@ -2513,8 +2194,6 @@ float3 SampleDirectionSphere(float u1, float u2)
 #define PropDepth 5
 #define CacheCapacity (BucketCount * 1024 * 1024)
 static const uint HashOffset = (4 * 1024 * 1024 * 16);
-
-
 
 RWByteAddressBuffer VoxelDataBufferA;
 ByteAddressBuffer VoxelDataBufferB;
@@ -2633,7 +2312,6 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 	inline void AddVoxelData(uint CacheEntry, uint4 Values) {
 	    CacheEntry *= 16;
-	    // Values[3] |= Values[3] << 16;
 	    [unroll]for(int i = 0; i < 4; i++)
 	    	if(Values[i] != 0) VoxelDataBufferA.InterlockedAdd(CacheEntry + 4 * i, Values[i]);//move to gaussians later, requires a full compressor every bounce tho since I cant rely on interlockedadds
 	}

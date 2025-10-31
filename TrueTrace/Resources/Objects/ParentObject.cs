@@ -259,11 +259,7 @@ namespace TrueTrace {
             ConstructKernel = MeshRefit.FindKernel("Construct");
             RefitLayerKernel = MeshRefit.FindKernel("RefitLayer");
             UpdateGlobalBufferAABBKernel = MeshRefit.FindKernel("UpdateGlobalBufferAABBKernel");
-#if !DontUseSGTree
-            LightBLASRefitKernel = MeshRefit.FindKernel("BLASSGTreeRefitKernel");
-#else
-            LightBLASRefitKernel = MeshRefit.FindKernel("BLASLightRefitKernel");
-#endif
+            LightBLASRefitKernel = MeshRefit.FindKernel("BLASLightTreeRefitKernel");
             LightBLASCopyKernel = MeshRefit.FindKernel("BLASCopyNodeDataKernel");
         }
         private bool NeedsToResetBuffers = true;
@@ -1317,11 +1313,7 @@ namespace TrueTrace {
                     var A1 = GlobalLightNodeOffset;
                     cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", A1);
                     cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
-#if !DontUseSGTree
-                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "SGTreeWrite", RealizedLightNodeBufferA);
-#else
                     cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBufferA);
-#endif
                     cmd.SetComputeBufferParam(MeshRefit, LightBLASCopyKernel, "LightNodesWriteB", RealizedLightNodeBufferA);
                     cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightCopier");

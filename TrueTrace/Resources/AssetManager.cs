@@ -37,6 +37,7 @@ namespace TrueTrace {
         private ComputeShader Refitter;
         private ComputeShader MeshFunctions;
         private int RefitLayer;
+        private int RefitCopy;
         private int LightTLASRefitKernel;
 
         private int TriangleBufferKernel;
@@ -60,8 +61,7 @@ namespace TrueTrace {
         [HideInInspector] public ComputeBuffer AggTriBufferB;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer LightTreeBufferA;
-        // [HideInInspector] public ComputeBuffer LightTreeBufferB;
-        public List<MyMeshDataCompacted> MyMeshesCompacted;
+        [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;
         [HideInInspector] public List<LightData> UnityLights;
         [HideInInspector] public InstancedManager InstanceData;
         [HideInInspector] public List<InstancedObject> Instances;
@@ -120,7 +120,6 @@ namespace TrueTrace {
             ThisShader.SetComputeBuffer(Kernel, "LightTriangles", LightTriBuffer);
             ThisShader.SetComputeBuffer(Kernel, "_LightMeshes", LightMeshBuffer);
             ThisShader.SetComputeBuffer(Kernel, "SGTree", LightTreeBufferA);
-            // ThisShader.SetComputeBuffer(Kernel, "SGTreePrev", LightTreeBufferB);
             ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
         }
 
@@ -945,12 +944,10 @@ namespace TrueTrace {
             
             UpdateMaterialDefinition();
             Refitter = Resources.Load<ComputeShader>("Utility/BVHRefitter");
-#if !DontUseSGTree
-            LightTLASRefitKernel = Refitter.FindKernel("TLASSGTreeRefitKernel");
-#else
             LightTLASRefitKernel = Refitter.FindKernel("TLASLightBVHRefitKernel");
-#endif
             RefitLayer = Refitter.FindKernel("RefitBVHLayer");
+            
+            RefitCopy = Refitter.FindKernel("BLASCopyNodeDataKernel");
 
             MaterialsChanged = new List<RayTracingObject>();
             InstanceData = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
@@ -1218,6 +1215,7 @@ namespace TrueTrace {
         cmd.Release();}
         }
 
+        int LightNodeCount = 0;
         private void AccumulateData(CommandBuffer cmd)
         {
             // UnityEngine.Profiling.Profiler.BeginSample("Update Object Lists");
@@ -1245,29 +1243,17 @@ namespace TrueTrace {
                 int SkinnedMeshTriCount = 0;
                 int SkinnedMeshTriOffset = 0;
 
-#if !DontUseSGTree
                 for(int i = 0; i < ParentsLength; i++) {
-                    if (RenderQue[i].LightTriangles.Count != 0) {
+                    if (RenderQue[i].HasLightTriangles) {
                         if(RenderQue[i].IsSkinnedGroup) {
-                            AggSGTreeSKINNEDNodeCount += RenderQue[i].LBVH.SGTree.Length;
+                            AggSGTreeSKINNEDNodeCount += RenderQue[i].LBVH.NodeCount;
                         } 
                         LightMeshCount++; 
-                        AggSGTreeNodeCount += RenderQue[i].LBVH.SGTree.Length;
+                        AggSGTreeNodeCount += RenderQue[i].LBVH.NodeCount;
                     }
                 }
-#else
-                for(int i = 0; i < ParentsLength; i++) {
-                    if (RenderQue[i].LightTriangles.Count != 0) {
-                        if(RenderQue[i].IsSkinnedGroup) {
-                            AggSGTreeSKINNEDNodeCount += RenderQue[i].LBVH.nodes.Length;
-                        } 
-                        LightMeshCount++; 
-                        AggSGTreeNodeCount += RenderQue[i].LBVH.nodes.Length;
-                    }
-                }
-#endif
                 int InstanceQueCount = InstanceRenderQue.Count;
-                for (int i = 0; i < InstanceQueCount; i++) {if (InstanceRenderQue[i].InstanceParent.LightTriangles.Count != 0) LightMeshCount++;}
+                for (int i = 0; i < InstanceQueCount; i++) {if (InstanceRenderQue[i].InstanceParent.HasLightTriangles) LightMeshCount++;}
 
 
                 
@@ -1298,11 +1284,7 @@ namespace TrueTrace {
                     AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
                     AggTriCount += InstanceData.RenderQue[i].AggTriangles.Length;
                     LightTriCount += InstanceData.RenderQue[i].LightTriangles.Count;
-#if !DontUseSGTree
-                    if (InstanceData.RenderQue[i].LightTriangles.Count != 0) AggSGTreeNodeCount += InstanceData.RenderQue[i].LBVH.SGTree.Length;
-#else
-                    if (InstanceData.RenderQue[i].LightTriangles.Count != 0) AggSGTreeNodeCount += InstanceData.RenderQue[i].LBVH.nodes.Length;
-#endif
+                    if (InstanceData.RenderQue[i].LightTriangles.Count != 0) AggSGTreeNodeCount += InstanceData.RenderQue[i].LBVH.NodeCount;
                 }
 
                 CurSGNodeOffset = 2 * (LightMeshCount) * 2;
@@ -1318,8 +1300,11 @@ namespace TrueTrace {
                 {//Accumulate the BVH nodes and triangles for all normal models
                     if(MeshFunctions == null) MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
                     LightAABBs = new LightBounds[LightMeshCount];
-                    SGTreeNodes = new GaussianTreeNode[LightMeshCount];
-                    SGTree = new GaussianTreeNode[LightMeshCount * 2];
+                    LightNodeCount = LightMeshCount * 2;
+                    #if !DontUseSGTree
+                        SGTreeNodes = new GaussianTreeNode[LightMeshCount];
+                        SGTree = new GaussianTreeNode[LightMeshCount * 2];
+                    #endif
                     bool ResizedTriArray = false;
                     bool ResizedBVHArray = false;
                     bool ResizedLightTriArray = false;
@@ -1488,11 +1473,7 @@ namespace TrueTrace {
                                 int TempI = i;
                                 cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
                                 cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[TempI].LocalLightNodeCount);
-#if !DontUseSGTree
-                                cmd.SetComputeBufferParam(MeshFunctions, LightTreeNodeBufferKernel, "SGNodesIn", InstanceData.RenderQue[TempI].LightTreeBuffer);
-#else
                                 cmd.SetComputeBufferParam(MeshFunctions, LightTreeNodeBufferKernel, "LightNodesIn", InstanceData.RenderQue[TempI].LightTreeBuffer);
-#endif
                                 cmd.DispatchCompute(MeshFunctions, LightTreeNodeBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[TempI].LocalLightNodeCount / 372.0f), 1, 1);
                             }
 
@@ -1821,13 +1802,8 @@ namespace TrueTrace {
                 CommonFunctions.DeepClean(ref LBVHLeaves);
                 CommonFunctions.DeepClean(ref ParentList);
                     LBVHLeaves = new List<int>();
-#if !DontUseSGTree
-                    ParentList = new Vector2Int[SGTree.Length];
-                    if(SGTree.Length != 0);
-#else
-                    ParentList = new Vector2Int[LBVH.nodes.Length];
-                    if(LBVH.nodes.Length != 0);
-#endif
+                    ParentList = new Vector2Int[LightNodeCount];
+                    if(LightNodeCount != 0)
                     Refit2(0,0);
                     int LBVHLeaveCount = LBVHLeaves.Count;
                     for(int i = 0; i < LBVHLeaveCount; i++) {
@@ -1866,19 +1842,17 @@ namespace TrueTrace {
                         LBVHWorkingSet[i].SetData(LBVH.MainSet[i]);
                     }
                     //kernel 8
-                    cmd.SetComputeBufferParam(Refitter, 8, "LightNodesWriteB", LightTreeBufferA);
+                    cmd.SetComputeBufferParam(Refitter, RefitCopy, "LightNodesWriteB", LightTreeBufferA);
                     cmd.SetComputeIntParam(Refitter, "TargetOffset", LightTreePrimaryTLASOffset);
                     cmd.SetComputeIntParam(Refitter, "TotalNodeOffset", 0);
 
                     Resettled = true;
+                    cmd.SetComputeIntParam(Refitter, "Count", LightNodeCount);
+                    cmd.DispatchCompute(Refitter, RefitCopy, (int)Mathf.Ceil(LightNodeCount / (float)256.0f), 1, 1);
 #if !DontUseSGTree
-                    cmd.SetComputeIntParam(Refitter, "Count", SGTree.Length);
-                    cmd.DispatchCompute(Refitter, 8, (int)Mathf.Ceil(SGTree.Length / (float)256.0f), 1, 1);
-                    cmd.SetBufferData(LightTreeBufferA, SGTree, 0, 0, SGTree.Length);
+                    cmd.SetBufferData(LightTreeBufferA, SGTree, 0, 0, LightNodeCount);
 #else
-                    cmd.SetComputeIntParam(Refitter, "Count", LBVH.nodes.Length);
-                    cmd.DispatchCompute(Refitter, 8, (int)Mathf.Ceil(LBVH.nodes.Length / (float)256.0f), 1, 1);
-                    cmd.SetBufferData(LightTreeBufferA, LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    cmd.SetBufferData(LightTreeBufferA, LBVH.nodes, 0, 0, LightNodeCount);
 #endif
                 }
                 LBVHTLASTask = Task.Run(() => CorrectRefitLBVH());
@@ -1890,11 +1864,7 @@ namespace TrueTrace {
                     cmd.SetComputeIntParam(Refitter, "Resettled", Resettled ? 1 : 0);
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "_MeshData", RayMaster.FramesSinceStart2 % 2 == 0 ? MeshDataBufferA : MeshDataBufferB);
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "_LightMeshes", LightMeshBuffer);
-#if !DontUseSGTree
-                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "SGTreeWrite", LightTreeBufferA);
-#else
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "LightNodesWrite", LightTreeBufferA);
-#endif
                     int ObjectOffset = 0;
                     for(int i = LBVHWorkingSet.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
@@ -1946,32 +1916,6 @@ namespace TrueTrace {
             Refit2(Depth + 1, LBVH.nodes[CurrentIndex].left + 1);
 #endif
         }
-
-//         private void Refit3(int Depth, int CurrentIndex, uint LRPath) {
-// #if !DontUseSGTree
-//             if(CurrentIndex >= SGTree.Length) return;
-//             if(SGTree[CurrentIndex].left < 0) {
-//                 int Index = LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex;
-//                 MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
-// #else
-//             if(LBVH == null || LBVH.nodes == null || CurrentIndex >= LBVH.nodes.Length) return;
-//             if(LBVH.nodes[CurrentIndex].left < 0) {
-//                 int Index = LightMeshes[-(LBVH.nodes[CurrentIndex].left+1)].LockedMeshIndex;
-//                 MyMeshDataCompacted TempDat =  MyMeshesCompacted[Index];
-
-// #endif
-//                 TempDat.PathFlags = LRPath;
-//                 MyMeshesCompacted[Index] = TempDat;
-//                 return;
-//             }
-// #if !DontUseSGTree
-//             Refit3(Depth + 1, SGTree[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
-//             Refit3(Depth + 1, SGTree[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
-// #else
-//             Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
-//             Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
-// #endif
-//         }
 
         private bool ChangedLastFrame = true;
         private RayTracingMaster RayMaster;
@@ -2111,11 +2055,9 @@ namespace TrueTrace {
                     }
 
 #if !DontUseSGTree
-                    LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
-                    // LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
+                    LightTreeBufferA.SetData(SGTree, 0, 0, LightNodeCount);
 #else
-                    LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-                    // LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LightNodeCount);
 #endif
                 }
 
@@ -2229,14 +2171,9 @@ namespace TrueTrace {
                     CommonFunctions.DeepClean(ref LBVHLeaves);
                     CommonFunctions.DeepClean(ref ParentList);
                     LBVHLeaves = new List<int>();
-#if !DontUseSGTree
-                    ParentList = new Vector2Int[SGTree.Length];
-                    if(SGTree.Length != 0)
-#else
-                    ParentList = new Vector2Int[LBVH.nodes.Length];
-                    if(LBVH.nodes.Length != 0)
-#endif
-                    Refit2(0,0);
+                    ParentList = new Vector2Int[LightNodeCount];
+                    if(LightNodeCount != 0)
+                        Refit2(0,0);
                     int LBVHLeaveCount = LBVHLeaves.Count;
                     for(int i = 0; i < LBVHLeaveCount; i++) {
 #if !DontUseSGTree

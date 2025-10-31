@@ -423,7 +423,7 @@ void UpdateGlobalBufferAABBKernel(uint3 id : SV_DispatchThreadID)
 // ---------------------------------------------------------------------- //
 //Light BVH refits
 
-#pragma kernel TLASSGTreeRefitKernel
+#pragma kernel TLASLightBVHRefitKernel
 
 
 
@@ -438,8 +438,11 @@ inline float3 i_octahedral_32( uint data ) {
 
 
 
-RWStructuredBuffer<GaussianTreeNode> SGTreeWrite;
-RWStructuredBuffer<LightBVHData> LightNodesWrite;
+#ifdef UseSGTree
+	RWStructuredBuffer<GaussianTreeNode> LightNodesWrite;
+#else
+	RWStructuredBuffer<LightBVHData> LightNodesWrite;
+#endif
 StructuredBuffer<int> WorkingSet;
 int SetCount;
 int ObjectOffset;
@@ -601,65 +604,47 @@ int LightTreePrimaryTLASOffset;
 
 int Resettled;
 [numthreads(256,1,1)]
-void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
-{
-    if(id.x >= (uint)SetCount) return;
-    const int Index = WorkingSet[id.x];
-    GaussianTreeNode Node = SGTreeWrite[Index];
-    if(Resettled == 0) SGTreeWrite[Index + LightTreePrimaryTLASOffset] = Node;
-    if(Node.left < 0) {
-        int StartIndex = _MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].LightNodeOffset;
-        float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].W2L);
-        float3 ExtendedCenter = transform_position(TransfMat, SGTreeWrite[StartIndex].position + float3(SGTreeWrite[StartIndex].radius, 0, 0));
-        float3 center = transform_position(TransfMat, SGTreeWrite[StartIndex].position);
-        float3 axis = transform_direction(TransfMat, i_octahedral_32(SGTreeWrite[StartIndex].axis));
-        float Scale = length(center - ExtendedCenter) / SGTreeWrite[StartIndex].radius;
-
-        SGTreeWrite[Index].position = center;
-        SGTreeWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(VMFSharpnessToAxisLength(SGTreeWrite[StartIndex].sharpness))), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-        SGTreeWrite[Index].axis = octahedral_32(axis);
-        SGTreeWrite[Index].variance = SGTreeWrite[StartIndex].variance * Scale;        
-
-        SGTreeWrite[Index].radius = SGTreeWrite[StartIndex].radius * Scale;
-        SGTreeWrite[Index].intensity = SGTreeWrite[StartIndex].intensity * Scale * Scale;
-        return;
-    }
-    GaussianTreeNode LeftNode = SGTreeWrite[Node.left];
-
-    SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[Node.left + 1], Node.left);
-
-}
-
-
-
-
-
-#pragma kernel TLASLightBVHRefitKernel
-
-[numthreads(256,1,1)]
 void TLASLightBVHRefitKernel (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x];
-    LightBVHData Node = LightNodesWrite[Index];
-    if(Resettled == 0) LightNodesWrite[Index + LightTreePrimaryTLASOffset] = Node;
-    if(Node.left < 0) {
-        int StartIndex = _MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].LightNodeOffset;
-        float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].W2L);
-        float3 center = transform_position(TransfMat, (LightNodesWrite[StartIndex].BBMax + LightNodesWrite[StartIndex].BBMin) / 2.0f);
-        float3 extent = transform_direction(TransfMat, (LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f);
-        LightNodesWrite[Index].BBMax = center + extent;
-        LightNodesWrite[Index].BBMin = center - extent;
-        float Scale = 1.0f;//length((LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f) / length(extent);
-        LightNodesWrite[Index].w = octahedral_32(transform_direction(TransfMat, i_octahedral_32(LightNodesWrite[StartIndex].w)));
-        LightNodesWrite[Index].phi = max(LightNodesWrite[StartIndex].phi * Scale,0.000000f);
-        LightNodesWrite[Index].cosTheta_oe = LightNodesWrite[StartIndex].cosTheta_oe;
+    const int NodeLeft = LightNodesWrite[Index].left;
+    if(Resettled == 0) LightNodesWrite[Index + LightTreePrimaryTLASOffset] = LightNodesWrite[Index];
+    if(NodeLeft < 0) {
+        int StartIndex = _MeshData[_LightMeshes[-(NodeLeft+1)].LockedMeshIndex].LightNodeOffset;
+        float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(NodeLeft+1)].LockedMeshIndex].W2L);
+       	#ifdef UseSGTree
+	        float3 ExtendedCenter = transform_position(TransfMat, LightNodesWrite[StartIndex].position + float3(LightNodesWrite[StartIndex].radius, 0, 0));
+	        float3 center = transform_position(TransfMat, LightNodesWrite[StartIndex].position);
+	        float3 axis = transform_direction(TransfMat, i_octahedral_32(LightNodesWrite[StartIndex].axis));
+	        float Scale = length(center - ExtendedCenter) / LightNodesWrite[StartIndex].radius;
+
+	        LightNodesWrite[Index].position = center;
+	        LightNodesWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(VMFSharpnessToAxisLength(LightNodesWrite[StartIndex].sharpness))), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+	        LightNodesWrite[Index].axis = octahedral_32(axis);
+	        LightNodesWrite[Index].variance = LightNodesWrite[StartIndex].variance * Scale;        
+
+	        LightNodesWrite[Index].radius = LightNodesWrite[StartIndex].radius * Scale;
+	        LightNodesWrite[Index].intensity = LightNodesWrite[StartIndex].intensity * Scale * Scale;
+	    #else
+	        int StartIndex = _MeshData[_LightMeshes[-(NodeLeft+1)].LockedMeshIndex].LightNodeOffset;
+	        float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(NodeLeft+1)].LockedMeshIndex].W2L);
+	        float3 center = transform_position(TransfMat, (LightNodesWrite[StartIndex].BBMax + LightNodesWrite[StartIndex].BBMin) / 2.0f);
+	        float3 extent = transform_direction(TransfMat, (LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f);
+	        LightNodesWrite[Index].BBMax = center + extent;
+	        LightNodesWrite[Index].BBMin = center - extent;
+	        float Scale = 1.0f;//length((LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f) / length(extent);
+	        LightNodesWrite[Index].w = octahedral_32(transform_direction(TransfMat, i_octahedral_32(LightNodesWrite[StartIndex].w)));
+	        LightNodesWrite[Index].phi = max(LightNodesWrite[StartIndex].phi * Scale,0.000000f);
+	        LightNodesWrite[Index].cosTheta_oe = LightNodesWrite[StartIndex].cosTheta_oe;
+	     #endif
         return;
     }
-    LightBVHData LeftNode = LightNodesWrite[Node.left];
-
-    LightNodesWrite[Index] = Union(LeftNode, LightNodesWrite[Node.left + 1], Node.left);
-
+    #ifdef UseSGTree
+	    LightNodesWrite[Index] = UnionSG(LightNodesWrite[NodeLeft], LightNodesWrite[NodeLeft + 1], NodeLeft);
+	#else
+    	LightNodesWrite[Index] = Union(LightNodesWrite[NodeLeft], LightNodesWrite[NodeLeft + 1], NodeLeft);
+    #endif
 }
 
 
@@ -679,7 +664,7 @@ float3 unpackRGBE(uint x)
 }
 
 
-#pragma kernel BLASSGTreeRefitKernel
+#pragma kernel BLASLightTreeRefitKernel
 
 int TotalNodeOffset;
 
@@ -701,74 +686,61 @@ inline TrianglePos triangle_get_positions(const int ID) {
 	return tri;
 }
 [numthreads(256,1,1)]
-void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
+void BLASLightTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x] + TotalNodeOffset;
-    const int NodeLeft = SGTreeWrite[Index].left;
+    const int NodeLeft = LightNodesWrite[Index].left;
     [branch]if(NodeLeft < 0) {
         const LightTriData LightTri = LightTriangles[-(NodeLeft+1) + LightTriBuffOffset];
         const TrianglePos TriPositions = triangle_get_positions(LightTri.TriTarget + TriBuffOffset);
         
-        float3 mean = (TriPositions.pos0 + (TriPositions.pos0 + TriPositions.posedge1) + (TriPositions.pos0 + TriPositions.posedge2)) / 3.0f;
-        float radius = max(max(distance(mean, TriPositions.pos0), distance(mean, TriPositions.pos0 + TriPositions.posedge1)), distance(mean, TriPositions.pos0 + TriPositions.posedge2));
+#ifdef UseSGTree
+	        float3 mean = (TriPositions.pos0 + (TriPositions.pos0 + TriPositions.posedge1) + (TriPositions.pos0 + TriPositions.posedge2)) / 3.0f;
+	        float radius = max(max(distance(mean, TriPositions.pos0), distance(mean, TriPositions.pos0 + TriPositions.posedge1)), distance(mean, TriPositions.pos0 + TriPositions.posedge2));
 
-        float area = AreaOfTriangle(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1, TriPositions.pos0 + TriPositions.posedge2);
+	        float area = AreaOfTriangle(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1, TriPositions.pos0 + TriPositions.posedge2);
 
-        float intensity = LightTri.SourceEnergy * area;
-        float3 V = 0.5f * normalize(cross(TriPositions.posedge1, TriPositions.posedge2));
-        float variance = (dot(TriPositions.posedge1, TriPositions.posedge1) + dot(TriPositions.posedge2, TriPositions.posedge2) - dot(TriPositions.posedge1, TriPositions.posedge2)) / 18.0f;
+	        float intensity = LightTri.SourceEnergy * area;
+	        float3 V = 0.5f * normalize(cross(TriPositions.posedge1, TriPositions.posedge2));
+	        float variance = (dot(TriPositions.posedge1, TriPositions.posedge1) + dot(TriPositions.posedge2, TriPositions.posedge2) - dot(TriPositions.posedge1, TriPositions.posedge2)) / 18.0f;
 
-        float AxisLength = length(V);
-        if(AxisLength == 0) V = float3(0,1,0);
-        else V /= AxisLength;
-        SGTreeWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(AxisLength)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+	        float AxisLength = length(V);
+	        if(AxisLength == 0) V = float3(0,1,0);
+	        else V /= AxisLength;
+	        LightNodesWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(AxisLength)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
 
-        SGTreeWrite[Index].position = mean;
-        SGTreeWrite[Index].radius = radius;
-        SGTreeWrite[Index].intensity = intensity;
-        SGTreeWrite[Index].variance = variance;
-        SGTreeWrite[Index].axis = octahedral_32(V);
+	        LightNodesWrite[Index].position = mean;
+	        LightNodesWrite[Index].radius = radius;
+	        LightNodesWrite[Index].intensity = intensity;
+	        LightNodesWrite[Index].variance = variance;
+	        LightNodesWrite[Index].axis = octahedral_32(V);
+#else 
+	        float3 BBMax = max(max(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1), TriPositions.pos0 + TriPositions.posedge2);
+	        float3 BBMin = min(min(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1), TriPositions.pos0 + TriPositions.posedge2);
+	        [unroll]for(int i = 0; i < 3; i++) {
+	            if(abs(BBMax[i] - BBMin[i]) < 0.0001f) {
+	                BBMax[i] += 0.0001f;
+	                BBMin[i] -= 0.0001f;
+	            }
+	        }
+	        LightNodesWrite[Index].BBMax = BBMax;
+	        LightNodesWrite[Index].BBMin = BBMin;
+	        LightNodesWrite[Index].w = octahedral_32(-normalize(cross(normalize(TriPositions.posedge1), normalize(TriPositions.posedge2))));
+	        float area = AreaOfTriangle(mul(ToWorld, float4(TriPositions.pos0,1)).xyz, mul(ToWorld, float4(TriPositions.pos0 + TriPositions.posedge1,1)).xyz, mul(ToWorld, float4(TriPositions.pos0 + TriPositions.posedge2,1)).xyz);
+	        if(area == 0) area = 0.000000001f;
+
+	        LightNodesWrite[Index].phi = LightTri.SourceEnergy * area;   
+#endif
         return;
     }
-    GaussianTreeNode LeftNode = SGTreeWrite[NodeLeft + TotalNodeOffset];
+    GaussianTreeNode LeftNode = LightNodesWrite[NodeLeft + TotalNodeOffset];
 
-    SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[NodeLeft + 1 + TotalNodeOffset], NodeLeft);
-
-}
-
-#pragma kernel BLASLightRefitKernel
-
-[numthreads(256,1,1)]
-void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
-{
-    if(id.x >= (uint)SetCount) return;
-    const int Index = WorkingSet[id.x] + TotalNodeOffset;
-    LightBVHData Node = LightNodesWrite[Index];
-    if(Node.left < 0) {
-        LightTriData LightTri = LightTriangles[-(Node.left+1) + LightTriBuffOffset];
-        CudaTriangleA TriPositions = CudaTriArrayINA[LightTri.TriTarget + TriBuffOffset];
-        float3 BBMax = max(max(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1), TriPositions.pos0 + TriPositions.posedge2);
-        float3 BBMin = min(min(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1), TriPositions.pos0 + TriPositions.posedge2);
-        [unroll]for(int i = 0; i < 3; i++) {
-            if(abs(BBMax[i] - BBMin[i]) < 0.0001f) {
-                BBMax[i] += 0.0001f;
-                BBMin[i] -= 0.0001f;
-            }
-        }
-        LightNodesWrite[Index].BBMax = BBMax;
-        LightNodesWrite[Index].BBMin = BBMin;
-        LightNodesWrite[Index].w = octahedral_32(-normalize(cross(normalize(TriPositions.posedge1), normalize(TriPositions.posedge2))));
-        float area = AreaOfTriangle(mul(ToWorld, float4(TriPositions.pos0,1)).xyz, mul(ToWorld, float4(TriPositions.pos0 + TriPositions.posedge1,1)).xyz, mul(ToWorld, float4(TriPositions.pos0 + TriPositions.posedge2,1)).xyz);
-        if(area == 0) area = 0.000000001f;
-
-        LightNodesWrite[Index].phi = LightTri.SourceEnergy * area;   
-        // LightNodesWrite[Index].phi = max(AreaOfTriangle(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1, TriPositions.pos0 + TriPositions.posedge2),0.00000001f);   
-        return;
-    }
-    LightBVHData LeftNode = LightNodesWrite[Node.left + TotalNodeOffset];
-
-    LightNodesWrite[Index] = Union(LeftNode, LightNodesWrite[Node.left + 1 + TotalNodeOffset], Node.left);
+#ifdef UseSGTree
+    LightNodesWrite[Index] = UnionSG(LightNodesWrite[NodeLeft + TotalNodeOffset], LightNodesWrite[NodeLeft + 1 + TotalNodeOffset], NodeLeft);
+#else
+    LightNodesWrite[Index] = Union(LightNodesWrite[NodeLeft + TotalNodeOffset], LightNodesWrite[NodeLeft + 1 + TotalNodeOffset], NodeLeft);
+#endif
 }
 
 #pragma kernel BLASCopyNodeDataKernel

@@ -10,6 +10,7 @@ namespace TrueTrace {
     [System.Serializable]
     public unsafe class LightBVHBuilder {
         public NodeBounds ParentBound;
+        public int NodeCount = 0;
 
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
 
@@ -445,13 +446,14 @@ namespace TrueTrace {
             DimensionedIndicesArray.Dispose();
             ParentBound = nodes2[0];
             nodes2Array.Dispose();
+            NodeCount = nodes.Length;
 #if !DontUseSGTree
 
             {
-                SGTree = new GaussianTreeNode[nodes.Length];
+                SGTree = new GaussianTreeNode[NodeCount];
                 Set = new List<int>[MaxDepth];
                 for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
-                ParentList = new Vector2Int[nodes.Length];
+                ParentList = new Vector2Int[NodeCount];
                 Refit3(0, 0);
                 GaussianTreeNode TempNode = new GaussianTreeNode();
                 for(int i = MaxDepth - 1; i >= 0; i--) {
@@ -616,7 +618,7 @@ namespace TrueTrace {
                 }
                 nodes[i] = TempNode;
             }
-
+            NodeCount = nodes.Length;
 #if !DontUseSGTree
             {
                 Set = new List<int>[MaxDepth];
@@ -755,6 +757,7 @@ namespace TrueTrace {
                 nodes[i] = TempNode;
             }
 
+            NodeCount = PrimCount * 2;
 #if !DontUseSGTree
             {
                 Set = new List<int>[MaxDepth];

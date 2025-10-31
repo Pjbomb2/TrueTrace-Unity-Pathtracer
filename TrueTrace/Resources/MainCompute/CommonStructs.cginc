@@ -58,10 +58,8 @@ struct LightBVHData {
 
 #ifdef UseSGTree
 	StructuredBuffer<GaussianTreeNode> SGTree;
-	StructuredBuffer<GaussianTreeNode> SGTreePrev;
 #else 
 	StructuredBuffer<LightBVHData> SGTree;
-	StructuredBuffer<LightBVHData> SGTreePrev;
 #endif
 
 struct MyMeshDataCompacted {
@@ -95,7 +93,6 @@ StructuredBuffer<TerrainData> Terrains;
 struct LightTriData {
 	uint TriTarget;
 	float SourceEnergy;
-	// uint NormalizedColor;
 };
 
 StructuredBuffer<LightTriData> LightTriangles;
