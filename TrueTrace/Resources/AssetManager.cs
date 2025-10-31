@@ -1332,7 +1332,7 @@ namespace TrueTrace {
 
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
-                    CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
+                    CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), 36);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
     #if !DontUseSGTree
@@ -1343,7 +1343,7 @@ namespace TrueTrace {
 #else
                     if(BVH8AggregatedBuffer == null || !BVH8AggregatedBuffer.IsValid() || AggNodeCount > BVH8AggregatedBuffer.count) {CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80); ResizedBVHArray = true;}
                     if(AggTriBufferA == null || !AggTriBufferA.IsValid() || AggTriCount > AggTriBufferA.count) {CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>()); ResizedTriArray = true;}
-                    if(SkinnedMeshAggTriBufferPrev == null || !SkinnedMeshAggTriBufferPrev.IsValid() || (int)Mathf.Max(SkinnedMeshTriCount,1) > SkinnedMeshAggTriBufferPrev.count) CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
+                    if(SkinnedMeshAggTriBufferPrev == null || !SkinnedMeshAggTriBufferPrev.IsValid() || (int)Mathf.Max(SkinnedMeshTriCount,1) > SkinnedMeshAggTriBufferPrev.count) CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), 36);
                     if(AggTriBufferB == null || !AggTriBufferB.IsValid() || AggTriCount > AggTriBufferB.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
                     if(LightTriBuffer == null || !LightTriBuffer.IsValid() || LightTriCount > LightTriBuffer.count) {CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>()); ResizedLightTriArray = true;}
     #if !DontUseSGTree

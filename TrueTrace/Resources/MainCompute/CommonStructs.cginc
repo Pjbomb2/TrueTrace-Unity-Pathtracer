@@ -22,8 +22,14 @@ struct CudaTriangleB {
 	uint IsEmissive;
 };
 
+struct CudaTriangleC {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+};
+
 StructuredBuffer<CudaTriangleA> AggTrisA;
-StructuredBuffer<CudaTriangleA> SkinnedMeshTriBufferPrev;
+StructuredBuffer<CudaTriangleC> SkinnedMeshTriBufferPrev;
 StructuredBuffer<CudaTriangleB> AggTrisB;
 
 struct AABB {

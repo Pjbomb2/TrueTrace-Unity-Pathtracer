@@ -13,7 +13,7 @@ ByteAddressBuffer bufIndexes;
 uint gVertexCount;
 int SkinnedOffset;
 
-RWStructuredBuffer<CudaTriangleA> SkinnedTriBuffer;
+RWStructuredBuffer<CudaTriangleC> SkinnedTriBuffer;
 
 int VertOffset;
 
@@ -92,7 +92,7 @@ RWStructuredBuffer<CudaTriangleA> CudaTriArrayA;
 RWStructuredBuffer<CudaTriangleB> CudaTriArrayB;
 RWStructuredBuffer<BVHNode8Data> AggNodes;
 
-uint octahedral_32(float3 nor) {
+inline uint octahedral_32(float3 nor) {
 	float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
 	float t = saturate(-nor.z);
 	nor.xy = (nor.xy + (nor.xy > 0.0f ? t : -t)) * oct;
@@ -136,11 +136,11 @@ void Construct(uint3 id : SV_DispatchThreadID, uint3 gt : SV_GroupThreadID)
 		} else if(gt.y == 0) {
 			SkinnedTriBuffer[id.x + SkinnedOffset].pos0 = CudaTriArrayA[id.x + TriBuffOffset].pos0;
 			SkinnedTriBuffer[id.x + SkinnedOffset].posedge1 = CudaTriArrayA[id.x + TriBuffOffset].posedge1;
+			SkinnedTriBuffer[id.x + SkinnedOffset].posedge2 = CudaTriArrayA[id.x + TriBuffOffset].posedge2;
 			CudaTriArrayA[id.x + TriBuffOffset].pos0 = Pos[gt.x];
 			CudaTriArrayA[id.x + TriBuffOffset].posedge1 = Pos[gt.x + 2] - Pos[gt.x];
-		} else if(gt.y == 2) {
-			SkinnedTriBuffer[id.x + SkinnedOffset].posedge2 = CudaTriArrayA[id.x + TriBuffOffset].posedge2;
 			CudaTriArrayA[id.x + TriBuffOffset].posedge2 = Pos[gt.x + 1] - Pos[gt.x];
+		} else if(gt.y == 2) {
 			CudaTriArrayB[id.x + TriBuffOffset].norms = uint3(Norm[gt.x], Norm[gt.x + 2], Norm[gt.x + 1]);
 		}
 	}
@@ -427,7 +427,7 @@ void UpdateGlobalBufferAABBKernel(uint3 id : SV_DispatchThreadID)
 
 
 
-float3 i_octahedral_32( uint data ) {
+inline float3 i_octahedral_32( uint data ) {
     uint2 iv = uint2( data, data>>16u ) & 65535u; 
     float2 v = iv/32767.5f - 1.0f;
     float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
@@ -684,31 +684,39 @@ float3 unpackRGBE(uint x)
 int TotalNodeOffset;
 
 inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
-    float a = distance(pt1, pt2);
-    float b = distance(pt2, pt3);
-    float c = distance(pt3, pt1);
-    float s = (a + b + c) / 2.0f;
-    return sqrt(s * (s - a) * (s - b) * (s - c));
+ return 0.5f * length(cross(pt2 - pt1, pt3 - pt1));
 }
 float4x4 ToWorld;
 
+struct TrianglePos {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+};
+inline TrianglePos triangle_get_positions(const int ID) {
+	TrianglePos tri;
+	tri.pos0 = CudaTriArrayINA.Load(ID).pos0;
+	tri.posedge1 = CudaTriArrayINA.Load(ID).posedge1;
+	tri.posedge2 = CudaTriArrayINA.Load(ID).posedge2;
+	return tri;
+}
 [numthreads(256,1,1)]
 void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 {
     if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x] + TotalNodeOffset;
-    GaussianTreeNode Node = SGTreeWrite[Index];
-    if(Node.left < 0) {
-        LightTriData LightTri = LightTriangles[-(Node.left+1) + LightTriBuffOffset];
-        CudaTriangleA TriPositions = CudaTriArrayINA[LightTri.TriTarget + TriBuffOffset];
+    const int NodeLeft = SGTreeWrite[Index].left;
+    [branch]if(NodeLeft < 0) {
+        const LightTriData LightTri = LightTriangles[-(NodeLeft+1) + LightTriBuffOffset];
+        const TrianglePos TriPositions = triangle_get_positions(LightTri.TriTarget + TriBuffOffset);
+        
         float3 mean = (TriPositions.pos0 + (TriPositions.pos0 + TriPositions.posedge1) + (TriPositions.pos0 + TriPositions.posedge2)) / 3.0f;
         float radius = max(max(distance(mean, TriPositions.pos0), distance(mean, TriPositions.pos0 + TriPositions.posedge1)), distance(mean, TriPositions.pos0 + TriPositions.posedge2));
-
 
         float area = AreaOfTriangle(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1, TriPositions.pos0 + TriPositions.posedge2);
 
         float intensity = LightTri.SourceEnergy * area;
-        float3 V = 0.5f * normalize(cross(normalize(TriPositions.posedge1), normalize(TriPositions.posedge2)));
+        float3 V = 0.5f * normalize(cross(TriPositions.posedge1, TriPositions.posedge2));
         float variance = (dot(TriPositions.posedge1, TriPositions.posedge1) + dot(TriPositions.posedge2, TriPositions.posedge2) - dot(TriPositions.posedge1, TriPositions.posedge2)) / 18.0f;
 
         float AxisLength = length(V);
@@ -723,9 +731,9 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         SGTreeWrite[Index].axis = octahedral_32(V);
         return;
     }
-    GaussianTreeNode LeftNode = SGTreeWrite[Node.left + TotalNodeOffset];
+    GaussianTreeNode LeftNode = SGTreeWrite[NodeLeft + TotalNodeOffset];
 
-    SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[Node.left + 1 + TotalNodeOffset], Node.left);
+    SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[NodeLeft + 1 + TotalNodeOffset], NodeLeft);
 
 }
 

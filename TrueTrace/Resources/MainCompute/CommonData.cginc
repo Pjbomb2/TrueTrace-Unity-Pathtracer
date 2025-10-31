@@ -2409,6 +2409,26 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
     MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
+
+    {
+        [branch]if(MatDat.MatCapTex.x > 0) {
+            float3 worldViewUp = normalize(float3(0, 1, 0) - viewDir * dot(viewDir, float3(0, 1, 0)));
+            float3 worldViewRight = normalize(cross(viewDir, worldViewUp));
+            
+            float2 matcapUV = float2(dot(worldViewRight, Norm), dot(worldViewUp, Norm)) * 0.5f + 0.5f;
+
+            float3 matcap = SampleTexture(matcapUV, SampleMatCap, MatDat) * MatDat.MatCapColor;
+            Unity_Hue_Degrees_float(matcap, MatDat.Hue * 500.0f, matcap);
+            matcap *= MatDat.Brightness;
+            // TempCol = TempMat.surfaceColor;
+            Unity_Saturation_float(matcap, MatDat.Saturation, matcap);
+            Unity_Contrast_float(matcap, MatDat.Contrast);
+            if(MatDat.MatCapMask.x > 0) MatDat.surfaceColor = lerp(MatDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, MatDat).x);
+            else MatDat.surfaceColor = matcap.xyz;
+        }
+    }
+
+
     if(MatDat.emission > 0) {
         if (MatDat.EmissiveTex.x > 0) {
             float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
