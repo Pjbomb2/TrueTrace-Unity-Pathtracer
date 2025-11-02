@@ -2110,55 +2110,55 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         FinalPos = (AggTrisA[AggTriIndex].pos0 + AggTrisA[AggTriIndex].posedge1 * FinalUV.x + AggTrisA[AggTriIndex].posedge2 * FinalUV.y);
     #endif
     int MaterialIndex = AggTrisA[AggTriIndex].MatDat + MatOffset;
-    MaterialData MatDat = _Materials[MaterialIndex];
+    MaterialData TTMat = _Materials[MaterialIndex];
     #ifdef AdvancedBackground
-    	if(GetFlag(MatDat.Tag, IsBackground)) return -1;
+    	if(GetFlag(TTMat.Tag, IsBackground)) return -1;
     #endif
     float2 BaseUv = TOHALF(AggTrisA[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTrisA[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTrisA[AggTriIndex].texedge2) * FinalUV.y;
-    if(MatDat.AlbedoTex.x > 0)
-    	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
+    if(TTMat.AlbedoTex.x > 0)
+    	TTMat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, TTMat);
 
-    float3 TempCol = MatDat.surfaceColor;
-    Unity_Hue_Degrees_float(TempCol, MatDat.Hue * 500.0f, MatDat.surfaceColor);
-    MatDat.surfaceColor *= MatDat.Brightness;
-    TempCol = MatDat.surfaceColor;
-    Unity_Saturation_float(TempCol, MatDat.Saturation, MatDat.surfaceColor);
-    Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
-    MatDat.surfaceColor = saturate(MatDat.surfaceColor);
+    float3 TempCol = TTMat.surfaceColor;
+    Unity_Hue_Degrees_float(TempCol, TTMat.Hue * 500.0f, TTMat.surfaceColor);
+    TTMat.surfaceColor *= TTMat.Brightness;
+    TempCol = TTMat.surfaceColor;
+    Unity_Saturation_float(TempCol, TTMat.Saturation, TTMat.surfaceColor);
+    Unity_Contrast_float(TTMat.surfaceColor, TTMat.Contrast);
+    TTMat.surfaceColor = saturate(TTMat.surfaceColor);
 
 
     {
-        [branch]if(MatDat.MatCapTex.x > 0) {
+        [branch]if(TTMat.MatCapTex.x > 0) {
             float3 worldViewUp = normalize(float3(0, 1, 0) - viewDir * dot(viewDir, float3(0, 1, 0)));
             float3 worldViewRight = normalize(cross(viewDir, worldViewUp));
             
             float2 matcapUV = float2(dot(worldViewRight, Norm), dot(worldViewUp, Norm)) * 0.5f + 0.5f;
 
-            float3 matcap = SampleTexture(matcapUV, SampleMatCap, MatDat) * MatDat.MatCapColor;
-            Unity_Hue_Degrees_float(matcap, MatDat.Hue * 500.0f, matcap);
-            matcap *= MatDat.Brightness;
+            float3 matcap = SampleTexture(matcapUV, SampleMatCap, TTMat) * TTMat.MatCapColor;
+            Unity_Hue_Degrees_float(matcap, TTMat.Hue * 500.0f, matcap);
+            matcap *= TTMat.Brightness;
             // TempCol = TempMat.surfaceColor;
-            Unity_Saturation_float(matcap, MatDat.Saturation, matcap);
-            Unity_Contrast_float(matcap, MatDat.Contrast);
-            if(MatDat.MatCapMask.x > 0) MatDat.surfaceColor = lerp(MatDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, MatDat).x);
-            else MatDat.surfaceColor = matcap.xyz;
+            Unity_Saturation_float(matcap, TTMat.Saturation, matcap);
+            Unity_Contrast_float(matcap, TTMat.Contrast);
+            if(TTMat.MatCapMask.x > 0) TTMat.surfaceColor = lerp(TTMat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, TTMat).x);
+            else TTMat.surfaceColor = matcap.xyz;
         }
     }
 
 
-    if(MatDat.emission > 0) {
-        if (MatDat.EmissiveTex.x > 0) {
-            float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-            float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
-            if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-                MatDat.emission *= EmissTex.x * (luminance(EmissTex.xyz) > 0.01f);
+    if(TTMat.emission > 0) {
+        if (TTMat.EmissiveTex.x > 0) {
+            float3 EmissCol = lerp(TTMat.EmissionColor, TTMat.surfaceColor, GetFlag(TTMat.Tag, BaseIsMap));
+            float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TTMat);
+            if(!GetFlag(TTMat.Tag, IsEmissionMask)) {//IS a mask
+                TTMat.emission *= EmissTex.x * (luminance(EmissTex.xyz) > 0.01f);
             } else EmissCol *= EmissTex.xyz;
-            MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
+            TTMat.surfaceColor = lerp(TTMat.surfaceColor, EmissCol, saturate(TTMat.emission) * GetFlag(TTMat.Tag, ReplaceBase));
         } else {
-            MatDat.surfaceColor *= MatDat.EmissionColor;
+            TTMat.surfaceColor *= TTMat.EmissionColor;
         }
     }
-    Radiance = MatDat.emission * MatDat.surfaceColor;
+    Radiance = TTMat.emission * TTMat.surfaceColor;
     return AggTriIndex;
 }
 
