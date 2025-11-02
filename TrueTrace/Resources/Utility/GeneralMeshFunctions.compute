@@ -90,30 +90,15 @@ void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
 
 }
 
-
-
-#pragma kernel CombineLightNodes
-
-StructuredBuffer<LightBVHData> LightNodesIn;
-RWStructuredBuffer<LightBVHData> LightNodesOut;
-RWStructuredBuffer<LightBVHData> LightNodesOut2;
-
-[numthreads(372, 1, 1)]
-void CombineLightNodes(uint3 id : SV_DispatchThreadID)
-{
-	if (id.x >= Count)
-		return;
-
-	LightNodesOut[id.x + Offset] = LightNodesIn[id.x];
-	LightNodesOut2[id.x + Offset] = LightNodesIn[id.x];
-
-}
-
 #pragma kernel CombineSGTreeNodes
 
-StructuredBuffer<GaussianTreeNode> SGNodesIn;
-RWStructuredBuffer<GaussianTreeNode> SGNodesOut;
-RWStructuredBuffer<GaussianTreeNode> SGNodesOut2;
+#ifdef UseSGTree
+	StructuredBuffer<GaussianTreeNode> LightNodesIn;
+	RWStructuredBuffer<GaussianTreeNode> LightNodesOut;
+#else
+	StructuredBuffer<LightBVHData> LightNodesIn;
+	RWStructuredBuffer<LightBVHData> LightNodesOut;
+#endif
 
 [numthreads(372, 1, 1)]
 void CombineSGTreeNodes(uint3 id : SV_DispatchThreadID)
@@ -121,7 +106,6 @@ void CombineSGTreeNodes(uint3 id : SV_DispatchThreadID)
 	if (id.x >= Count)
 		return;
 
-	SGNodesOut[id.x + Offset] = SGNodesIn[id.x];
-	SGNodesOut2[id.x + Offset] = SGNodesIn[id.x];
+	LightNodesOut[id.x + Offset] = LightNodesIn[id.x];
 
 }

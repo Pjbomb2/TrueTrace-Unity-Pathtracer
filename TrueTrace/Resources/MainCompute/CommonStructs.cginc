@@ -22,8 +22,14 @@ struct CudaTriangleB {
 	uint IsEmissive;
 };
 
+struct CudaTriangleC {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+};
+
 StructuredBuffer<CudaTriangleA> AggTrisA;
-StructuredBuffer<CudaTriangleA> SkinnedMeshTriBufferPrev;
+StructuredBuffer<CudaTriangleC> SkinnedMeshTriBufferPrev;
 StructuredBuffer<CudaTriangleB> AggTrisB;
 
 struct AABB {
@@ -34,7 +40,7 @@ struct AABB {
 struct GaussianTreeNode {
 	float3 position;
 	float radius;
-	float3 axis;
+	uint axis;
 	float variance;
 	float sharpness;
 	float intensity;
@@ -52,10 +58,8 @@ struct LightBVHData {
 
 #ifdef UseSGTree
 	StructuredBuffer<GaussianTreeNode> SGTree;
-	StructuredBuffer<GaussianTreeNode> SGTreePrev;
 #else 
 	StructuredBuffer<LightBVHData> SGTree;
-	StructuredBuffer<LightBVHData> SGTreePrev;
 #endif
 
 struct MyMeshDataCompacted {
@@ -66,6 +70,7 @@ struct MyMeshDataCompacted {
 	int mesh_data_bvh_offsets;//could I convert this an int4?
 	int LightTriCount;
 	int LightNodeOffset;
+	int LightNodeSkinnedOffset;
 	uint PathFlags;
 	int SkinnedOffset;
 };
@@ -88,7 +93,6 @@ StructuredBuffer<TerrainData> Terrains;
 struct LightTriData {
 	uint TriTarget;
 	float SourceEnergy;
-	// uint NormalizedColor;
 };
 
 StructuredBuffer<LightTriData> LightTriangles;

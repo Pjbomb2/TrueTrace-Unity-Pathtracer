@@ -446,7 +446,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
 
     int MaxM = ReSTIRGITemporalMCap;
-    if(Case == 3) MaxM = min(5, MaxM);
+    // if(Case == 3) MaxM = min(5, MaxM);
     if (RunningReservoirB.Radiance.M > MaxM) {
         RunningReservoirB.Radiance.Wsum *= MaxM / RunningReservoirB.Radiance.M;
         RunningReservoirB.Radiance.M = MaxM; 

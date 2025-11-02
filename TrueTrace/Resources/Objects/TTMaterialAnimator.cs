@@ -7,7 +7,7 @@ using UnityEditor;
 
 namespace TrueTrace {
     [ExecuteInEditMode][System.Serializable][RequireComponent(typeof(RayTracingObject))]
-    public class MaterialAnimationView : MonoBehaviour
+    public class TTMaterialAnimator : MonoBehaviour
     {
         [SerializeField] public bool Animate = true;
         [SerializeField] public RayObjMat SelectedMaterial = new RayObjMat();
@@ -24,19 +24,20 @@ namespace TrueTrace {
 
         private void OnEnable() {
             TargetObject = this.gameObject.GetComponent<RayTracingObject>();
+            SelectedMaterial = TargetObject.LocalMaterials[MatSubIndex];
         }
 
     }
 
 #if UNITY_EDITOR
-    [CustomEditor(typeof(MaterialAnimationView))]
-    public class MaterialAnimationViewEditor : Editor
+    [CustomEditor(typeof(TTMaterialAnimator))]
+    public class TTMaterialAnimatorEditor : Editor
     {
         public override void OnInspectorGUI()
         {
             var t1 = (targets);
             int TargCount = t1.Length;
-            var t =  t1[0] as MaterialAnimationView;
+            var t =  t1[0] as TTMaterialAnimator;
             DrawDefaultInspector();
             var TheseNames = t.TargetObject.Names;
             t.MatSubIndex = EditorGUILayout.Popup("Selected Material:", t.MatSubIndex, TheseNames);

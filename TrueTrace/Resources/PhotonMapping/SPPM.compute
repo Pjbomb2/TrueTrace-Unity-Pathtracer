@@ -164,9 +164,9 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
         float t = f * dot(tri.posedge2, q);
 
         [branch]if (t > 0 && t < ray_hit.t) {
-            const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+            const TriangleUvs TriUVs = triangle_get_UVs(tri_id);
             const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
-            float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+            float2 BaseUv = TriUVs.UV0 * (1.0f - u - v) + TriUVs.UV1 * u + TriUVs.UV2 * v;
             //major slowdown
             #ifdef AdvancedAlphaMapped
                 [branch]if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {

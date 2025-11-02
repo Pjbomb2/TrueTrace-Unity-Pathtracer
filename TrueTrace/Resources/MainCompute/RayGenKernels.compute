@@ -22,7 +22,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    float2 jitter = ((random(0, pixel_index) - 0.5));
+    float2 jitter = ((random(0, pixel_index) - 0.5)) * JitterSize;
     if(OIDNGuideWrite || UseASVGFAndReSTIR) jitter = 0;
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
@@ -35,7 +35,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
 void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    float2 jitter = ((random(0, pixel_index) - 0.5));
+    float2 jitter = ((random(0, pixel_index) - 0.5)) * JitterSize;
     if(OIDNGuideWrite) jitter = 0;
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height));
     SmallerRay ray;

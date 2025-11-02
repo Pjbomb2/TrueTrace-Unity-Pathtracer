@@ -10,6 +10,7 @@ namespace TrueTrace {
     [System.Serializable]
     public unsafe class LightBVHBuilder {
         public NodeBounds ParentBound;
+        public int NodeCount = 0;
 
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
 
@@ -269,6 +270,40 @@ namespace TrueTrace {
             Refit(Depth + 1, nodes2[CurrentIndex].left + 1);
         }
 
+        public Vector2Int[] ParentList;
+
+        public uint CalcBitField(int Index) {
+            int Parent = ParentList[Index].x;
+            bool IsLeft = nodes[Parent].left == Index;
+            uint Flag = (ParentList[Index].y <= 31) ? ((IsLeft ? 0u : 1u) << ParentList[Index].y) : 0u;
+            if(ParentList[Index].y == 0) return Flag;
+            return Flag | CalcBitField(ParentList[Index].x);
+        }
+        // List<LightTriData> Tris2;
+        // public uint TestBitField(int Depth, int Index, uint BitField, uint DesiredIndex) {
+        //     if(Depth > 31) {
+        //         Debug.LogError("BROKE");
+        //         return 0;
+        //     }
+        //     if(nodes[Index].left < 0) {
+        //         if(Tris2[-(nodes[Index].left+1)].TriTarget == DesiredIndex) return 1;
+        //         Debug.LogError("STUFF: " + Tris2[-(nodes[Index].left+1)].TriTarget + " : " + DesiredIndex);
+        //         return 0;
+        //     }
+        //     bool IsLeft = ((BitField >> Depth) & 0x1) == 0u;
+        //     return TestBitField(Depth + 1, IsLeft ? nodes[Index].left : (nodes[Index].left + 1), BitField, DesiredIndex);
+        // }
+
+        private void Refit3(int Depth, int CurrentIndex) {
+            if((float)System.Math.Cos((double)(2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f)) == 0) return;
+            Set[Depth].Add(CurrentIndex);
+            if(nodes[CurrentIndex].left < 0) return;
+            ParentList[nodes[CurrentIndex].left] = new Vector2Int(CurrentIndex, Depth);
+            ParentList[nodes[CurrentIndex].left + 1] = new Vector2Int(CurrentIndex, Depth);
+            Refit3(Depth + 1, nodes[CurrentIndex].left);
+            Refit3(Depth + 1, nodes[CurrentIndex].left + 1);
+        }
+
         private void Refit2(int Depth, int CurrentIndex) {
             if((float)System.Math.Cos((double)(2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f)) == 0) return;
             Set[Depth].Add(CurrentIndex);
@@ -326,9 +361,14 @@ namespace TrueTrace {
 
 
 
+#if TTTriSplitting && !HardwareRT
+        public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles, int* ReverseIndexesLightCounter, bool IsSkinned) {//need to make sure incomming is transformed to world space already
+#else
         public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles) {//need to make sure incomming is transformed to world space already
+#endif
             PrimCount = Tris.Count;          
             MaxDepth = 0;
+            // Tris2 = Tris;
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             
             nodes2Array = new NativeArray<NodeBounds>(PrimCount * 2, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
@@ -406,12 +446,15 @@ namespace TrueTrace {
             DimensionedIndicesArray.Dispose();
             ParentBound = nodes2[0];
             nodes2Array.Dispose();
+            NodeCount = nodes.Length;
 #if !DontUseSGTree
+
             {
-                SGTree = new GaussianTreeNode[nodes.Length];
+                SGTree = new GaussianTreeNode[NodeCount];
                 Set = new List<int>[MaxDepth];
                 for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
-                Refit2(0, 0);
+                ParentList = new Vector2Int[NodeCount];
+                Refit3(0, 0);
                 GaussianTreeNode TempNode = new GaussianTreeNode();
                 for(int i = MaxDepth - 1; i >= 0; i--) {
                     int SetCount = Set[i].Count;
@@ -426,6 +469,32 @@ namespace TrueTrace {
                         if(LBVHNode.left < 0) {
                             LightTriData ThisLight = Tris[-(LBVHNode.left+1)];
                             CudaTriangle TempTri = AggTriangles[ThisLight.TriTarget];
+                            TempTri.IsEmissive = CalcBitField(WriteIndex);
+#if TTTriSplitting && !HardwareRT
+                            if(!IsSkinned) {
+                                int CounterCoun = ReverseIndexesLightCounter[-(LBVHNode.left+1)];
+                                for(int k = 0; k < CounterCoun; k++) {
+                                    AggTriangles[ThisLight.TriTarget + k] = TempTri;
+                                }
+                            } else {
+                                AggTriangles[ThisLight.TriTarget] = TempTri;
+                            }
+#else
+                            AggTriangles[ThisLight.TriTarget] = TempTri;
+#endif
+                            // string temp = "";
+                            // for(int i4 = 0; i4 < 32; i4++) {
+                            //     if(((TempTri.IsEmissive >> i4) & 0x1) == 0u) temp += "0";
+                            //     else temp += "1";
+                            // }
+                            // char[] charArray = temp.ToCharArray();
+                            // Array.Reverse(charArray);
+                            // temp = new string(charArray);
+                            // Debug.Log("PATH: " + temp);
+
+                            // Debug.Log
+                            // if(TestBitField(0, 0, TempTri.IsEmissive, ThisLight.TriTarget) == 0u) Debug.LogError("BROKE AT: ");
+
                             float area = AreaOfTriangle(TempTri.pos0, TempTri.pos0 + TempTri.posedge1, TempTri.pos0 + TempTri.posedge2);
 
                             intensity = ThisLight.SourceEnergy * area;
@@ -442,7 +511,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            V = w_left * CommonFunctions.UnpackOctahedral(LeftNode.axis) * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * CommonFunctions.UnpackOctahedral(RightNode.axis) * VMFSharpnessToAxisLength(RightNode.sharpness);
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
                             variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
@@ -454,7 +523,7 @@ namespace TrueTrace {
                         if(AxisLength == 0) V = new Vector3(0,1,0);
                         else V /= AxisLength;
                         TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness((float)System.Math.Clamp((double)AxisLength, 0.0d, 1.0d)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-                        TempNode.axis = V;
+                        TempNode.axis = CommonFunctions.PackOctahedral(V);
                         TempNode.S.Center = mean;
                         TempNode.variance = variance;
                         TempNode.intensity = intensity;
@@ -549,7 +618,7 @@ namespace TrueTrace {
                 }
                 nodes[i] = TempNode;
             }
-
+            NodeCount = nodes.Length;
 #if !DontUseSGTree
             {
                 Set = new List<int>[MaxDepth];
@@ -570,10 +639,10 @@ namespace TrueTrace {
                             TempNode = SGTreeNodes[-(LBVHNode.left+1)];
                             Vector3 ExtendedCenter = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center + new Vector3(TempNode.S.Radius, 0, 0), 1));
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
-                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
+                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(CommonFunctions.UnpackOctahedral(TempNode.axis), 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-                            TempNode.axis = Axis;
+                            TempNode.axis = CommonFunctions.PackOctahedral(Axis);
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
                             TempNode.S.Radius *= Scale;
@@ -587,7 +656,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            V = w_left * CommonFunctions.UnpackOctahedral(LeftNode.axis) * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * CommonFunctions.UnpackOctahedral(RightNode.axis) * VMFSharpnessToAxisLength(RightNode.sharpness);
                             // V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
@@ -601,7 +670,7 @@ namespace TrueTrace {
                             else V /= AxisLength;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
 
-                            TempNode.axis = V;
+                            TempNode.axis = CommonFunctions.PackOctahedral(V);
                             TempNode.S.Center = mean;
                             TempNode.variance = variance;
                             TempNode.intensity = intensity;
@@ -688,6 +757,7 @@ namespace TrueTrace {
                 nodes[i] = TempNode;
             }
 
+            NodeCount = PrimCount * 2;
 #if !DontUseSGTree
             {
                 Set = new List<int>[MaxDepth];
@@ -708,10 +778,10 @@ namespace TrueTrace {
                             TempNode = SGTreeNodes[-(LBVHNode.left+1)];
                             Vector3 ExtendedCenter = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center + new Vector3(TempNode.S.Radius, 0, 0), 1));
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
-                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
+                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(CommonFunctions.UnpackOctahedral(TempNode.axis), 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
-                            TempNode.axis = Axis;
+                            TempNode.axis = CommonFunctions.PackOctahedral(Axis);
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
                             TempNode.S.Radius *= Scale;
@@ -725,7 +795,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            V = w_left * CommonFunctions.UnpackOctahedral(LeftNode.axis) * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * CommonFunctions.UnpackOctahedral(RightNode.axis) * VMFSharpnessToAxisLength(RightNode.sharpness);
                             // V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
@@ -739,7 +809,7 @@ namespace TrueTrace {
                             else V /= AxisLength;
                             TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
 
-                            TempNode.axis = V;
+                            TempNode.axis = CommonFunctions.PackOctahedral(V);
                             TempNode.S.Center = mean;
                             TempNode.variance = variance;
                             TempNode.intensity = intensity;
@@ -769,6 +839,7 @@ namespace TrueTrace {
             // SAHArray.Dispose();
             // indices_going_left_array.Dispose();
             // tempArray.Dispose();
+            CommonFunctions.DeepClean(ref ParentList);
             CommonFunctions.DeepClean(ref FinalIndices);
             CommonFunctions.DeepClean(ref nodes);
 #if !DontUseSGTree

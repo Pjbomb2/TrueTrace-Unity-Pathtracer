@@ -115,9 +115,9 @@ void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDire
     pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
 }
 #ifdef RadCache
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX, inout float4 PSRScreenData) {//main function
+inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTMat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX, inout float4 PSRScreenData) {//main function
 #else
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout float4 PSRScreenData) {//main function
+inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTMat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout float4 PSRScreenData) {//main function
 #endif
     #ifdef Fog
         float3 SigmaT = FogDensity * FogScale;
@@ -144,7 +144,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float wldScale = rsqrt(dot(USGNorm, USGNorm));
         USGNorm = -mul(wldScale, USGNorm);
         if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
-        if(hitDat.MatType == CutoutIndex) USGNorm = Geomnorm;
+        if(TTMat.MatType == CutoutIndex) USGNorm = Geomnorm;
     }
 
     bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
@@ -154,22 +154,22 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 #ifndef DisableNormalMaps
 #ifdef UseTextureLOD
-    if (CurBounce == 0 && !ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
+    if (CurBounce == 0 && !ClayMode && (TTMat.NormalTex.x > 0 || TTMat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
 #else
-    if (!ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
+    if (!ClayMode && (TTMat.NormalTex.x > 0 || TTMat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
 #endif
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-        float2 Norm = SampleTexture(BaseUv, SampleNormal, hitDat);
+        float2 Norm = SampleTexture(BaseUv, SampleNormal, TTMat);
 
-        float3 LocalNormIN = float3((hitDat.NormalStrength * Norm - (hitDat.NormalStrength / 2.0f)), 0.0f);
+        float3 LocalNormIN = float3((TTMat.NormalStrength * Norm - (TTMat.NormalStrength / 2.0f)), 0.0f);
         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN);
 
-        if(hitDat.SecondaryNormalTex.x > 0) {
-            float2 DetailNorm = SampleTexture(BaseUv, SampleDetailNormal, hitDat);
-            float3 DetailLocalNormIN = float3((hitDat.DetailNormalStrength * DetailNorm - (hitDat.DetailNormalStrength / 2.0f)), 0.0f);
+        if(TTMat.SecondaryNormalTex.x > 0) {
+            float2 DetailNorm = SampleTexture(BaseUv, SampleDetailNormal, TTMat);
+            float3 DetailLocalNormIN = float3((TTMat.DetailNormalStrength * DetailNorm - (TTMat.DetailNormalStrength / 2.0f)), 0.0f);
             DetailLocalNormIN.z = 1.0 - 0.5 * dot(DetailLocalNormIN, DetailLocalNormIN);
-            LocalNormIN = lerp(LocalNormIN, DetailLocalNormIN, hitDat.SecondaryNormalTexBlend);
+            LocalNormIN = lerp(LocalNormIN, DetailLocalNormIN, TTMat.SecondaryNormalTexBlend);
         }
 
         norm = clamp(normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)).xyz),-1,1);
@@ -177,9 +177,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         norm = i_octahedral_32(octahedral_32(norm));
     }
 #endif
-    if(CurBounce == 0 && UseASVGF && !(hitDat.metallic == 1 && hitDat.roughness < 0.05f) && hitDat.specTrans != 1 && RandomNums[id].w == 1) {
-        Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
-        norm = i_octahedral_32(asuint(PrevScreenData.y));
+    if(CurBounce == 0 && UseASVGF && !(TTMat.metallic == 1 && TTMat.roughness < 0.05f) && TTMat.specTrans != 1 && RandomNums[id].w == 1) {
+        // Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
+        // norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
 #if DebugView == DVGeomNorm
     if(CurBounce == 0) _DebugTex[id.xy] = float4(Geomnorm, 0);
@@ -190,20 +190,20 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
     {
-        [branch]if(hitDat.MatCapTex.x > 0) {
+        [branch]if(TTMat.MatCapTex.x > 0) {
             float3 worldViewUp = normalize(float3(0, 1, 0) - ray.direction * dot(ray.direction, float3(0, 1, 0)));
             float3 worldViewRight = normalize(cross(ray.direction, worldViewUp));
             
             float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5f;
 
-            float3 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat) * hitDat.MatCapColor;
-            Unity_Hue_Degrees_float(matcap, hitDat.Hue * 500.0f, matcap);
-            matcap *= hitDat.Brightness;
-            // TempCol = TempMat.surfaceColor;
-            Unity_Saturation_float(matcap, hitDat.Saturation, matcap);
-            Unity_Contrast_float(matcap, hitDat.Contrast);
-            if(hitDat.MatCapMask.x > 0) hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
-            else hitDat.surfaceColor = matcap.xyz;
+            float3 matcap = SampleTexture(matcapUV, SampleMatCap, TTMat) * TTMat.MatCapColor;
+            Unity_Hue_Degrees_float(matcap, TTMat.Hue * 500.0f, matcap);
+            matcap *= TTMat.Brightness;
+            // TempCol = TTMat.surfaceColor;
+            Unity_Saturation_float(matcap, TTMat.Saturation, matcap);
+            Unity_Contrast_float(matcap, TTMat.Contrast);
+            if(TTMat.MatCapMask.x > 0) TTMat.surfaceColor = lerp(TTMat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, TTMat).x);
+            else TTMat.surfaceColor = matcap.xyz;
         }
     }
 
@@ -218,7 +218,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         throughput *= Homo;
         if(newT == hit.t) {
     #endif
-    [branch] if (hitDat.emission > 0.0f) {//if we hit a light, this ray is done
+    [branch] if (TTMat.emission > 0.0f) {//if we hit a light, this ray is done
     #ifdef IgnoreBackfacingEmissive
         if(GotFlipped) return;
     #endif    
@@ -226,14 +226,18 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 #ifdef Fog
         float3 Tr = exp(-SigmaT * OptDepthSpherExpMedium(ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, hit.t, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
         float pdf3 = (Tr.x + Tr.y + Tr.z) / 3.0f;
-        hitDat.emission *= Tr;// / pdf3;// / pdf;
+        TTMat.emission *= Tr;// / pdf3;// / pdf;
 #endif
-        float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
-        bool UseBSDFLight = !UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0;
+        float3 EmissCol = TTMat.surfaceColor * TTMat.emission * LEMEnergyScale;
+        #ifdef UseSGTree
+            bool UseBSDFLight = !UseNEE || (AggTrisB[hit.triangle_id].IsEmissive == 0 && _MeshData[hit.mesh_id].LightTriCount == 0);
+        #else
+            bool UseBSDFLight = !UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0;
+        #endif
         #ifndef UseBRDFLights
             UseBSDFLight = UseBSDFLight || GetBounceData(asuint(PSRScreenData.w)) == 0;
         #endif
-        if (UseBSDFLight) {
+        [branch]if (UseBSDFLight) {
             #ifdef PhotonMapping
                 if (CurBounce == 0) Color.Direct += EmissCol;
                 else if (CurBounce == 1) Color.Indirect += EmissCol;
@@ -248,40 +252,57 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     Color.Indirect += Color.throughput * EmissCol;
                 #endif
             }
-        } else {
-            float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
-            float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
-            float a = AreaOfTriangle(float3(0,0,0), a1, a2);
-            float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
-            float light_pdf = 1.0f / (SA * LightMeshCount);
-            #if defined(LBVH)
-                #ifdef DoubleBufferSGTree
-                    [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
-                    else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
-                #else
-                    CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
-                #endif
-            #else
-                light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
-            #endif
-            float w = power_heuristic(max(last_pdf,0), light_pdf);
-            if (CurBounce == 0) Color.Direct += EmissCol;
-            #ifdef UseBRDFLights
-                #ifdef PhotonMapping
-                    else if (CurBounce == 1) Color.Indirect += EmissCol * w;
-                #else
-                    else if (CurBounce == 1) Color.Direct += EmissCol * w;
-                #endif
-                else {
-                    #ifdef RadCache
-                        if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
-                        else Color.Indirect += Color.throughput * EmissCol * w;
-                    #else
-                        Color.Indirect += Color.throughput * EmissCol * w;
-                    #endif
-                }
-            #endif
         }
+        #ifdef UseBRDFLights
+        else {
+            [branch]if (CurBounce == 0) {
+                Color.Direct += EmissCol;
+            } else {
+                float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
+                float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
+                float a = AreaOfTriangle(float3(0,0,0), a1, a2);
+                float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
+                float light_pdf = 1.0f / (SA);
+                float4x4 WorldToLoc = _MeshData[hit.mesh_id].W2L;
+                uint Path = _MeshData[hit.mesh_id].PathFlags;
+                int Offset2 = _MeshData[hit.mesh_id].LightNodeOffset;
+                int Offset0 = 0;
+                #if defined(LBVH)
+                    #ifdef DoubleBufferSGTree
+                        [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) {
+                            WorldToLoc = _MeshDataPrev[hit.mesh_id].W2L;
+                            Offset0 = LightTreePrimaryTLASOffset;
+                            [branch] if(_MeshData[hit.mesh_id].LightNodeSkinnedOffset != -1)
+                                Offset2 = _MeshData[hit.mesh_id].LightNodeSkinnedOffset;
+                        }
+
+                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, WorldToLoc, AggTrisB[hit.triangle_id].IsEmissive, Offset2, Path, Offset0);
+                    #else
+                        CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, WorldToLoc, AggTrisB[hit.triangle_id].IsEmissive, Offset2, Path, Offset0);
+                    #endif
+                #else
+                    light_pdf /= (float)LightMeshCount;
+                    light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
+                #endif
+                float w = power_heuristic(max(last_pdf,0), light_pdf);
+                    #ifdef PhotonMapping
+                        if (CurBounce == 1) Color.Indirect += EmissCol * w;
+                        else
+                    #else
+                        if (CurBounce == 1) Color.Direct += EmissCol * w;
+                        else
+                    #endif
+                    {
+                        #ifdef RadCache
+                            if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
+                            else Color.Indirect += Color.throughput * EmissCol * w;
+                        #else
+                            Color.Indirect += Color.throughput * EmissCol * w;
+                        #endif
+                    }
+                }
+        }
+        #endif
         [branch]if(UseReSTIRGI && CurBounce == 1 && FromColorSpecPacked(Color.MetRoughIsSpec).x == 1 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) {
             PrevScreenData.z = -100000.0f;
             PSRScreenData.z = -100000.0f;
@@ -290,7 +311,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             PrevScreenData.z = -10000.0f;
             PSRScreenData.z = -100000.0f;
         }
-        if(hitDat.emission > 1.0f) {
+        if(TTMat.emission > 1.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
@@ -303,36 +324,35 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
    
     [branch]if(ClayMode) {
-        hitDat.surfaceColor = ClayColor;
+        TTMat.surfaceColor = ClayColor;
 #ifdef ClayMetalOverride
-        if(hitDat.specTrans == 0) {
-            hitDat.metallic = ClayMetalOverrideValue;
-            hitDat.roughness = ClayRoughnessOverrideValue;
+        if(TTMat.specTrans == 0) {
+            TTMat.metallic = ClayMetalOverrideValue;
+            TTMat.roughness = ClayRoughnessOverrideValue;
         }
-
 #else
-        hitDat.metallic = 0;
+        TTMat.metallic = 0;
 #endif
-        hitDat.clearcoat = 0;
-        hitDat.sheen = 0;
-        hitDat.Specular = 0;
+        TTMat.clearcoat = 0;
+        TTMat.sheen = 0;
+        TTMat.Specular = 0;
     }
 
-    if(hitDat.ColorBleed != 1 && (Color.MetRoughIsSpec >> 31)) {
-        float lum = lum2(hitDat.surfaceColor);
-        hitDat.surfaceColor = ((lum * 255.0f) + (hitDat.ColorBleed *((hitDat.surfaceColor * 255.0f) - (lum * 255.0f)))) / 255.0f;
+    if(TTMat.ColorBleed != 1 && (Color.MetRoughIsSpec >> 31)) {
+        float lum = lum2(TTMat.surfaceColor);
+        TTMat.surfaceColor = ((lum * 255.0f) + (TTMat.ColorBleed *((TTMat.surfaceColor * 255.0f) - (lum * 255.0f)))) / 255.0f;
     }
     
-    validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+    validBSDFSample = SampleDisney(TTMat, ray.direction, GetFlag(TTMat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
     {
         if (CurBounce == 0) {
-            float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
+            float Metallic = saturate(TTMat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : TTMat.Specular));
             if (MaterialLobe == 3) {
                 Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted), Color.MetRoughIsSpec);
                 PSRScreenData.w = asfloat(ToColorSpecPackedAdd(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted), asuint(PSRScreenData.w)));
             } else {
-                Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(Metallic, hitDat.roughness, MaterialLobe), Color.MetRoughIsSpec);
-                PSRScreenData.w = asfloat(ToColorSpecPackedAdd(float3(Metallic, hitDat.roughness, MaterialLobe), asuint(PSRScreenData.w)));
+                Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(Metallic, TTMat.roughness, MaterialLobe), Color.MetRoughIsSpec);
+                PSRScreenData.w = asfloat(ToColorSpecPackedAdd(float3(Metallic, TTMat.roughness, MaterialLobe), asuint(PSRScreenData.w)));
             }
         }
 
@@ -348,17 +368,17 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 PSRScreenData.w = asfloat(ToColorSpecPackedAdd(float3(0, 0, 3), asuint(PSRScreenData.w)));
             }
         }
-        if (MaterialLobe != 3 && !(MaterialLobe == 0 && hitDat.roughness < 0.5f)) {
+        if (MaterialLobe != 3 && !(MaterialLobe == 0 && TTMat.roughness < 0.5f)) {
             Color.MetRoughIsSpec |= 1 << 31;
             PSRScreenData.w = asfloat(asuint(PSRScreenData.w) | (1 << 31));
 
         }
         Color.InWaterDistance += hit.t;
-        if(!GetFlag(hitDat.Tag, Thin)) {
+        if(!GetFlag(TTMat.Tag, Thin)) {
             int WaterStageFlag = (Color.MetRoughIsSpec & 0x3800000) >> 23;
             if(GotFlipped) {
                 if((MaterialLobe == 2 && Refracted) || MaterialLobe == 3 || (WaterStageFlag == 2 || WaterStageFlag == 4)) {
-                    bsdfmodifier *= exp(-Color.InWaterDistance * CalculateExtinction((MaterialLobe == 2 && Refracted) ? (hitDat.transmittanceColor) : (1.0f - (bsdf * hitDat.surfaceColor)), hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
+                    bsdfmodifier *= exp(-Color.InWaterDistance * CalculateExtinction((MaterialLobe == 2 && Refracted) ? (TTMat.transmittanceColor) : (1.0f - (bsdf * TTMat.surfaceColor)), TTMat.scatterDistance == 0.0f ? 1.0f : TTMat.scatterDistance));
                     //MAY WANNA CHANGE THE MATLOBE == 2 TO MATLOBE == 3 AS WELL^^
                     if(!(WaterStageFlag == 2 || WaterStageFlag == 4)) WaterStageFlag = 3 + !Refracted;
                     Color.InWaterDistance = 0;
@@ -373,8 +393,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x3800000)) | (WaterStageFlag << 23);
             PSRScreenData.w = asfloat((asuint(PSRScreenData.w) & ~(0x3800000)) | (WaterStageFlag << 23));
         } else if(Refracted && MaterialLobe != 3) {
-            bsdfmodifier *= sqrt(exp(-CalculateExtinction((MaterialLobe == 2 && Refracted) ? (hitDat.transmittanceColor) : (1.0f - (bsdf * hitDat.surfaceColor)), hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
-            // bsdfmodifier *= sqrt(exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
+            bsdfmodifier *= sqrt(exp(-CalculateExtinction((MaterialLobe == 2 && Refracted) ? (TTMat.transmittanceColor) : (1.0f - (bsdf * TTMat.surfaceColor)), TTMat.scatterDistance == 0.0f ? 1.0f : TTMat.scatterDistance)));
+            // bsdfmodifier *= sqrt(exp(-CalculateExtinction(1.0f - TTMat.surfaceColor, TTMat.scatterDistance == 0.0f ? 1.0f : TTMat.scatterDistance)));
 
         }
 
@@ -389,31 +409,31 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             pdf = phase_draine_eval(dot(ray.direction.xzy, PrevDirection.xzy), DRAINE_G, DRAINE_A);
             norm = ray.direction;
             ray.origin = pos;
-            hitDat.surfaceColor = FogColor;
-            hitDat.metallic = 0;
-            hitDat.roughness = 1;
+            TTMat.surfaceColor = FogColor;
+            TTMat.metallic = 0;
+            TTMat.roughness = 1;
             DidScatter = true;
         }
         pdf *= VolumeBSDF;
     #endif
 
     [branch] if (CurBounce == 0 || GetBounceData(asuint(PSRScreenData.w)) == 0) {//Setting textures for denosier to use
-        float3 Col = hitDat.surfaceColor;
+        float3 Col = TTMat.surfaceColor;
         if(MaterialLobe == 3) Col = bsdf;
-        PSRScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -norm : norm)), asfloat(packRGBE((CurBounce == 0) ? Col : (unpackRGBE(asuint(PSRScreenData.y)) * Col))), PSRScreenData.z + hit.t, asfloat((((asuint(PSRScreenData.w) & ~(0x7C000000)) & ~(0x400000)) | (((CurBounce < 20 && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22))); 
+        PSRScreenData = float4(asfloat(octahedral_32(((TTMat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -norm : norm)), asfloat(packRGBE((CurBounce == 0) ? Col : (unpackRGBE(asuint(PSRScreenData.y)) * Col))), PSRScreenData.z + hit.t, asfloat((((asuint(PSRScreenData.w) & ~(0x7C000000)) & ~(0x400000)) | (((CurBounce < 20 && ((MaterialLobe == 3 && TTMat.roughness < 0.25f) || (TTMat.metallic == 1 && MaterialLobe == 0 && TTMat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22))); 
     }
 
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
     [branch] if (CurBounce == 0 || GetBounceData(Color.MetRoughIsSpec) == 0) {//Setting textures for denosier to use
 #ifdef AltFadeMapping
-            Color.Flags = packRGBE((unpackRGBE(Color.Flags) * hitDat.surfaceColor));
+            Color.Flags = packRGBE((unpackRGBE(Color.Flags) * TTMat.surfaceColor));
 #else
-            Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
+            Color.Flags = packRGBE((CurBounce == 0) ? TTMat.surfaceColor : (unpackRGBE(Color.Flags) * TTMat.surfaceColor));
 #endif
             Color.Data = float3((CurBounce == 0) ? throughput : (throughput * Color.Data.xyz));
-        PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
-        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
+        PrevScreenData = float4(asfloat(octahedral_32(((TTMat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((TTMat.diffTrans != 0 || (TTMat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
+        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && TTMat.roughness < 0.25f) || (TTMat.metallic == 1 && MaterialLobe == 0 && TTMat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
 #ifdef PhotonMapping
@@ -429,7 +449,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
         #endif
         float pdf3 = 0;
-        // ReconstructBsdf2(hitDat, PrevDirection, ray.direction, Refracted ? -norm : norm, pdf3, bsdf, GetTangentSpace2(Refracted ? -norm : norm), pixel_index);
+        // ReconstructBsdf2(TTMat, PrevDirection, ray.direction, Refracted ? -norm : norm, pdf3, bsdf, GetTangentSpace2(Refracted ? -norm : norm), pixel_index);
         [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
             if(GetBounceData(CachePathLength) != 0){
                 #ifdef NonDirectionalRadCache
@@ -457,7 +477,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
                 }
             } else {
-                CachePathLength = ((CachePathLength & ~(0x7C000000)) | (((CurBounce < 30 && ((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.2f))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
+                CachePathLength = ((CachePathLength & ~(0x7C000000)) | (((CurBounce < 30 && ((MaterialLobe == 3) || (MaterialLobe == 0 && TTMat.roughness < 0.2f))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
             }
             CachePathLength = (CachePathLength & ~64) | ((MaterialLobe == 3) << 6);
         }
@@ -532,16 +552,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
                     LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
                     area = (Light.SpotAngle.x * Light.SpotAngle.y);
-                    if(hitDat.MatType == 3) Radiance = 0;
+                    if(TTMat.MatType == 3) Radiance = 0;
                     Radiance *= PI;
-                    if(MaterialLobe == 0 && hitDat.roughness <= 0.5f) AggTriIndex = -1;
+                    if(MaterialLobe == 0 && TTMat.roughness <= 0.5f) AggTriIndex = -1;
                 break;
                 case AREALIGHTDISK:
                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * Light.SpotAngle.x;
                     LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
                     area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
-                    if(MaterialLobe == 0 && hitDat.roughness <= 0.5f) AggTriIndex = -1;
+                    if(MaterialLobe == 0 && TTMat.roughness <= 0.5f) AggTriIndex = -1;
                 break;
             }
             Radiance *= LightEnergyScale;
@@ -554,8 +574,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float4x4 MeshTransformInverse = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].W2L;
             #endif
             float ax, ay;
-            CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
-            AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, float2(ax, ay), -PrevDirection, (saturate(hitDat.metallic + hitDat.Specular + hitDat.clearcoat)));
+            CalculateAnisotropicParams(TTMat.roughness, TTMat.anisotropic, ax, ay);
+            AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, float2(ax, ay), -PrevDirection, (saturate(TTMat.metallic + TTMat.Specular + TTMat.clearcoat)));
             #ifdef LBVH
                 MeshTransformInverse = _MeshData[MeshIndex].W2L;
             #endif
@@ -600,15 +620,15 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float3 bsdf_value = 0.0f;
                 float3 bsdf_diffuse = 0;
                 #ifdef RadCache
-                    float3 colcol = hitDat.surfaceColor;
-                    hitDat.surfaceColor =1 ;
-                    bool validbsdfNEE = EvaluateBsdf3(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
+                    float3 colcol = TTMat.surfaceColor;
+                    TTMat.surfaceColor =1 ;
+                    bool validbsdfNEE = EvaluateBsdf3(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
                     bsdf_pdf = 0;
-                    hitDat.surfaceColor = colcol;
-                    validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                    TTMat.surfaceColor = colcol;
+                    validbsdfNEE = EvaluateBsdf(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
                 #else
-                    if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) hitDat.surfaceColor = 1.0f;
-                    bool validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                    if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) TTMat.surfaceColor = 1.0f;
+                    bool validbsdfNEE = EvaluateBsdf(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
                     if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
                 #endif
                 #ifdef Fog
@@ -724,7 +744,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     if(MaterialLobe == 2 && DoPartialRendering && CurBounce == 0) {
         CB = (int(id.x)/PartialRenderingFactor + int(id.y)/PartialRenderingFactor + curframe)%2==0;
         if(UseASVGF) {
-            if(hitDat.metallic == 1 || hitDat.specTrans == 1 || RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
+            if(TTMat.metallic == 1 || TTMat.specTrans == 1 || RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
         }
     }
 
@@ -1139,7 +1159,7 @@ int MaterialIndex;
 
     float2 BaseUv;
     bool HitTerrain = false;
-    MaterialData TempMat;
+    MaterialData TTMat;
     [branch]if (TerrainExists && (bestHit.mesh_id == 9999999)) {//if hit terrain
         BaseUv = float2(bestHit.u, bestHit.v);
         float4 Mats = TerrainAlphaMap.SampleLevel(sampler_TerrainAlphaMap, BaseUv * (Terrains[bestHit.triangle_id].AlphaMap.xy - Terrains[bestHit.triangle_id].AlphaMap.zw) + Terrains[bestHit.triangle_id].AlphaMap.zw, 0);
@@ -1166,31 +1186,31 @@ int MaterialIndex;
         if(Mats.z > 0.001f) BaseCol += SampleTexture(BaseUv, SampleTerrainAlbedo, _Materials[MaterialIndex + 2]) * Mats.z;
         if(Mats.w > 0.001f) BaseCol += SampleTexture(BaseUv, SampleTerrainAlbedo, _Materials[MaterialIndex + 3]) * Mats.w;
         MaterialIndex += x;
-        TempMat = _Materials[MaterialIndex];
-        BaseUv = BaseUv * TempMat.surfaceColor.xy + TempMat.transmittanceColor.xy;
-        TempMat.surfaceColor = BaseCol;
+        TTMat = _Materials[MaterialIndex];
+        BaseUv = BaseUv * TTMat.surfaceColor.xy + TTMat.transmittanceColor.xy;
+        TTMat.surfaceColor = BaseCol;
         HitTerrain = true;
     } else {
         BaseUv = TOHALF(AggTrisA[bestHit.triangle_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[bestHit.triangle_id].texedge1) * bestHit.u + TOHALF(AggTrisA[bestHit.triangle_id].texedge2) * bestHit.v;
 #ifndef AdvancedBackground
         MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
 #endif
-        TempMat = _Materials[MaterialIndex];
+        TTMat = _Materials[MaterialIndex];
 
         float3 TempCol = 1;
-        if(TempMat.AlbedoTex.x > 0) TempCol = SampleTexture(BaseUv, SampleAlbedo, TempMat);
-        if(TempMat.SecondaryAlbedoTex.x > 0) {
-            float AlbMaskVal = TempMat.AlbedoBlendFactor;
-            if(TempMat.SecondaryAlbedoMask.x > 0) {
-                AlbMaskVal = SampleTexture(BaseUv, SampleSecondaryAlbedoMask, TempMat).x;
+        if(TTMat.AlbedoTex.x > 0) TempCol = SampleTexture(BaseUv, SampleAlbedo, TTMat);
+        if(TTMat.SecondaryAlbedoTex.x > 0) {
+            float AlbMaskVal = TTMat.AlbedoBlendFactor;
+            if(TTMat.SecondaryAlbedoMask.x > 0) {
+                AlbMaskVal = SampleTexture(BaseUv, SampleSecondaryAlbedoMask, TTMat).x;
             }
-            float3 SecondaryVal = SampleTexture(BaseUv, SampleSecondaryAlbedo, TempMat).xyz;
-            switch(GetFlagStretch(TempMat.Tag, 1, 3)) {
+            float3 SecondaryVal = SampleTexture(BaseUv, SampleSecondaryAlbedo, TTMat).xyz;
+            switch(GetFlagStretch(TTMat.Tag, 1, 3)) {
                 case 0:
                     TempCol = lerp(TempCol, SecondaryVal, AlbMaskVal);
                 break;
                 case 1:
-                    if(AlbMaskVal > 0.5f || !(TempMat.SecondaryAlbedoMask.x > 0))
+                    if(AlbMaskVal > 0.5f || !(TTMat.SecondaryAlbedoMask.x > 0))
                         TempCol += SecondaryVal;
                 break;
                 case 2:
@@ -1199,17 +1219,17 @@ int MaterialIndex;
                 break;
             }
         }
-        if(GetFlag(TempMat.Tag, VertexColors)) TempCol *= unpackRGBE(AggTrisB[bestHit.triangle_id].VertColA) * (1.0f - bestHit.u - bestHit.v) + unpackRGBE(AggTrisB[bestHit.triangle_id].VertColB) * bestHit.u + unpackRGBE(AggTrisB[bestHit.triangle_id].VertColC) * bestHit.v;
-        TempMat.surfaceColor *= TempCol;
+        if(GetFlag(TTMat.Tag, VertexColors)) TempCol *= unpackRGBE(AggTrisB[bestHit.triangle_id].VertColA) * (1.0f - bestHit.u - bestHit.v) + unpackRGBE(AggTrisB[bestHit.triangle_id].VertColB) * bestHit.u + unpackRGBE(AggTrisB[bestHit.triangle_id].VertColC) * bestHit.v;
+        TTMat.surfaceColor *= TempCol;
 
-        TempCol = TempMat.surfaceColor;
-        Unity_Hue_Degrees_float(TempCol, TempMat.Hue * 500.0f, TempMat.surfaceColor);
-        TempMat.surfaceColor *= TempMat.Brightness;
-        TempCol = TempMat.surfaceColor;
-        Unity_Saturation_float(TempCol, TempMat.Saturation, TempMat.surfaceColor);
-        Unity_Contrast_float(TempMat.surfaceColor, TempMat.Contrast);
-        TempMat.surfaceColor = saturate(TempMat.surfaceColor);
-        TempMat.surfaceColor = lerp(TempMat.surfaceColor, TempMat.BlendColor, TempMat.BlendFactor);
+        TempCol = TTMat.surfaceColor;
+        Unity_Hue_Degrees_float(TempCol, TTMat.Hue * 500.0f, TTMat.surfaceColor);
+        TTMat.surfaceColor *= TTMat.Brightness;
+        TempCol = TTMat.surfaceColor;
+        Unity_Saturation_float(TempCol, TTMat.Saturation, TTMat.surfaceColor);
+        Unity_Contrast_float(TTMat.surfaceColor, TTMat.Contrast);
+        TTMat.surfaceColor = saturate(TTMat.surfaceColor);
+        TTMat.surfaceColor = lerp(TTMat.surfaceColor, TTMat.BlendColor, TTMat.BlendFactor);
     }
 
     #ifdef MultiMapScreenshot
@@ -1226,7 +1246,7 @@ int MaterialIndex;
         #elif DebugView == DVTriID
             if(CurBounce == 0) _DebugTex[id.xy] = HandleDebug(bestHit.triangle_id);
         #elif DebugView == DVAlbID
-            if(CurBounce == 0) _DebugTex[id.xy] = HandleDebug(TempMat.AlbedoTex.x);
+            if(CurBounce == 0) _DebugTex[id.xy] = HandleDebug(TTMat.AlbedoTex.x);
         #elif DebugView == DVDepthView
             if(CurBounce == 0) _DebugTex[id.xy] = bestHit.t / DepthDivisor;
         #endif
@@ -1237,25 +1257,25 @@ int MaterialIndex;
     if(UseASVGF && CurBounce == 0) PrevScreenData.z = 0;
     float4 PSRScreenData = InvalidateScreenSpaceInfo ? 0 : PSRGBuff[id.xy];
 
-    if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
-    if (TempMat.RoughnessTex.x > 0) {
-        TempMat.roughness = saturate(pow(SampleTexture(BaseUv, SampleRoughness, TempMat), rcp(2.2f)));
-        TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - TempMat.roughness) : TempMat.roughness);
+    if (TTMat.specTrans != 1 && TTMat.MetallicTex.x > 0) TTMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TTMat), rcp(2.2f));
+    if (TTMat.RoughnessTex.x > 0) {
+        TTMat.roughness = saturate(pow(SampleTexture(BaseUv, SampleRoughness, TTMat), rcp(2.2f)));
+        TTMat.roughness = (GetFlag(TTMat.Tag, InvertSmoothnessTexture) ? (1.0f - TTMat.roughness) : TTMat.roughness);
     }
-    TempMat.metallic = saturate(TempMat.metallic);
-    if(!all(TempMat.MetallicRemap == float2(0,1))) TempMat.metallic = (TempMat.metallic * (TempMat.MetallicRemap.y - TempMat.MetallicRemap.x)) + TempMat.MetallicRemap.x;
-    if(!all(TempMat.RoughnessRemap == float2(0,1))) {
-        if(GetFlag(TempMat.Tag, UseSmoothness)) TempMat.roughness = (TempMat.roughness * ((1.0f - TempMat.RoughnessRemap.x) - (1.0f - TempMat.RoughnessRemap.y))) + (1.0f - TempMat.RoughnessRemap.y);
-        else TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
+    TTMat.metallic = saturate(TTMat.metallic);
+    if(!all(TTMat.MetallicRemap == float2(0,1))) TTMat.metallic = (TTMat.metallic * (TTMat.MetallicRemap.y - TTMat.MetallicRemap.x)) + TTMat.MetallicRemap.x;
+    if(!all(TTMat.RoughnessRemap == float2(0,1))) {
+        if(GetFlag(TTMat.Tag, UseSmoothness)) TTMat.roughness = (TTMat.roughness * ((1.0f - TTMat.RoughnessRemap.x) - (1.0f - TTMat.RoughnessRemap.y))) + (1.0f - TTMat.RoughnessRemap.y);
+        else TTMat.roughness = (TTMat.roughness * (TTMat.RoughnessRemap.y - TTMat.RoughnessRemap.x)) + TTMat.RoughnessRemap.x;
     }
-    if(TempMat.DiffTransTex.x > 0) {
-        TempMat.diffTrans = saturate(pow(SampleTexture(BaseUv, SampleDiffTrans, TempMat), rcp(2.2f)));
+    if(TTMat.DiffTransTex.x > 0) {
+        TTMat.diffTrans = saturate(pow(SampleTexture(BaseUv, SampleDiffTrans, TTMat), rcp(2.2f)));
     }
-    if(!all(TempMat.DiffTransRemap == float2(0,1))) TempMat.diffTrans = (TempMat.diffTrans * (TempMat.DiffTransRemap.y - TempMat.DiffTransRemap.x)) + TempMat.DiffTransRemap.x;
+    if(!all(TTMat.DiffTransRemap == float2(0,1))) TTMat.diffTrans = (TTMat.diffTrans * (TTMat.DiffTransRemap.y - TTMat.DiffTransRemap.x)) + TTMat.DiffTransRemap.x;
 
 
 #ifdef MoreAO
-    if(GetBounceData(asuint(PSRScreenData.w)) == 2 && TempMat.diffTrans == 0) {
+    if(GetBounceData(asuint(PSRScreenData.w)) == 2 && TTMat.diffTrans == 0) {
         if(FromColorSpecPacked(asuint(PSRScreenData.w)).z == 2 || FromColorSpecPacked(asuint(PSRScreenData.w)).z == 1)
         if(bestHit.t < aoRadius) {
             float ao = bestHit.t / aoRadius;
@@ -1266,24 +1286,24 @@ int MaterialIndex;
 #endif
 
 
-    TempMat.roughness = max(TempMat.roughness, 0.00001f);
+    TTMat.roughness = max(TTMat.roughness, 0.00001f);
 #ifdef ClampRoughnessToBounce
     {
         const uint Case = (asuint(PrevScreenData.w) << 1) >> 30;
-        if(CurBounce != 0 && Case != 3) TempMat.roughness = max(TempMat.roughness, saturate((float)CurBounce / 6.0f));
-        if(CurBounce != 0 && Case != 3) TempMat.clearcoat = max(min(TempMat.clearcoat, TempMat.clearcoat - saturate((float)CurBounce / 6.0f)),0);
+        if(CurBounce != 0 && Case != 3) TTMat.roughness = max(TTMat.roughness, saturate((float)CurBounce / 6.0f));
+        if(CurBounce != 0 && Case != 3) TTMat.clearcoat = max(min(TTMat.clearcoat, TTMat.clearcoat - saturate((float)CurBounce / 6.0f)),0);
     }
 #endif
-    if(TempMat.emission > 0) {
-        if (TempMat.EmissiveTex.x > 0) {
-            float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
-            float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
-            if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
-                TempMat.emission *= EmissTex.x * (luminance(EmissTex.xyz) > 0.01f);
+    if(TTMat.emission > 0) {
+        if (TTMat.EmissiveTex.x > 0) {
+            float3 EmissCol = lerp(TTMat.EmissionColor, TTMat.surfaceColor, GetFlag(TTMat.Tag, BaseIsMap));
+            float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TTMat);
+            if(!GetFlag(TTMat.Tag, IsEmissionMask)) {//IS a mask
+                TTMat.emission *= EmissTex.x * (luminance(EmissTex.xyz) > 0.01f);
             } else EmissCol *= EmissTex.xyz;
-            TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emission) * GetFlag(TempMat.Tag, ReplaceBase));
+            TTMat.surfaceColor = lerp(TTMat.surfaceColor, EmissCol, saturate(TTMat.emission) * GetFlag(TTMat.Tag, ReplaceBase));
         } else {
-            TempMat.surfaceColor *= TempMat.EmissionColor;
+            TTMat.surfaceColor *= TTMat.EmissionColor;
         }
     }
     if(CurBounce == 0 && UseReSTIRGI) PrevScreenData.w = asfloat(0);
@@ -1294,9 +1314,9 @@ int MaterialIndex;
     float3 norm = 0;
 #ifdef RadCache
     uint PathLength = CacheBuffer[pixel_index].pathLength;
-    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x, PSRScreenData);
+    calcFinalColor(ray, Color, TTMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x, PSRScreenData);
 #else
-    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PSRScreenData);
+    calcFinalColor(ray, Color, TTMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PSRScreenData);
 #endif
     if(CurBounce == 0 || ((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     if(CurBounce == 0 || ((true ^ InvalidateScreenSpaceInfo) && any(PrevPrevPSR != PSRScreenData))) PSRGBuff[id.xy] = PSRScreenData;
@@ -1404,6 +1424,7 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
         float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+        reflprojection *= dot(reflprojection * float2(screen_width, screen_height), reflprojection * float2(screen_width, screen_height)) > 0.00001f;
         int2 NeighbPos = id.xy + reflprojection * int2(screen_width, screen_height);
         if(any(NeighbPos < 0 || NeighbPos >= int2(screen_width, screen_height))) return;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
@@ -1445,6 +1466,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+        reflprojection *= dot(reflprojection * float2(screen_width, screen_height), reflprojection * float2(screen_width, screen_height)) > 0.00001f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
             CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
             MVTexture[id.xy] = (reflprojection);

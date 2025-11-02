@@ -73,7 +73,7 @@ namespace TrueTrace {
         private int Temporal;
         private int Atrous_LF;
         private int Atrous;
-        private int DistCorrect;
+        private int SpecCopy;
         private int CalcQuart;
         private Vector3 PrevCamPos;
 
@@ -142,7 +142,7 @@ namespace TrueTrace {
             Temporal = shader.FindKernel("Temporal");
             Atrous_LF = shader.FindKernel("Atrous_LF");
             Atrous = shader.FindKernel("Atrous");
-            DistCorrect = shader.FindKernel("DistanceCorrectionKernel");
+            SpecCopy = shader.FindKernel("TempCopyKernel");
             CalcQuart = shader.FindKernel("CalcPerc");
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
@@ -236,6 +236,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(shader, "CurFrame", CurFrame);
 
             shader.SetTextureFromGlobal(Reproject, "TEX_PT_MOTION", "TTMotionVectorTexture");
+            cmd.SetComputeTextureParam(shader, Reproject, "ReflRefracA", (EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
             cmd.SetComputeBufferParam(shader, Reproject, "GlobalColorsRead", _ColorBuffer);
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
@@ -413,9 +414,9 @@ namespace TrueTrace {
             shader.SetBool("DiffRes", ResolutionRatio != 1.0f);
             // cmd.CopyTexture((EvenFrame ? ASVGF_FILTERED_SPEC_A : ASVGF_FILTERED_SPEC_B), ASVGF_ATROUS_PING_SPEC);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("COPY A");
-            cmd.SetComputeTextureParam(shader, DistCorrect + 1, "TEX_ASVGF_FILTERED_SPEC_B", (EvenFrame ? ASVGF_FILTERED_SPEC_A : ASVGF_FILTERED_SPEC_B));
-            cmd.SetComputeTextureParam(shader, DistCorrect + 1, "IMG_ASVGF_ATROUS_PING_SPEC", ASVGF_ATROUS_PING_SPEC);
-            cmd.DispatchCompute(shader, DistCorrect + 1, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
+            cmd.SetComputeTextureParam(shader, SpecCopy, "TEX_ASVGF_FILTERED_SPEC_B", (EvenFrame ? ASVGF_FILTERED_SPEC_A : ASVGF_FILTERED_SPEC_B));
+            cmd.SetComputeTextureParam(shader, SpecCopy, "IMG_ASVGF_ATROUS_PING_SPEC", ASVGF_ATROUS_PING_SPEC);
+            cmd.DispatchCompute(shader, SpecCopy, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("COPY A");
 
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous LF: " + 0);
@@ -469,7 +470,7 @@ namespace TrueTrace {
 
                 cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
                 shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
-                cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
+                cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 8.0f), Mathf.CeilToInt((ScreenHeight + 15) / 8.0f), 1);
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous " + 0);
 
             for(int i = 0; i < 6; i++) {
@@ -528,7 +529,7 @@ namespace TrueTrace {
 
                 cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
                 shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
-                cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
+                cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 8.0f), Mathf.CeilToInt((ScreenHeight + 15) / 8.0f), 1);
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous " + (e + 1));
             }
 

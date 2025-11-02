@@ -273,11 +273,11 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 		LocalFactor = 1;
 	}
 	if (IsDiffuse) {
-		if(GetBounceData(Pixel.MetRoughIsSpec) != 1 && !InvalidReprojection) AlbCol.y = AlbedoColorB[pos_prev].y;
+		if(GetBounceData(Pixel.MetRoughIsSpec) != 1 && !InvalidReprojection && length(unpackRGBE(AlbedoColorB[pos_prev].y)) <= 1) AlbCol.y = AlbedoColorB[pos_prev].y;
 		TempSH = irradiance_to_SH(Exposure * (LocalFactor) * IndirectBoost * clamp(Pixel.Indirect * Pixel.Data.xyz / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz));
 		HF = float4((LocalFactor) * clamp(Exposure * (Pixel.Direct + NEEValue) * Pixel.Data.xyz,0,1200000.0f),1);
 	} else {
-		if(GetBounceData(Pixel.MetRoughIsSpec) != 1 && !InvalidReprojection) AlbCol.x = AlbedoColorB[pos_prev].x;
+		if(GetBounceData(Pixel.MetRoughIsSpec) != 1 && !InvalidReprojection && length(unpackRGBE(AlbedoColorB[pos_prev].x)) <= 1) AlbCol.x = AlbedoColorB[pos_prev].x;
 		Spec = packRGBE((LocalFactor) * clamp(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + NEEValue) * Pixel.Data.xyz,0,1200000.0f));
 	}
 	STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, TempSH);
@@ -333,7 +333,7 @@ float CameraDist;
 groupshared float4 s_reprojected_pixels[GROUP_SIZE_PIXELS][GROUP_SIZE_PIXELS];
 
 
-inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_LocalInvocationID)
+inline void reproject_pixel(int2 p, int2 gl_LocalInvocationID)
 {
 	int2 local_pos = gl_LocalInvocationID;
 
@@ -345,10 +345,10 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 	float2 pos_prev = ((float2(p)+0.5) * float2(rcp(screen_width), rcp(screen_height)) + motion.xy) * float2(screen_width, screen_height);
 	int2 pp = int2(floor(pos_prev));
 
-	if (pp.x <= field_left || pp.y <= field_left || pp.x >= field_right || pp.y >= screen_height)
+	[branch]if (pp.x < 0 || pp.y < 0 || pp.x >= screen_width || pp.y >= screen_height)
 		return;
 
-	if((min(GetBounceData(GlobalColorsRead[pp.x + pp.y * screen_width].MetRoughIsSpec), 3) > 2)) return;
+	if((min((ReflRefracA[pp] >> 29), 3) > 2)) return;
 
 	// Fetch the previous frame gradient position...
 	int2 pos_grad_prev = pp / GRAD_DWN;
@@ -362,7 +362,7 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 	// 1) Carrying forward the same random number sequence over multiple frames introduces bias.
 	// 2) Gradient pixels use light lists from the previous frame. If the same pixel was used
 	// as a gradient for more than one frame, we would need to keep the light lists from 2+ frames behind.
-	if (all((pos_grad_prev * GRAD_DWN + stratum_prev == pp))) {
+	[branch]if (all((pos_grad_prev * GRAD_DWN + stratum_prev == pp))) {
 		return;
 	}
 
@@ -373,12 +373,8 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 	float depth_prev = TEX_PT_VIEW_DEPTH_B[pp];
 
 	float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / abs(depth_curr);
-	if (dist_depth < 0.1f)
-	{
-		s_reprojected_pixels[local_pos.y][local_pos.x] = float4(pp, 0,0);
-	}
 	// Compare the surfaces
-	if (dist_depth < 0.1f)
+	[branch]if (dist_depth < 0.1f)
 	{
 		float3 prev_hf = TEX_PT_COLOR_HF[pp];
 		float3 prev_spec = unpackRGBE(TEX_PT_COLOR_SPEC[pp]);
@@ -407,9 +403,9 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	int2 pos_grad = ipos / GRAD_DWN;
 
 
-	reproject_pixel(ipos, 0, screen_width, gl_LocalInvocationID);
+	reproject_pixel(ipos, gl_LocalInvocationID);
 
-	if(ipos.x < screen_width && ipos.y < screen_height) {
+	[branch]if(ipos.x < screen_width && ipos.y < screen_height) {
 		RNGTexA[ipos] = float4(CurFrame, ipos.x + ipos.y * screen_width, 0, 0);
 	    const uint pixel_index = ipos.x + ipos.y * screen_width;
 	    Ray CamRay = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
@@ -460,7 +456,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 			}
 		}
 	}
-	if(!found) {
+	[branch]if(!found) {
 		int2 tempoffset = int2((CurFrame % 3), (CurFrame % 9) / 3);
 		int2 p = local_pos * GRAD_DWN + tempoffset;
 		if(all(s_reprojected_pixels[p.y][p.x].xy != float2(0,0))) {
@@ -471,8 +467,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 		}
 	}
 
-	if (!found)
-	{
+	[branch]if (!found) {
 		IMG_ASVGF_GRAD_SMPL_POS_A[pos_grad] = 0u;
 		return;
 	}
@@ -480,18 +475,13 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	// Final pass: store the gradient information and patch the surface parameters
 
 	ipos += found_offset;
+	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
+	ScreenSpaceInfoWrite[ipos] = float4(asfloat(TEX_PT_NORMALS_B[found_pos_prev].xy),0,0);
+	
 	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	Ray PrevCamRay2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
-	// if(ipos.x > screen_width / 2) PrevCamRay.origin = PrevCamRay2.origin;
 	PrevCamRay.origin = PrevCamRay2.origin;
 	uint4 Target = PrimaryTriData[found_pos_prev];
-	// Ray Ray2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
-	// Ray2.origin += CamDiff;
-	// int ResultantMeshID = Closest_Hit_Compute(Ray2);
-	// if(Target.x != ResultantMeshID) {
-	// 	IMG_ASVGF_GRAD_SMPL_POS_A[pos_grad] = 0u;
-	// 	return;
-	// }
 
 	uint gradient_idx =
 		(1 << 31) /* mark sample as busy */
@@ -503,7 +493,6 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 
 	RNGTexA[ipos] = float4(RNGTexB[found_pos_prev].xyz, (ReflRefracB[found_pos_prev] >> 31) ? 2 : 1);
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin = PrevCamRay.origin;
-	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = PrevCamRay.direction;
 	float3 Pos;
 	if(Target.w == 1) Pos = asfloat(Target.xyz);
 	else { 
@@ -525,10 +514,9 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 		}
 	}
 
-	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
+	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - PrevCamRay.origin);
 
-	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
-	ScreenSpaceInfoWrite[ipos] = float4(asfloat(TEX_PT_NORMALS_B[found_pos_prev].xy),0,0);
+
 }
 
 
@@ -587,7 +575,7 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 	float grad_spec = 0;
 
 	// Process reprojected HF and SPEC samples
-	if (u != 0u)
+	[branch]if (u != 0u)
 	{
 		/* position of sample inside of stratum in the current frame */
 		const int2 grad_strata_pos = int2(
@@ -611,6 +599,7 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 		// First person weapon moves a lot, which creates gradients and makes noise.
 		// Slow-changing lighting is better than noise on the weapon, so reduce the gradients.
 	}
+	IMG_ASVGF_GRAD_HF_SPEC_PING[ipos] = float2(grad_hf, grad_spec);
 
 	// Process all LF samples in the 3x3 square, accumulate the luminances
 
@@ -622,7 +611,6 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 
 	IMG_ASVGF_GRAD_LF_PING[ipos] = grad_lf;
 
-	IMG_ASVGF_GRAD_HF_SPEC_PING[ipos] = float2(grad_hf, grad_spec);
 }
 
 
@@ -757,8 +745,6 @@ inline void get_shared_data(int2 offset, inout float depth, inout float3 normal,
 	lum_hf = normal_lum.w;
 }
 
-Texture2D<float4> TEX_ASVGF_ATROUS_PONG_LF_SH;
-Texture2D<float2> TEX_ASVGF_ATROUS_PONG_LF_COCG;
 
 
 bool reprojection_intersect_border(inout float2 prev_pos, const float2 mv, const float2 image_size_minus_one) {
@@ -848,7 +834,8 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
 			float depth_prev = TEX_PT_VIEW_DEPTH_B[p].x;
 			uint2 norms = TEX_PT_NORMALS_B[p];
-			bool ReflectedRefractedPrev = ReflRefracB[p] >> 31;
+			uint RRB = ReflRefracB[p];
+			bool ReflectedRefractedPrev = RRB >> 31;
 			float3  normal_prev = i_octahedral_32(norms.y);
 			float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
 			
@@ -856,7 +843,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 			float dist_depth = (abs(depth_curr.x - depth_prev) - CameraDist) / min(depth_curr.x, depth_prev);// * max(depth_curr.y,0.25f);
 			float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 
-			if(UseBackupPointSelection || MatIndex == ((ReflRefracB[p] << 4) >> 4))
+			if(UseBackupPointSelection || MatIndex == ((RRB << 4) >> 4))
 			[branch]if(!ReflectedRefracted && !ReflectedRefractedPrev) {
 				if (dist_depth < 0.1)
 				{
@@ -1289,7 +1276,7 @@ inline void filter_image(
 	filtered_lf.CoCg = sum_color_lf.CoCg / sum_w_lf;
 	LFVarianceB[ipos_lowres] = TotVariance / float2(9.0f, sum_w_lf);
 }
-float3 SH_to_irradiance(SH sh)
+inline float3 SH_to_irradiance(SH sh)
 {
     float   Y       = sh.shY.w / 0.282095;
 
@@ -1429,8 +1416,8 @@ inline void filter_image(
 		int ValidTaps = 0;
 		[unroll]for(int i = -1; i <= 1; i++) {
 			[unroll]for(int j = -1; j <= 1; j++) {
+				[branch]if(i == 0 && j == 0) continue;
 				int2 offID = ipos + int2(i, j) * step_size;
-				if(i == 0 && j == 0) continue;
 				float3 Val = unpackRGBE(img_spec[offID]);
 				if(luminance(Val) != 0) {
 					ValidTaps++;
@@ -1500,7 +1487,7 @@ inline void filter_image(
             }
             p = ipos + int2(actxx, actyy) * step_size;// + jitter;
 
-			float w_hf = all(p >= 0 && p < int2(screen_width, screen_height));
+			float w_hf = all(p > 0 && p <= int2(screen_width, screen_height));
 			if(w_hf == 0) continue;
 
 			float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[p].y);
@@ -1530,9 +1517,7 @@ inline void filter_image(
 
 			if (normal_weight_spec > 0) w_spec *= pow(NdotN, normal_weight_spec);
 
-			// w_spec *= pow(clamp(abs(MetRough.x - CenterMetallic), 0, 1), step_size);
 			if(spec_iteration != 0)  w_spec *= saturate(pow(1.0f - length(ray.direction - CenterRay.direction) / max(abs(depth_center * depth), 0.0001f), 32.0f * step_size) + 1e-3);
-			// if(spec_iteration != 0)  w_spec *= pow(1.0f - (1.0f - 10.0f * roughness_center) * length(ray.direction - CenterRay.direction) / abs(depth_center * depth_center), 32.0f * step_size);
 
 			float2 c_mom = img_moments[p].xy;
 			filtered_hf += c_hf.rgb * w_hf;
@@ -1701,7 +1686,7 @@ float3 demodulate_specular(float3 base_reflectivity, float3 specular)
 
 
 
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 1)]
 void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupID : SV_GroupID, uint gl_LocalInvocationIndex : SV_GroupIndex, uint3 gl_LocalInvocationID : SV_GroupThreadID)
 {
 	int2 ipos = gl_GlobalInvocationID.xy;
@@ -1801,37 +1786,6 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 	}
 } 
 
-int TargetWidth;
-int TargetHeight;
-RWTexture2D<half> TEX_PT_VIEW_DEPTH_AWRITE;//current frame depth
-float3 Forward;
-#pragma kernel DistanceCorrectionKernel
-float FetchDepth(float2 UV) {
-    Ray ray = CreateCameraRay(UV * 2.0f - 1.0f);  
-    #ifdef HDRP
-        float depth = 1.0f - (Depth[int3(UV * int2(TargetWidth, TargetHeight), 0)].x);
-        // float depth = 1.0f - (Depth.SampleLevel(my_linear_clamp_sampler, float3(UV, 1), 0).x);
-    #else
-        float depth = 1.0f - (Depth.SampleLevel(my_linear_clamp_sampler, UV, 0).x);
-    #endif
-        depth = NearPlane * FarPlane / (depth * (NearPlane - FarPlane) + FarPlane);
-        return length(ray.direction / dot(ray.direction, Forward) * depth);   
-}
-
-[numthreads(32, 32, 1)]
-void DistanceCorrectionKernel(uint3 id : SV_DispatchThreadID) {
-    if(id.x >= (uint)screen_width || id.y >= (uint)screen_height) return;
-    float2 Uv = (id.xy + 0.5f) / float2(screen_width, screen_height);
-
-    float CurDepth = FetchDepth(Uv);
-    // float CurDepthX = FetchDepth(Uv + float2(rcp(screen_width) * 2.0f, 0));
-    // float CurDepthY = FetchDepth(Uv + float2(0, rcp(screen_height) * 2.0f));
-    // float CurDepthX2 = FetchDepth(Uv - float2(rcp(screen_width) * 2.0f, 0));
-    // float CurDepthY2 = FetchDepth(Uv - float2(0, rcp(screen_height) * 2.0f));
-    TEX_PT_VIEW_DEPTH_AWRITE[id.xy] = CurDepth;//, abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY) + abs(CurDepth - CurDepthY2) + abs(CurDepth - CurDepthX2));
-}
-
-
 #pragma kernel TempCopyKernel
 
 [numthreads(32, 32, 1)]
@@ -1840,40 +1794,62 @@ void TempCopyKernel(uint3 id : SV_DispatchThreadID) {
 }
 
 
-groupshared float sort[64];
+groupshared float sort_vals[64];
 RWTexture2D<float2> img_quartiles;
-#define Swap(A, B) {float C = B; B = A; A = C;}
 #pragma kernel CalcPerc
 [numthreads(8, 8, 1)]
-void CalcPerc(int3 id : SV_DispatchThreadID, int GTI : SV_GroupIndex, int3 GroupID : SV_GroupID)
+void CalcPerc(int3 id : SV_DispatchThreadID, uint GTI : SV_GroupIndex, int3 GroupID : SV_GroupID)
 {
-  const int2 pixel = min(id.xy, int2(screen_width, screen_height));
+    // clamp to last valid pixel (assumes screen_width/height are ints)
+    int2 pixel = id.xy;
+    pixel.x = min(pixel.x, screen_width - 1);
+    pixel.y = min(pixel.y, screen_height - 1);
 
-  // Sort luminance using odd even sort
-  sort[GTI] = luminance(TEX_PT_COLOR_HF[pixel]);
-  GroupMemoryBarrierWithGroupSync();
-	const bool Valid = GTI < 63;
-    const bool OddSorter = GTI % 2 == 0;
-    const bool EvenSorter = GTI % 2 == 1;
+    // load luminance into shared memory
+    sort_vals[GTI] = luminance(TEX_PT_COLOR_HF[pixel]);
+    GroupMemoryBarrierWithGroupSync();
 
-    [unroll]for (int i = 0; i < 32; i++) {
-      if(Valid)
-      if (OddSorter) {
-        if (sort[GTI] > sort[GTI + 1]) Swap(sort[GTI], sort[GTI + 1]);
-      }
-      GroupMemoryBarrierWithGroupSync();
-      if(Valid)
-      if (EvenSorter) {
-        if (sort[GTI] > sort[GTI + 1]) Swap(sort[GTI], sort[GTI + 1]);
-      }
-      GroupMemoryBarrierWithGroupSync();
+    // Bitonic sort for 64 elements. Use a single-thread-per-pair writer to avoid races.
+    // k = subsequence size, j = distance to partner
+    [unroll]
+    for (uint k = 2; k <= 64; k <<= 1) {
+        [unroll]
+        for (uint j = k >> 1; j > 0; j >>= 1) {
+            uint idx = GTI;
+            uint ixj = idx ^ j; // partner index (0..63)
+
+            // only the lower index thread performs the pair compare-write
+            if (idx < ixj) {
+                float a = sort_vals[idx];
+                float b = sort_vals[ixj];
+
+                // determine direction: within current k-block, low indices sort ascending (true) when (idx & k) == 0
+                bool ascending = ((idx & k) == 0);
+
+                // if we want ascending and a > b -> swap; if descending and a < b -> swap
+                bool shouldSwap = ascending ? (a > b) : (a < b);
+
+                if (shouldSwap) {
+                    // write swapped values (single thread writes both)
+                    sort_vals[idx]   = b;
+                    sort_vals[ixj]   = a;
+                } else {
+                    // write original values (not strictly necessary but keeps memory coherent)
+                    // optional - you can omit these two writes if you know values unchanged
+                    sort_vals[idx]   = a;
+                    sort_vals[ixj]   = b;
+                }
+            }
+
+            // must sync so other threads see the updated pair
+            GroupMemoryBarrierWithGroupSync();
+        }
     }
 
-
-  if (GTI == 0) {
-    const float firefly_lower = sort[16];
-    const float firefly_upper = sort[58];
-    img_quartiles[GroupID.xy] = float2(firefly_lower, firefly_upper);
-  }
+    // thread 0 writes quartiles for this workgroup
+    if (GTI == 0) {
+        float firefly_lower = sort_vals[16]; // 17th smallest (0-based idx 16)
+        float firefly_upper = sort_vals[58]; // 59th smallest (0-based idx 58)
+        img_quartiles[GroupID.xy] = float2(firefly_lower, firefly_upper);
+    }
 }
-

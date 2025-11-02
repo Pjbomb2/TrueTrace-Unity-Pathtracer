@@ -703,6 +703,7 @@ namespace TrueTrace {
             SetFloat("ClayRoughnessOverrideValue", LocalTTSettings.ClayRoughnessOverride, cmd);
             SetFloat("aoStrength", LocalTTSettings.aoStrength, cmd);
             SetFloat("aoRadius", LocalTTSettings.aoRadius, cmd);
+            SetInt("LightTreePrimaryTLASOffset", AssetManager.Assets.LightTreePrimaryTLASOffset, cmd);
             SetInt("MainDirectionalLight", MainDirectionalLight, cmd);
             SetInt("NonInstanceCount", Assets.NonInstanceCount, cmd);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);

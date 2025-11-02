@@ -58,6 +58,8 @@
 
 #define FogScale 12.0f
 
+#define JitterSize 1.0f
+
 
 //Dont change the ones below
 #define DisneyIndex 0
