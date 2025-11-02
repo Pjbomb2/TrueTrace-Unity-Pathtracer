@@ -156,25 +156,27 @@ for bringing bindless textures to unity!
   <li>FULLY Disable Radiance Cache - Will free the memory(RAM/VRAM) usually used by the Radiance Cache</li>
   <li>Use Rasterized Lighting For Direct - Experimental, only known to work in BIRP, Forces truetrace to only render indirect</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
+  <li>Load TT Settings From Global File - Normally, each scene has its own TTSettings file, but activating this allows you to put any TTSettings file into the RayTracingMaster script(attached to the Scene gameobject), and it will be used instead.</li>
   <li>Enable Verbose Logging - Truetrace will yell more information into the console.</li>
   <li>Enable Triangle Splitting - Optimization for SWRT that splits triangles to improve tracing performance.</li>
-  <li>Enable Strict Memory Reduction - Shrinks compute buffers when objects are removed, which reduces performance but saves VRAM.</li>
+  <li>Enable Strict Memory Reduction - Shrinks compute buffers when objects are removed, which causes stuttering on object add/remove but saves VRAM.</li>
   <li>Save Multiple Maps On Screenshot - Any sort of image saved by truetrace will also generate images of the corrosponding material and mesh IDs.</li>
-  <li>Enable Photon Mapping - Enables the experimental photon mapping pass for caustic generation.  Materials will need to have their flag enabled to generate caustics.</li>
+  <li>Enable Photon Mapped Caustics - Enables the photon mapping pass for caustic generation.  Materials/RayTracingObject scripts(attached to each Mesh) will need to have their flag enabled to generate caustics.</li>
   <li>Remove TT Scripts During Save - Will delete all unmodified raytracingobject and parentobject scripts when the scene is saved, then add them back. This helps with version control.</li>
   <li>Fade Mapping - Not super compatable with realtime denoisers, but allows for surfaces with variable transparency, based on alpha texture.</li>
   <li>Stained Glass - Whether or not to color shadow rays that pass through colored glass, dictated by material parameters: Thin, Albedo, Scatter Distance.</li>
   <li>Use Light BVH - Toggles the use of EITHER the Light BVH or Gaussian Tree on/off; uses the RIS count of NEE if off. Turn off for maximum speed, but poor emissive mesh sampling quality.</li>
   <li>Quick Radcache Toggle - Toggles the radcache on/off. Useful for comparing to ground truth pathtracing.</li>
-  <li>Use Texture LOD - Samples LOD of textures based on bounce number, can improve performance.</li>
-  <li>Double Buffer Light Tree - Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but hurts performance with ASVGF.</li>
+  <li>Use Texture LOD - Samples LOD of textures based on bounce number, can improve performance(DX12 only).</li>
+  <li>Double Buffer Light Tree - Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but slightly hurts performance with ASVGF.</li>
+  <li>Use BSDF Lights - Allows naive sampling of emissive triangles using MIS.  Turn off if your having some issues with fireflies to rely entirely on the light BVH.</li>
 </ul>
 
 
 ## Editor Window Guide
 TrueTrace Options Description - 
 <ul>
-  <li>Build Aggregated BVH(Recommended to do any time you change objects in edit mode)- Allows you to pre-build objects BVH's before running so you dont have to wait every time you go into play mode for it to build.</li>
+  <li>Build Aggregated BVH(Recommended to do any time you add/remove objects in edit mode)- Allows you to pre-build objects BVH's before running so you dont have to wait every time you go into play mode for it to build.</li>
   <li>Take Screenshot - Takes a screenshot to the path under "Functionality Settings" in the TrueTrace options</li>
   <li>Clear Parent Data - Clears the data stored in parent GameObjects, allowing you to actually click them without lagging</li>
   <li>Auto Assign Scripts - Assigns all required scripts to all objects under the Scene GameObject, best way to add objects</li>

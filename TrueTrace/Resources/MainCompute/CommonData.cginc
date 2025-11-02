@@ -243,7 +243,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 }
 
 
-#ifdef UseTextureLOD
+#if defined(UseTextureLOD) && !defined(DX11)
 	#define BindlessLOD CurBounce
 #else
 	#define BindlessLOD 0
