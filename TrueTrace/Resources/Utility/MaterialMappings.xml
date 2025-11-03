@@ -2088,6 +2088,11 @@
         <ReadIndex>-3</ReadIndex>
         <TextureName>_Normal1</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>12</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_Height1</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
     <RoughnessRange>null</RoughnessRange>
@@ -2192,6 +2197,11 @@
         <Purpose>4</Purpose>
         <ReadIndex>0</ReadIndex>
         <TextureName>_Metallic</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>12</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_HeightMap</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>

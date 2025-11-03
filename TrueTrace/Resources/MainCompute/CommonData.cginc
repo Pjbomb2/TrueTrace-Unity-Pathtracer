@@ -3021,7 +3021,7 @@ inline bool triangle_intersect_shadow(int mesh_id, int tri_id, const SmallerRay 
 
 	#ifdef TTDisplacement
 	    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
-	    if(_IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
+	    if(_IntersectionMaterials[MaterialIndex].DisplacementFactor != 0 && _IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
             int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;	    	
 		    float3 Max = max(max(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), max(max(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
 		    float3 Min = min(min(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), min(min(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));

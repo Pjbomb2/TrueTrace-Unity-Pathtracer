@@ -1658,7 +1658,7 @@ namespace TrueTrace {
 #if TTDisplacement
                     float DisplacementScale = 0.1f;
                     if(DisplacementTexLength != 0)
-                    if(_Materials[(int)TempTri.MatDat].Textures.DisplacementTex.x == 0) {
+                    if(_Materials[(int)TempTri.MatDat].Textures.DisplacementTex.x == 0 || _Materials[(int)TempTri.MatDat].MatData.DisplacementFactor == 0) {
                         DisplacementScale = 0;
                         TriPrisms[OffsetReal] = new TriPrism(TempTri, DisplacementScale);
                     } else {
