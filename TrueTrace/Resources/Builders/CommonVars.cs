@@ -155,6 +155,8 @@ namespace CommonVars
         public Vector3 surfaceColor;
         public float Rotation;
         public float scatterDistance;
+        public Vector2Int DisplacementTex;//80
+        public float DisplacementFactor;
     };
 
     [System.Serializable]
@@ -172,6 +174,7 @@ namespace CommonVars
         public Vector2Int SecondaryAlbedoMask;
         public Vector2Int SecondaryNormalTex;
         public Vector2Int DiffTransTex;
+        public Vector2Int DisplacementTex;
     }
     [System.Serializable]
     public struct MatTextureModifierData
@@ -242,6 +245,7 @@ namespace CommonVars
         public Vector2 DiffTransRemap;
         public Vector3 MatCapColor;
         public float CausticStrength;
+        public float DisplacementFactor;
     }
 
     [System.Serializable]
@@ -276,7 +280,7 @@ namespace CommonVars
         public int ReadIndex;
         public List<Vector3Int> TexObjList = new List<Vector3Int>();
     }   
-    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture, DiffTransTex};
+    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture, DiffTransTex, Displacement};
 
     [System.Serializable]
     public class TexturePairs {
@@ -336,6 +340,7 @@ namespace CommonVars
         public string NormalGUID;
         public string DiffTransGUID;
         public string ShaderName;
+        public string DisplacementGUID;
     }
     [System.Serializable]
     public class RayObjs
@@ -428,6 +433,7 @@ namespace CommonVars
         public int LightNodeSkinnedOffset;
         public uint PathFlags;
         public int SkinnedOffset;
+        public int DisplacementOffset;
     }
 
     [System.Serializable]
@@ -502,6 +508,19 @@ namespace CommonVars
             this.left = left;
         }
     };
+
+#if TTDisplacement && HardwareRT
+    [System.Serializable]
+    public struct AABB2
+    {
+        public Vector3 BBMin;
+        public Vector3 BBMax;
+        public AABB2(AABB A) {
+            this.BBMin = A.BBMin;
+            this.BBMax = A.BBMax;
+        }
+    }
+#endif
 
     [System.Serializable]
     public struct AABB
@@ -720,6 +739,38 @@ namespace CommonVars
         public uint node_4y;
         public uint node_4z;
         public uint node_4w;
+    }
+    [System.Serializable]
+    public struct TriPrism
+    {
+        public Vector3 Va;
+        public Vector3 Vb;
+        public Vector3 Vc;
+        public Vector3 Ea;
+        public Vector3 Eb;
+        public Vector3 Ec;
+        public uint Na;
+        public uint Nb;
+        public uint Nc;
+        public TriPrism(CudaTriangle Tri, float wmax) {
+            // V = new Vector3[3];
+            // E = new Vector3[3];
+            // N = new Vector3[3];
+            Va = Tri.pos0;
+            Vb = Tri.pos0 + Tri.posedge1;
+            Vc = Tri.pos0 + Tri.posedge2;
+            Na = Tri.norm0;
+            Nb = Tri.norm1;
+            Nc = Tri.norm2;
+            Vector3 norm0 = CommonFunctions.UnpackOctahedral(Tri.norm0);
+            Vector3 norm1 = CommonFunctions.UnpackOctahedral(Tri.norm1);
+            Vector3 norm2 = CommonFunctions.UnpackOctahedral(Tri.norm2);
+            Vector3 GeometricNorm = Vector3.Cross(Tri.posedge1.normalized, Tri.posedge2.normalized).normalized;
+            if(Vector3.Dot(GeometricNorm, norm0) < 0) GeometricNorm *= -1;
+            Ea = Va + wmax * (1.0f / Vector3.Dot(norm0, GeometricNorm)) * norm0;
+            Eb = Vb + wmax * (1.0f / Vector3.Dot(norm1, GeometricNorm)) * norm1;
+            Ec = Vc + wmax * (1.0f / Vector3.Dot(norm2, GeometricNorm)) * norm2;
+        }
     }
 
     [System.Serializable]
@@ -1290,6 +1341,7 @@ namespace CommonVars
             NewMat.DiffTransRemap = new Vector2(0,1);
             NewMat.MatCapColor = Vector3.one;
             NewMat.CausticStrength = 1;
+            NewMat.DisplacementFactor = 0;
             return NewMat;
         }
 

@@ -139,15 +139,29 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
         Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
         USGNorm = Geomnorm;
     } else {
-        Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         USGNorm = mul(Inverse, cross(normalize(AggTrisA[hit.triangle_id].posedge1), normalize(AggTrisA[hit.triangle_id].posedge2)));
         float wldScale = rsqrt(dot(USGNorm, USGNorm));
         USGNorm = -mul(wldScale, USGNorm);
+    #ifdef TTDisplacement
+        if(TTMat.DisplacementTex.x == 0) {
+            Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
+        } else {
+            Geomnorm = GetDisplacementNormal(PrismBuffer[hit.triangle_id - _MeshData[hit.mesh_id].TriOffset + _MeshData[hit.mesh_id].DisplacementOffset], float2(hit.u, hit.v), TTMat, AggTrisA[hit.triangle_id], id.xy);
+            Geomnorm = mul(Inverse, float4(Geomnorm,0));
+            USGNorm = Geomnorm;   
+            pos += Geomnorm * 0.01f;
+        }
+    #else
+        Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
+    #endif
         if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
         if(TTMat.MatType == CutoutIndex) USGNorm = Geomnorm;
     }
 
     bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
+    #ifdef TTDisplacement
+        if(TTMat.DisplacementTex.x == 0)
+    #endif
     if (GotFlipped) {USGNorm *= -1.0f; Geomnorm *= -1.0f;}//Backfacing surface
 
     norm = Geomnorm;

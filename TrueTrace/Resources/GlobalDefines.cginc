@@ -6,6 +6,7 @@
 // #define MultiMapScreenshot
 // #define RasterizedDirect
 // #define PhotonMapping
+#define TTDisplacement
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
@@ -109,6 +110,7 @@
 #define SampleSecondaryAlbedoMask 11
 #define SampleDetailNormal 12
 #define SampleDiffTrans 13
+#define SampleDisplacement 14
 
 #define BlendModeLerp 0
 #define BlendModeAdd 1

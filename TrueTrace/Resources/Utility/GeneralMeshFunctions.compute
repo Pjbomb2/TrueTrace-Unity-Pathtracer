@@ -58,6 +58,24 @@ void CombineTriBuffers(uint3 id : SV_DispatchThreadID)
 }
 
 
+#pragma kernel CombineDisplacementBuffers
+
+#ifdef TTDisplacement
+	RWStructuredBuffer<Prism> OutTriPrismBuffer;
+	StructuredBuffer<Prism> InTriPrismBuffer;
+#endif
+[numthreads(372, 1, 1)]
+void CombineDisplacementBuffers(uint3 id : SV_DispatchThreadID)
+{
+	#ifdef TTDisplacement
+		if (id.x >= Count)
+			return;
+		OutTriPrismBuffer[id.x + Offset] = InTriPrismBuffer[id.x];
+	#else
+		return;
+	#endif
+}
+
 
 #pragma kernel CombineNodeBuffers
 

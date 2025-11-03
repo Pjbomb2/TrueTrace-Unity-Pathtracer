@@ -921,6 +921,7 @@ Toolbar toolbar;
                                        EmissionColor,
                                        EmissionIntensity,
                                        MatCapColor,
+                                       DisplacementTexture,
                                        };
 
       VisualElement MaterialPairingMenu;
@@ -981,6 +982,7 @@ Toolbar toolbar;
                      case((int)Properties.MetallicTexture):Purpose = (int)TexturePurpose.Metallic;break;
                      case((int)Properties.RoughnessTexture):Purpose = (int)TexturePurpose.Roughness;break;
                      case((int)Properties.AlphaTexture):Purpose = (int)TexturePurpose.Alpha;break;
+                     case((int)Properties.DisplacementTexture):Purpose = (int)TexturePurpose.Displacement;break;
                      case((int)Properties.MatCapTexture):Purpose = (int)TexturePurpose.MatCapTex;break;
                      case((int)Properties.MatCapMask):Purpose = (int)TexturePurpose.MatCapMask;break;
                      case((int)Properties.SecondaryAlbedoTexture):Purpose = (int)TexturePurpose.SecondaryAlbedoTexture;break;
@@ -995,6 +997,7 @@ Toolbar toolbar;
                   switch(Prop) {
                      case((int)Properties.AlbedoTexture):ReadIndex = -4;break;
                      case((int)Properties.NormalTexture):ReadIndex = -3;break;
+                     case((int)Properties.DisplacementTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
                      case((int)Properties.EmissionTexture):ReadIndex = -4;break;
                      case((int)Properties.MetallicTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
                      case((int)Properties.RoughnessTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
@@ -1016,6 +1019,7 @@ Toolbar toolbar;
                      switch(Prop) {
                         case((int)Properties.AlbedoTexture):ReadIndex = -4;break;
                         case((int)Properties.NormalTexture):ReadIndex = -3;break;
+                         case((int)Properties.DisplacementTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
                         case((int)Properties.EmissionTexture):ReadIndex = -4;break;
                         case((int)Properties.MetallicTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
                         case((int)Properties.RoughnessTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
@@ -1125,6 +1129,14 @@ Toolbar toolbar;
                      Fallback = FallbackNode
                   });  
                break;
+               case((int)Properties.DisplacementTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.Displacement,
+                     ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
+                  });
+                  break;  
                case((int)Properties.MatCapTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.MatCapTex,
@@ -1405,6 +1417,7 @@ Toolbar toolbar;
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Color), Port.Capacity.Single, "Emission Color"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Emission Intensity"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "MatCap Color"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Displacement Texture"));
 
          _graphView.AddElement(OutputNode);
          Vector2 Pos = new Vector2(30, 10);
@@ -1447,6 +1460,11 @@ Toolbar toolbar;
                   Pos.y = 980;
                   ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlphaTexture] as Port);
+               break;
+               case((int)TexturePurpose.Displacement):
+                  Pos.y = 1780;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.DisplacementTexture] as Port);
                break;
                case((int)TexturePurpose.Metallic):
                   Pos.y = 340;
@@ -1513,6 +1531,10 @@ Toolbar toolbar;
                      break;
                      case((int)TexturePurpose.Metallic):
                         Pos.y = 340;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.Displacement):
+                        Pos.y = 1780;
                         ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                      break;
                      case((int)TexturePurpose.DiffTransTex):
@@ -1731,6 +1753,7 @@ Toolbar toolbar;
 
       Toggle BindlessToggle;
       Toggle HardwareRTToggle;
+      Toggle DisplacementToggle;
       Toggle GaussianTreeToggle;
       Toggle OIDNToggle;
       Toggle MaterialHelperToggle;
@@ -1774,6 +1797,7 @@ Toolbar toolbar;
          if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
          SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
          SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
+         SetGlobalDefines("TTDisplacement", definesList.Contains("TTDisplacement"));
       }
 
 
@@ -1866,6 +1890,8 @@ Toolbar toolbar;
             RemoveScriptsDuringSaveToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("RemoveScriptsDuringSave");} else {RemoveDefine("RemoveScriptsDuringSave");}});
 
 
+            DisplacementToggle = new Toggle() {value = (definesList.Contains("TTDisplacement")), text = "Enable Displacement Mapping"};
+            DisplacementToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTDisplacement"); SetGlobalDefines("TTDisplacement", true);} else {RemoveDefine("TTDisplacement"); SetGlobalDefines("TTDisplacement", false);}});
             VisualElement ClayColorBox = new VisualElement();
 
 
@@ -1925,6 +1951,7 @@ Toolbar toolbar;
                // ReflectionMotionVectorToggle.SetEnabled(false);
                RasterizedDirectToggle.SetEnabled(false);
                // BindlessToggle.SetEnabled(false);
+               DisplacementToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
                RadCacheToggle.SetEnabled(false);
@@ -1946,6 +1973,7 @@ Toolbar toolbar;
                // ReflectionMotionVectorToggle.SetEnabled(true);
                RasterizedDirectToggle.SetEnabled(true);
                // BindlessToggle.SetEnabled(true);
+               DisplacementToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
                OIDNToggle.SetEnabled(true);
                RadCacheToggle.SetEnabled(true);
@@ -2028,6 +2056,7 @@ Toolbar toolbar;
          #endif
          NonPlayContainer.Add(TriangleSplittingToggle);
          #if TTAdvancedSettings
+            NonPlayContainer.Add(DisplacementToggle);
             NonPlayContainer.Add(StrictMemoryReductionToggle);
             NonPlayContainer.Add(MultiMapScreenshotToggle);
          #endif
@@ -3456,7 +3485,7 @@ public class DialogueGraphView : GraphView
     }
 
     private bool CheckIfSingleComp(string PortName) {
-      return PortName.Contains("Mask") || PortName.Equals("Alpha Texture") || PortName.Equals("Metallic Texture") || PortName.Equals("Roughness Texture") || PortName.Equals("DiffTrans Texture");
+      return PortName.Contains("Mask") || PortName.Equals("Alpha Texture") || PortName.Equals("Metallic Texture") || PortName.Equals("Roughness Texture") || PortName.Equals("DiffTrans Texture") || PortName.Equals("Displacement Texture");
     }
     private UnityEditor.Experimental.GraphView.GraphViewChange OnGraphViewChanged(UnityEditor.Experimental.GraphView.GraphViewChange graphViewChange) {
       if(graphViewChange.edgesToCreate != null)

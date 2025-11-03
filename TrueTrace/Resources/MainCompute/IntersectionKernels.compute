@@ -13,9 +13,36 @@
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
+inline bool rayBoxIntersection(const float3 ray_orig, const float3 ray_dir, const float3 Min, const float3 Max, float tMax, inout float t0) {
+    const float3 tmp_min = (Min - ray_orig) / ray_dir;
+    const float3 tmp_max = (Max - ray_orig) / ray_dir;
+    const float3 tmin = min(tmp_min, tmp_max);
+    const float3 tmax = max(tmp_min, tmp_max);
+    t0 = max(tmin.x, max(tmin.y, max(tmin.z, 0.0f))); // Usually ray_tmin = 0
+    float t1 = min(tmax.x, min(tmax.y, min(tmax.z, tMax)));
+    return (t0 <= t1);
+}
+
 void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum, inout float3 throughput) {
     TrianglePos tri = triangle_get_positions(tri_id);
-
+   #ifdef TTDisplacement
+        const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+        if(_IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
+            int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;
+            float3 Max = max(max(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), max(max(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+            float3 Min = min(min(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), min(min(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+            float trumax = 0;
+            float trumin = 0;
+            rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
+            float TT = ray_hit.t;
+            float4 A = PDM(ray_hit, PrismBuffer[prism_id], ray, 0.00f, TT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumin);
+            if(A.w != -1) {
+                ray_hit.mesh_id = mesh_id;
+                ray_hit.triangle_id = tri_id;
+                return;
+            }
+        }
+    #endif
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
 
@@ -31,7 +58,9 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
 
         [branch]if (t > 0 && t < ray_hit.t) {
             const TriangleUvs TriUVs = triangle_get_UVs(tri_id);
-            const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            #ifndef TTDisplacement
+                const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            #endif
             //major slowdown
             #ifdef AdvancedAlphaMapped
                 [branch]if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
@@ -78,6 +107,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #endif
     RayHit bestHit;
     SmallerRay ray;
+    SmallerRay ray2;
     float3 throughput = 1;
     #ifndef HardwareRT
         int Reps = 0;
@@ -86,7 +116,6 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
         uint2 current_group;
         uint oct_inv4;
         int tlas_stack_size = -1;
-        SmallerRay ray2;
         int NodeOffset = 0;
         int TriOffset = 0;
         int MatOffset = 0;
@@ -116,14 +145,69 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             myRay.Direction = GlobalRays[ray_index].direction;
             ray.origin = myRay.Origin;
             ray.direction = myRay.Direction;
+            ray2 = ray;
             myRay.TMin = 0;
             myRay.TMax = bestHit.t;
             // bestHit.t = FarPlane;
+            int MeshInd = -1;
             while(true) {
                q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
-                while(q.Proceed()){}
+                while(q.Proceed()){
+                    #ifdef TTDisplacement
+                        if (q.CandidateType() == CANDIDATE_PROCEDURAL_PRIMITIVE) {
+                            RayHit TempHit = CreateRayHit();
+                            TempHit.t = bestHit.t;
+                            TempHit.mesh_id = uint(q.CandidateInstanceID() | (q.CandidateGeometryIndex() << 25));
+                            TempHit.triangle_id = q.CandidatePrimitiveIndex();
+                            int2 Indexes = int2(TempHit.mesh_id & 0x1FFFFFF, TempHit.mesh_id >> 25);
+                            int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+                            int tri_id = TempHit.triangle_id + triangleOffset;
+                            int mesh_id = MeshOffsets[Indexes.x].y;
+                            int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[tri_id].MatDat);
+                            if(mesh_id != MeshInd) {
+                                ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray2.direction));
+                                ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray2.origin, 1))).xyz;
+                                MeshInd = mesh_id;
+                            }
+                            if(_IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
+                                int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;
+                                Prism TP = PrismBuffer[prism_id];
+                                float3 Max = max(max(TP.V[0], TP.V[1]), max(max(TP.V[2], TP.E[0]), max(TP.E[1], TP.E[2])));
+                                float3 Min = min(min(TP.V[0], TP.V[1]), min(min(TP.V[2], TP.E[0]), min(TP.E[1], TP.E[2])));
+                                float trumax = 0;
+                                float trumin = 0;
+                                rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
+                                float TT = bestHit.t;
+                                float4 A = PDM(TempHit, TP, ray, 0, TT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumin);
+                                if(A.w < bestHit.t && A.w != -1) {
+                                    bestHit = TempHit;
+                                    continue;
+                                } else if(A.w == -1) continue;
+                            } else {
+                                TempHit.t = bestHit.t;
+                                float prevT = TempHit.t;
+                                IntersectTriangle(mesh_id, tri_id, ray, TempHit, _MeshData[mesh_id].MaterialOffset, RandNum, throughput);
+                                if(TempHit.t < bestHit.t && prevT != TempHit.t) {
+                                    bestHit = TempHit;
+                                    continue;
+                                } else if(prevT == TempHit.t) continue;
+
+                            }
+                            ray = ray2;
+                            MeshInd = -1;
+                            q.CommitProceduralPrimitiveHit(bestHit.t);
+                        }
+                    #endif
+
+                }
 
                 if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
+                    #ifdef TTDisplacement
+                        if(bestHit.t < q.CommittedRayT()) {
+                            myRay.TMax = bestHit.t;
+                            continue;
+                        }
+                    #endif
                     bestHit.t = q.CommittedRayT();
                     bestHit.u = q.CommittedTriangleBarycentrics().y;
                     bestHit.v = q.CommittedTriangleBarycentrics().x;
@@ -346,6 +430,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
         if(ray_index >= BufferSizes[CurBounce].shadow_rays) return;
     #endif
     SmallerRay ray;
+    SmallerRay ray2;
 
     #ifndef HardwareRT
         uint2 stack[16];
@@ -356,7 +441,6 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
         int MatOffset;
         uint oct_inv4;
         int tlas_stack_size;
-        SmallerRay ray2;
         int Reps = 0;
     #endif
 
@@ -375,11 +459,55 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
             myRay.Direction = normalize(ShadowRaysBuffer[ray_index].EndPoint - myRay.Origin);
             ray.origin = myRay.Origin;
             ray.direction = myRay.Direction;
+            ray2 = ray;
             myRay.TMin = 0;
             myRay.TMax = ShadowRayT;
+            int MeshInd = -1;
             while(true) {
                 q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
-                while(q.Proceed()){}
+                while(q.Proceed()) {
+                    #ifdef TTDisplacement
+                        if (q.CandidateType() == CANDIDATE_PROCEDURAL_PRIMITIVE) {
+                            int2 Indexes = int2(q.CandidateInstanceID(), q.CandidateGeometryIndex());
+                            int tri_id = q.CandidatePrimitiveIndex();
+                            int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+                            tri_id += triangleOffset;
+                            mesh_id = MeshOffsets[Indexes.x].y;
+                            int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[tri_id].MatDat);
+                            if(mesh_id != MeshInd) {
+                                ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray2.direction));
+                                ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray2.origin, 1))).xyz;
+                                MeshInd = mesh_id;
+                            }
+                            if(_IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
+                                int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;
+                                Prism TP = PrismBuffer[prism_id];
+                                float3 Max = max(max(TP.V[0], TP.V[1]), max(max(TP.V[2], TP.E[0]), max(TP.E[1], TP.E[2])));
+                                float3 Min = min(min(TP.V[0], TP.V[1]), min(min(TP.V[2], TP.E[0]), min(TP.E[1], TP.E[2])));
+                                float trumax = 0;
+                                float trumin = 0;
+                                rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
+                                float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, ShadowRayT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
+                                if( A.w != -1) return;
+                                else continue;
+                            } else {
+                                if(triangle_intersect_shadow(mesh_id, tri_id, ray, ShadowRayT, throughput, _MeshData[mesh_id].MaterialOffset)) return;
+                                else continue;
+                                // if(TempHit.t < bestHit.t && prevT != TempHit.t) {
+                                //     bestHit = TempHit;
+                                //     continue;
+                                // } else if(prevT == TempHit.t) continue;
+                            }
+                            ray = ray2;
+                            q.CommitProceduralPrimitiveHit(0);
+                        }
+                    #endif
+                }
+                #ifdef TTDisplacement
+                    if(q.CommittedStatus() == COMMITTED_PROCEDURAL_PRIMITIVE_HIT)
+                        ShadowRaysBuffer[ray_index].FIELD = -2;//WHY
+                    else
+                #endif
 
                 if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
 
@@ -543,7 +671,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
 
-                            [branch]if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, throughput, MatOffset)) {
+                            [branch]if (triangle_intersect_shadow(mesh_id, triangle_group.x + triangle_index, ray, max_distance, throughput, MatOffset)) {
                                 ShadowRaysBuffer[rayidx].FIELD = -2;//WHY
                                 return;
                             }
@@ -612,16 +740,6 @@ void kernel_shadow(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) 
 
 
 static float g = sin(atan(1.0f / 2.0f));
-
-inline bool rayBoxIntersection(const float3 ray_orig, const float3 ray_dir, const float3 Min, const float3 Max, float tMax, inout float t0) {
-    const float3 tmp_min = (Min - ray_orig) / ray_dir;
-    const float3 tmp_max = (Max - ray_orig) / ray_dir;
-    const float3 tmin = min(tmp_min, tmp_max);
-    const float3 tmax = max(tmp_min, tmp_max);
-    t0 = max(tmin.x, max(tmin.y, max(tmin.z, 0.025f))); // Usually ray_tmin = 0
-    float t1 = min(tmax.x, min(tmax.y, min(tmax.z, tMax)));
-    return (t0 <= t1);
-}
 
 bool GetDist(float3 CurrentPos, out float2 uv, out float dist, const TerrainData Terrain) {
     float3 b = float3(Terrain.TerrainDim.x, 0.01f, Terrain.TerrainDim.y);

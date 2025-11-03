@@ -40,6 +40,9 @@ namespace TrueTrace {
         private int RefitCopy;
         private int LightTLASRefitKernel;
 
+#if TTDisplacement
+        private int DisplacementBufferKernel;
+#endif
         private int TriangleBufferKernel;
         private int NodeBufferKernel;
         private int LightBufferKernel;
@@ -51,7 +54,9 @@ namespace TrueTrace {
         [HideInInspector] public GaussianTreeNode[] SGTree;
         [HideInInspector] public int LightTreePrimaryTLASOffset;
 
-
+#if TTDisplacement
+        [HideInInspector] public ComputeBuffer AggPrismBuffer;
+#endif
         [HideInInspector] public List<RayTracingObject> MaterialsChanged;
         [HideInInspector] public MaterialData[] _Materials;
         [HideInInspector] public IntersectionMatData[] IntersectionMats;
@@ -87,6 +92,9 @@ namespace TrueTrace {
         public void SetMeshTraceBuffers(ComputeShader ThisShader, int Kernel) {
             #if !HardwareRT
                 ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
+            #endif
+            #if TTDisplacement
+                ThisShader.SetComputeBuffer(Kernel, "PrismBuffer", AggPrismBuffer);
             #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisA", AggTriBufferA);
             ThisShader.SetComputeBuffer(Kernel, "SkinnedMeshTriBufferPrev", SkinnedMeshAggTriBufferPrev);
@@ -227,6 +235,10 @@ namespace TrueTrace {
             TerrainBuffer.ReleaseSafe();
             TLASCWBVHIndexes.ReleaseSafe();
 
+            #if TTDisplacement
+                AggPrismBuffer.ReleaseSafe();
+            #endif
+
             MaterialBuffer.ReleaseSafe();
             IntersectionMaterialBuffer.ReleaseSafe();
             MeshDataBufferA.ReleaseSafe();
@@ -289,6 +301,9 @@ namespace TrueTrace {
                             case 10: _Materials[SelectedTex.TexObjList[j].x].Textures.SecondaryAlbedoMask = VectoredTexIndex; break;
                             case 11: _Materials[SelectedTex.TexObjList[j].x].Textures.SecondaryNormalTex = VectoredTexIndex; break;
                             case 12: _Materials[SelectedTex.TexObjList[j].x].Textures.DiffTransTex = VectoredTexIndex; break;
+                            #if TTDisplacement
+                                case 13: _Materials[SelectedTex.TexObjList[j].x].Textures.DisplacementTex = VectoredTexIndex; break;
+                            #endif
                             default: break;
                         }
                 }
@@ -340,6 +355,9 @@ namespace TrueTrace {
                     }
                 break;
                 case 12://DiffTransMap
+                #if TTDisplacement
+                    case 13://metallicmap
+                #endif
                 case 3://metallicmap
                 case 4://roughnessmap
                     desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32_SInt;
@@ -412,6 +430,9 @@ namespace TrueTrace {
                                 else if(TempRect.TexType == 6)  _Materials[SelectedTex.TexObjList[j].x].Textures.MatCapMask = PackRect(RectSelect);
                                 else if(TempRect.TexType == 10)  _Materials[SelectedTex.TexObjList[j].x].Textures.SecondaryAlbedoMask = PackRect(RectSelect);
                                 else if(TempRect.TexType == 12) _Materials[SelectedTex.TexObjList[j].x].Textures.DiffTransTex = PackRect(RectSelect); 
+                                #if TTDisplacement
+                                    else if(TempRect.TexType == 13) _Materials[SelectedTex.TexObjList[j].x].Textures.DisplacementTex = PackRect(RectSelect); 
+                                #endif
                             break;
                             case 5: 
                                 _Materials[SelectedTex.TexObjList[j].x].Textures.EmissiveTex = PackRect(RectSelect); 
@@ -455,6 +476,9 @@ namespace TrueTrace {
                     case 7://alpha
                     case 8://IES
                     case 12:
+                    #if TTDisplacement
+                        case 13:
+                    #endif
                         CopyShader.SetTexture(6, "SingleInput", SelectedTex.Tex);
                         CopyShader.SetTexture(6, "SingleOutput", Atlas);
                         CopyShader.Dispatch(6, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
@@ -620,6 +644,9 @@ namespace TrueTrace {
                         if(TempMat.Textures.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.Textures.SecondaryNormalTex.x-1], ref BindlessDict, ref BindlessRect, 4, 11);
                         if(TempMat.Textures.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.Textures.EmissiveTex.x-1], ref BindlessDict, ref BindlessRect, 4, 2);
                         if(TempMat.Textures.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.Textures.AlphaTex.x-1], ref BindlessDict, ref BindlessRect, Obj.AlphaTexChannelIndex[(int)TempMat.Textures.AlphaTex.x-1], 3);
+                        #if TTDisplacement
+                            if(TempMat.Textures.DisplacementTex.x != 0) KeyCheck(MatCount, Obj.DisplacementTexs[(int)TempMat.Textures.DisplacementTex.x-1], ref BindlessDict, ref BindlessRect, Obj.DisplacementTexChannelIndex[(int)TempMat.Textures.DisplacementTex.x-1], 13);
+                        #endif
                         if(TempMat.Textures.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.Textures.MetallicTex.x-1], ref BindlessDict, ref BindlessRect, Obj.MetallicTexChannelIndex[(int)TempMat.Textures.MetallicTex.x-1], 4);
                         if(TempMat.Textures.RoughnessTex.x != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.Textures.RoughnessTex.x-1], ref BindlessDict, ref BindlessRect, Obj.RoughnessTexChannelIndex[(int)TempMat.Textures.RoughnessTex.x-1], 5);
                         if(TempMat.Textures.MatCapMask.x != 0) KeyCheck(MatCount, Obj.MatCapMasks[(int)TempMat.Textures.MatCapMask.x-1], ref BindlessDict, ref BindlessRect, Obj.MatCapMaskChannelIndex[(int)TempMat.Textures.MatCapMask.x-1], 6);
@@ -633,6 +660,9 @@ namespace TrueTrace {
                         if(TempMat.Textures.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.Textures.SecondaryNormalTex.x-1], ref NormTextures, ref NormRect, 0, 11);
                         if(TempMat.Textures.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.Textures.EmissiveTex.x-1], ref EmisTextures, ref EmisRect, 0, 2);
                         if(TempMat.Textures.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.Textures.AlphaTex.x-1], ref AlphTextures, ref AlphRect, Obj.AlphaTexChannelIndex[(int)TempMat.Textures.AlphaTex.x-1], 3);
+                        #if TTDisplacement
+                            if(TempMat.Textures.DisplacementTex.x != 0) KeyCheck(MatCount, Obj.DisplacementTexs[(int)TempMat.Textures.DisplacementTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.DisplacementTexChannelIndex[(int)TempMat.Textures.DisplacementTex.x-1], 13);
+                        #endif
                         if(TempMat.Textures.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.Textures.MetallicTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MetallicTexChannelIndex[(int)TempMat.Textures.MetallicTex.x-1], 4);
                         if(TempMat.Textures.RoughnessTex.x != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.Textures.RoughnessTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.RoughnessTexChannelIndex[(int)TempMat.Textures.RoughnessTex.x-1], 5);
                         if(TempMat.Textures.MatCapMask.x != 0) KeyCheck(MatCount, Obj.MatCapMasks[(int)TempMat.Textures.MatCapMask.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MatCapMaskChannelIndex[(int)TempMat.Textures.MatCapMask.x-1], 6);
@@ -659,6 +689,9 @@ namespace TrueTrace {
                         if(TempMat.Textures.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.Textures.SecondaryNormalTex.x-1], ref BindlessDict, ref BindlessRect, 4, 11);
                         if(TempMat.Textures.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.Textures.EmissiveTex.x-1], ref BindlessDict, ref BindlessRect, 4, 2);
                         if(TempMat.Textures.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.Textures.AlphaTex.x-1], ref BindlessDict, ref BindlessRect, Obj.AlphaTexChannelIndex[(int)TempMat.Textures.AlphaTex.x-1], 3);
+                        #if TTDisplacement
+                            if(TempMat.Textures.DisplacementTex.x != 0) KeyCheck(MatCount, Obj.DisplacementTexs[(int)TempMat.Textures.DisplacementTex.x-1], ref BindlessDict, ref BindlessRect, Obj.DisplacementTexChannelIndex[(int)TempMat.Textures.DisplacementTex.x-1], 13);
+                        #endif
                         if(TempMat.Textures.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.Textures.MetallicTex.x-1], ref BindlessDict, ref BindlessRect, Obj.MetallicTexChannelIndex[(int)TempMat.Textures.MetallicTex.x-1], 4);
                         if(TempMat.Textures.RoughnessTex.x != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.Textures.RoughnessTex.x-1], ref BindlessDict, ref BindlessRect, Obj.RoughnessTexChannelIndex[(int)TempMat.Textures.RoughnessTex.x-1], 5);
                         if(TempMat.Textures.MatCapMask.x != 0) KeyCheck(MatCount, Obj.MatCapMasks[(int)TempMat.Textures.MatCapMask.x-1], ref BindlessDict, ref BindlessRect, Obj.MatCapMaskChannelIndex[(int)TempMat.Textures.MatCapMask.x-1], 6);
@@ -672,6 +705,9 @@ namespace TrueTrace {
                         if(TempMat.Textures.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.Textures.SecondaryNormalTex.x-1], ref NormTextures, ref NormRect, 0, 11);
                         if(TempMat.Textures.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.Textures.EmissiveTex.x-1], ref EmisTextures, ref EmisRect, 0, 2);
                         if(TempMat.Textures.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.Textures.AlphaTex.x-1], ref AlphTextures, ref AlphRect, Obj.AlphaTexChannelIndex[(int)TempMat.Textures.AlphaTex.x-1], 3);
+                        #if TTDisplacement
+                            if(TempMat.Textures.DisplacementTex.x != 0) KeyCheck(MatCount, Obj.DisplacementTexs[(int)TempMat.Textures.DisplacementTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.DisplacementTexChannelIndex[(int)TempMat.Textures.DisplacementTex.x-1], 13);
+                        #endif
                         if(TempMat.Textures.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.Textures.MetallicTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MetallicTexChannelIndex[(int)TempMat.Textures.MetallicTex.x-1], 4);
                         if(TempMat.Textures.RoughnessTex.x != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.Textures.RoughnessTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.RoughnessTexChannelIndex[(int)TempMat.Textures.RoughnessTex.x-1], 5);
                         if(TempMat.Textures.MatCapMask.x != 0) KeyCheck(MatCount, Obj.MatCapMasks[(int)TempMat.Textures.MatCapMask.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MatCapMaskChannelIndex[(int)TempMat.Textures.MatCapMask.x-1], 6);
@@ -981,10 +1017,16 @@ namespace TrueTrace {
             // LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
+            #if TTDisplacement
+                AggPrismBuffer.ReleaseSafe();
+            #endif
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
             AggTriBufferB.ReleaseSafe();
             MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
             TriangleBufferKernel = MeshFunctions.FindKernel("CombineTriBuffers");
+#if TTDisplacement
+            DisplacementBufferKernel = MeshFunctions.FindKernel("CombineDisplacementBuffers");
+#endif
             NodeBufferKernel = MeshFunctions.FindKernel("CombineNodeBuffers");
             LightBufferKernel = MeshFunctions.FindKernel("CombineLightBuffers");
             LightTreeNodeBufferKernel = MeshFunctions.FindKernel("CombineSGTreeNodes");
@@ -1230,6 +1272,10 @@ namespace TrueTrace {
                 int AggNodeCount = CurNodeOffset;
                 int LightTriCount = 0;
                 int CurTriOffset = 0;
+                #if TTDisplacement
+                    int CurDispTriOffset = 0;
+                    int AggDispCount = 0;
+                #endif
                 int CurLightTriOffset = 0;
                 int CurSGNodeOffset = 0;
                 int CurSGNodeSkinnedOffset = 0;
@@ -1265,6 +1311,9 @@ namespace TrueTrace {
                     SkinnedMeshAggTriBufferPrev.ReleaseSafe();
                     AggTriBufferB.Release();
                     LightTriBuffer.Release();
+                    #if TTDisplacement
+                        AggPrismBuffer.ReleaseSafe();
+                    #endif
                     if(LightTreeBufferA != null) LightTreeBufferA.Release();
                     // if(LightTreeBufferB != null) LightTreeBufferB.Release();
 #endif
@@ -1274,6 +1323,9 @@ namespace TrueTrace {
                     TotalMatCount += RenderQue[i]._Materials.Count;
                     AggNodeCount += RenderQue[i].AggNodes.Length;
                     AggTriCount += RenderQue[i].AggTriangles.Length;
+                    #if TTDisplacement
+                        if(RenderQue[i].HasDisplacement) AggDispCount += RenderQue[i].TriPrisms.Length;
+                    #endif
                     LightTriCount += RenderQue[i].LightTriangles.Count;
                     if(RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) SkinnedMeshTriCount += RenderQue[i].AggTriangles.Length;
                 }
@@ -1283,6 +1335,9 @@ namespace TrueTrace {
                     TotalMatCount += InstanceData.RenderQue[i]._Materials.Count;
                     AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
                     AggTriCount += InstanceData.RenderQue[i].AggTriangles.Length;
+                    #if TTDisplacement
+                        if(InstanceData.RenderQue[i].HasDisplacement) AggDispCount += InstanceData.RenderQue[i].TriPrisms.Length;
+                    #endif
                     LightTriCount += InstanceData.RenderQue[i].LightTriangles.Count;
                     if (InstanceData.RenderQue[i].LightTriangles.Count != 0) AggSGTreeNodeCount += InstanceData.RenderQue[i].LBVH.NodeCount;
                 }
@@ -1306,6 +1361,9 @@ namespace TrueTrace {
                         SGTree = new GaussianTreeNode[LightMeshCount * 2];
                     #endif
                     bool ResizedTriArray = false;
+                    #if TTDisplacement
+                        bool ResizedDispArray = false;
+                    #endif
                     bool ResizedBVHArray = false;
                     bool ResizedLightTriArray = false;
                     bool ResizedLightBVHArray = false;
@@ -1314,12 +1372,18 @@ namespace TrueTrace {
                     ResizedLightTriArray = true;
                     ResizedTriArray = true;
                     ResizedBVHArray = true;
+                    #if TTDisplacement
+                        ResizedDispArray = true;
+                    #endif
 
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
                     CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), 36);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
+    #if TTDisplacement
+                    CommonFunctions.CreateDynamicBuffer(ref AggPrismBuffer, AggDispCount, CommonFunctions.GetStride<TriPrism>());
+    #endif
     #if !DontUseSGTree
                     CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
     #else
@@ -1336,12 +1400,18 @@ namespace TrueTrace {
     #else
                     if(LightTreeBufferA == null || !LightTreeBufferA.IsValid() || AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount > LightTreeBufferA.count) {CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<CompactLightBVHData>()); ResizedLightBVHArray = true;}
     #endif
+    #if TTDisplacement
+                    if(AggPrismBuffer == null || !AggPrismBuffer.IsValid() || AggDispCount > AggPrismBuffer.count) {CommonFunctions.CreateDynamicBuffer(ref AggPrismBuffer, AggDispCount, CommonFunctions.GetStride<TriPrism>()); ResizedDispArray = true;}
+    #endif
 #endif
+                    #if TTDisplacement
+                        MeshFunctions.SetBuffer(DisplacementBufferKernel, "OutTriPrismBuffer", AggPrismBuffer);
+                    #endif
+
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArrayA", AggTriBufferA);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArrayB", AggTriBufferB);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
-                    
                     CurSGNodeSkinnedOffset = AggSGTreeNodeCount;
 
 
@@ -1351,6 +1421,18 @@ namespace TrueTrace {
                     {
                         RenderQue[i].UpdateData();
                         int TempI = i;
+                        #if TTDisplacement
+                            if(RenderQue[i].HasDisplacement && (ResizedDispArray || RenderQue[i].GlobalDispOffset != CurDispTriOffset)) {
+                                int TempOffset = CurDispTriOffset;
+                                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("AccumBufferDisplacement");
+                                cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
+                                cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[TempI].LocalDisplacementCount);
+                                cmd.SetComputeBufferParam(MeshFunctions, DisplacementBufferKernel, "InTriPrismBuffer", RenderQue[TempI].TriPrismBuffer);
+                                cmd.DispatchCompute(MeshFunctions, DisplacementBufferKernel, (int)Mathf.Ceil(RenderQue[TempI].LocalDisplacementCount / 372.0f), 1, 1);
+                                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("AccumBufferDisplacement");
+                            }
+                        #endif
+
                         if(ResizedTriArray || RenderQue[i].GlobalTriOffset != CurTriOffset) {
                             int TempOffset = CurTriOffset;
                             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("AccumBufferTri");
@@ -1430,6 +1512,13 @@ namespace TrueTrace {
                         } else RenderQue[i].GlobalSkinnedOffset = -1;
                         CurNodeOffset += RenderQue[i].LocalNodeCount;
                         CurTriOffset += RenderQue[i].LocalTriCount;
+                        #if TTDisplacement
+                            if(RenderQue[i].HasDisplacement) {
+                                RenderQue[i].GlobalDispOffset = CurDispTriOffset;
+                                CurDispTriOffset += RenderQue[i].LocalDisplacementCount;
+                            }
+                        #endif
+                        
                         MatOffset += RenderQue[i]._Materials.Count;
                     }
                     InstanceQueCount = InstanceData.RenderQue.Count;
@@ -1437,10 +1526,20 @@ namespace TrueTrace {
                     {//Accumulate the BVH nodes and triangles for all instanced models
                         InstanceData.RenderQue[i].UpdateData();
                         InstanceData.RenderQue[i].InstanceMeshIndex = i + ParentsLength;
-
+                        int TempI = i;
+                        #if TTDisplacement
+                            if(InstanceData.RenderQue[i].HasDisplacement && (ResizedDispArray || InstanceData.RenderQue[i].GlobalDispOffset != CurDispTriOffset)) {
+                                int TempOffset = CurDispTriOffset;
+                                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("AccumBufferInstanceDisplacement");
+                                cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
+                                cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[TempI].LocalDisplacementCount);
+                                cmd.SetComputeBufferParam(MeshFunctions, DisplacementBufferKernel, "InTriPrismBuffer", InstanceData.RenderQue[TempI].TriPrismBuffer);
+                                cmd.DispatchCompute(MeshFunctions, DisplacementBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[TempI].LocalDisplacementCount / 372.0f), 1, 1);
+                                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("AccumBufferInstanceDisplacement");
+                            }
+                        #endif
                         if(ResizedTriArray || InstanceData.RenderQue[i].GlobalTriOffset != CurTriOffset) {
                             int TempOffset = CurTriOffset;
-                            int TempI = i;
                             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("AccumBufferInstanceTri");
                             cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
                             cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[TempI].LocalTriCount);
@@ -1450,7 +1549,6 @@ namespace TrueTrace {
                         }
                         if(ResizedBVHArray || InstanceData.RenderQue[i].GlobalNodeOffset != CurNodeOffset) {
                             int TempOffset = CurNodeOffset;
-                            int TempI = i;
                             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("AccumBufferInstanceNode");
                             cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
                             cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[TempI].LocalNodeCount);
@@ -1461,7 +1559,6 @@ namespace TrueTrace {
                         if (InstanceData.RenderQue[i].HasLightTriangles) {
                             if(ResizedLightTriArray || InstanceData.RenderQue[i].GlobalLightTriOffset != CurLightTriOffset) {
                                 int TempOffset = CurLightTriOffset;
-                                int TempI = i;
                                 cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
                                 cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[TempI].LocalLightTriCount);
                                 cmd.SetComputeBufferParam(MeshFunctions, LightBufferKernel, "LightTrianglesIn", InstanceData.RenderQue[TempI].LightTriBuffer);
@@ -1470,7 +1567,6 @@ namespace TrueTrace {
 
                             if(ResizedLightBVHArray || InstanceData.RenderQue[i].GlobalLightNodeOffset != CurSGNodeOffset) {
                                 int TempOffset = CurSGNodeOffset;
-                                int TempI = i;
                                 cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
                                 cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[TempI].LocalLightNodeCount);
                                 cmd.SetComputeBufferParam(MeshFunctions, LightTreeNodeBufferKernel, "LightNodesIn", InstanceData.RenderQue[TempI].LightTreeBuffer);
@@ -1490,6 +1586,10 @@ namespace TrueTrace {
                         CurNodeOffset += InstanceData.RenderQue[i].LocalNodeCount;
                         CurTriOffset += InstanceData.RenderQue[i].LocalTriCount;
                         MatOffset += InstanceData.RenderQue[i]._Materials.Count;
+                        #if TTDisplacement
+                            InstanceData.RenderQue[i].GlobalDispOffset = CurDispTriOffset;
+                            CurDispTriOffset += InstanceData.RenderQue[i].LocalDisplacementCount;
+                        #endif
 
                     }
                     InstanceQueCount = InstanceRenderQue.Count;
@@ -1528,6 +1628,8 @@ namespace TrueTrace {
                         IntersectionMats[i].surfaceColor = _Materials[i].MatData.BaseColor;
                         IntersectionMats[i].Rotation = _Materials[i].MatData.TextureModifiers.Rotation;
                         IntersectionMats[i].scatterDistance = _Materials[i].MatData.ScatterDist;
+                        IntersectionMats[i].DisplacementTex = _Materials[i].Textures.DisplacementTex;
+                        IntersectionMats[i].DisplacementFactor = _Materials[i].MatData.DisplacementFactor;
                     }
 
 #if StrictMemoryReduction
@@ -1558,6 +1660,7 @@ namespace TrueTrace {
             public int mesh_data_bvh_offsets;
             public int LightTriCount;
             public int LightNodeOffset;
+            public int AggDisplacementCount;
         }
 
 
@@ -1592,6 +1695,9 @@ namespace TrueTrace {
         public int NonInstanceCount = 0;
         Dictionary<ParentObject, List<InstancedObject>> InstanceIndexes;
 
+#if TTDisplacement && HardwareRT
+        private List<int> Handles;
+#endif
         BVH2Builder BVH;
         unsafe public void ConstructNewTLAS() {
 
@@ -1602,7 +1708,27 @@ namespace TrueTrace {
                 MeshOffsets = new List<Vector2>();
                 AccelStruct.ClearInstances();
                 int RendCount = RenderQue.Count;
+            #if TTDisplacement
+                Handles = new List<int>(RendCount); 
+            #endif
                 for(int i = 0; i < RendCount; i++) {
+                    #if TTDisplacement
+                        if(RenderQue[i].HasDisplacement) {
+                            MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
+                            SubMeshOffsets.Add(TotLength);
+                            RenderQue[i].AccelHandleIndex = MeshOffset;
+                            int IndiceLength = RenderQue[i].DisplacedTrianglesBuffer.count;
+                            TotLength += IndiceLength;
+                            RayTracingAABBsInstanceConfig GivenConfig = new RayTracingAABBsInstanceConfig();
+                            GivenConfig.aabbBuffer = RenderQue[i].DisplacedTrianglesBuffer;
+                            GivenConfig.aabbCount = RenderQue[i].DisplacedTrianglesBuffer.count;
+                            GivenConfig.aabbOffset = 0;
+                            GivenConfig.mask = 0x3;
+                            GivenConfig.accelerationStructureBuildFlagsOverride = false;
+                            Handles.Add(AccelStruct.AddInstance(GivenConfig, RenderQue[i].gameObject.transform.localToWorldMatrix, (uint)MeshOffset));
+                            MeshOffset++;
+                        } else
+                    #endif
                     foreach(var A in RenderQue[i].Renderers) {
                         MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
                         var B2 = A.gameObject;
@@ -1618,8 +1744,13 @@ namespace TrueTrace {
                         RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[SubMeshCount];
                         for(int i2 = 0; i2 < SubMeshCount; i2++)
                             B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
-                        if(B2.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj))
-                            AccelStruct.AddInstance(A, B, true, false, (uint)((TempObj.LocalMaterials[0].SpecTrans == 1) ? 0x2 : 0x1), (uint)MeshOffset);
+                        if(B2.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj)) {
+                            #if TTDisplacement
+                                Handles.Add(AccelStruct.AddInstance(A, B, true, false, (uint)((TempObj.LocalMaterials[0].SpecTrans == 1) ? 0x2 : 0x1), (uint)MeshOffset));
+                            #else
+                                AccelStruct.AddInstance(A, B, true, false, (uint)((TempObj.LocalMaterials[0].SpecTrans == 1) ? 0x2 : 0x1), (uint)MeshOffset);
+                            #endif
+                        }
                         MeshOffset++;
                     }
                 }
@@ -1973,6 +2104,7 @@ namespace TrueTrace {
             int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
             int AggNodeCount = aggregated_bvh_node_count;
             int AggTriCount = 0;
+            int AggDispCount = 0;
             int AggSkinnedOffset = 0;
             bool HasChangedMaterials = false;
             if(MeshAABBs.Length == 0) return -1;
@@ -2011,7 +2143,12 @@ namespace TrueTrace {
                         LightTriCount = RenderQue[i].LightTriangles.Count,
                         LightNodeOffset = RenderQue[i].GlobalLightNodeOffset,
                         LightNodeSkinnedOffset = RenderQue[i].GlobalLightNodeSkinnedOffset,
-                        SkinnedOffset = RenderQue[i].GlobalSkinnedOffset
+                        SkinnedOffset = RenderQue[i].GlobalSkinnedOffset,
+                        #if TTDisplacement
+                            DisplacementOffset = RenderQue[i].HasDisplacement ? AggDispCount : -1
+                        #else
+                            DisplacementOffset = -1
+                        #endif
                     });
                     RenderQue[i].CompactedMeshData = i;
                     MatOffset += RenderQue[i].MatOffset;
@@ -2019,6 +2156,9 @@ namespace TrueTrace {
                     TransformedAABBs[i] = RenderQue[i].aabb;
                     AggNodeCount += RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
                     AggTriCount += RenderQue[i].AggIndexCount;
+                    #if TTDisplacement
+                        if(RenderQue[i].HasDisplacement) AggDispCount += RenderQue[i].LocalDisplacementCount;
+                    #endif
                     #if !HardwareRT
                         aggregated_bvh_node_count += RenderQue[i].BVH.cwbvhnode_count;
                     #endif
@@ -2084,9 +2224,17 @@ namespace TrueTrace {
                     Aggs[i].mesh_data_bvh_offsets = aggregated_bvh_node_count;
                     Aggs[i].LightTriCount = InstanceData.RenderQue[i].LightTriangles.Count;
                     Aggs[i].LightNodeOffset = InstanceData.RenderQue[i].GlobalLightNodeOffset;
+                    #if TTDisplacement
+                        Aggs[i].AggDisplacementCount = (RenderQue[i].HasDisplacement ? AggDispCount : -1);
+                    #else
+                        Aggs[i].AggDisplacementCount = -1;
+                    #endif
                     MatOffset += InstanceData.RenderQue[i].MatOffset;
                     AggNodeCount += InstanceData.RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
                     AggTriCount += InstanceData.RenderQue[i].AggIndexCount;
+                    #if TTDisplacement
+                        if(InstanceData.RenderQue[i].HasDisplacement) AggDispCount += InstanceData.RenderQue[i].LocalDisplacementCount;
+                    #endif
                     #if !HardwareRT
                         aggregated_bvh_node_count += InstanceData.RenderQue[i].BVH.cwbvhnode_count;
                     #endif
@@ -2112,7 +2260,9 @@ namespace TrueTrace {
                                     LightTriCount = Aggs[Index].LightTriCount,
                                     LightNodeOffset = Aggs[Index].LightNodeOffset,
                                     LightNodeSkinnedOffset = -1,
-                                    SkinnedOffset = -1
+                                    SkinnedOffset = -1,
+                                    DisplacementOffset = Aggs[Index].AggDisplacementCount
+
                                 });
                                 if(TempList[j].LightIndex != -1) {
                                     LightMeshData TempDat = LightMeshes[TempList[j].LightIndex];
@@ -2143,8 +2293,8 @@ namespace TrueTrace {
                             LightTriCount = Aggs[Index].LightTriCount,
                             LightNodeOffset = Aggs[Index].LightNodeOffset,
                             LightNodeSkinnedOffset = -1,
-                            SkinnedOffset = -1
-
+                            SkinnedOffset = -1,
+                            DisplacementOffset = Aggs[Index].AggDisplacementCount
                         });
                         InstanceRenderQue[i].CompactedMeshData = MeshCount + i;
 
@@ -2226,6 +2376,11 @@ namespace TrueTrace {
                         TempMesh2.Transform = TargetTransform.worldToLocalMatrix;
                         MyMeshesCompacted[i] = TempMesh2;
                         #if HardwareRT
+                            #if TTDisplacement
+                                if(TargetParent.HasDisplacement) {
+                                    AccelStruct.UpdateInstanceTransform(Handles[TargetParent.AccelHandleIndex], TargetTransform.localToWorldMatrix);
+                                } else
+                            #endif
                             foreach(var a in TargetParent.Renderers)
                                 AccelStruct.UpdateInstanceTransform(a);
                         #endif
@@ -2365,7 +2520,8 @@ namespace TrueTrace {
                     else TempMat.MatData.Tag = CurrentMaterial.LocalMaterials[Index].Tag;
 
 
-
+                        IntersectionMats[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset].DisplacementTex =        TempMat.Textures.DisplacementTex;
+                        IntersectionMats[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset].DisplacementFactor =        TempMat.MatData.DisplacementFactor;
                         IntersectionMats[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset].AlphaTex =        TempMat.Textures.AlphaTex;
                         IntersectionMats[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset].AlbedoTex =       TempMat.Textures.AlbedoTex;
                         IntersectionMats[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset].Tag =             TempMat.MatData.Tag;

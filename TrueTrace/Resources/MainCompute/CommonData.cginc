@@ -268,12 +268,18 @@ float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat Mat
 		switch(TextureType) {
 			case SampleAlbedo: FinalCol = _TextureAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0); break;
 			case SampleAlpha: FinalCol = _AlphaAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0); break;
+			#ifdef TTDisplacement
+				case SampleDisplacement: FinalCol = SingleComponentAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.DisplacementTex, MatTex.Rotation), 0); break;
+			#endif
 		}
 	#else//BINDLESS
 		int2 TextureIndexAndChannel = -1;
 		[branch] switch(TextureType) {
 			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			#ifdef TTDisplacement
+				case SampleDisplacement: TextureIndexAndChannel = MatTex.DisplacementTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			#endif
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
@@ -307,6 +313,9 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 			case SampleSecondaryAlbedoMask: FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.SecondaryAlbedoMask, MatTex.Rotation), 0); break;
 			case SampleDetailNormal: FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.SecondaryNormalTexScaleOffset, MatTex.SecondaryNormalTex, MatTex.RotationSecondaryNormal), 0).xyxy; break;
 			case SampleDiffTrans: FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.DiffTransTex, MatTex.Rotation), 0); break;
+			#ifdef TTDisplacement
+				case SampleDisplacement: FinalCol = SingleComponentAtlas.SampleLevel(TTPrimarySampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.DisplacementTex, MatTex.Rotation), 0); break;
+			#endif
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
@@ -325,6 +334,9 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 			case SampleSecondaryAlbedoMask: TextureIndexAndChannel = MatTex.SecondaryAlbedoMask; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleDetailNormal: TextureIndexAndChannel = MatTex.SecondaryNormalTex; HandleRotation(UV, MatTex.RotationSecondaryNormal); UV = UV * MatTex.SecondaryNormalTexScaleOffset.xy + MatTex.SecondaryNormalTexScaleOffset.zw; break;
 			case SampleDiffTrans: TextureIndexAndChannel = MatTex.DiffTransTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			#ifdef TTDisplacement
+				case SampleDisplacement: TextureIndexAndChannel = MatTex.DisplacementTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			#endif
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
@@ -664,78 +676,7 @@ static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
 
     return 1.0f / (s * scatterDistance);
 }
-//shadow_triangle
-//triangle_shadow
-//putting these^ here cuz I ALWAYS ctrl + f for the WRONG term when trying to find this function...
-inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const float max_distance, inout float3 throughput, const int MatOffset) {
-    TrianglePos tri = triangle_get_positions(tri_id);
 
-    float3 h = cross(ray.direction, tri.posedge2);
-    float  a = dot(tri.posedge1, h);
-
-    float  f = rcp(a);
-    float3 s = ray.origin - tri.pos0;
-    float  u = f * dot(s, h);
-
-    float3 q = cross(s, tri.posedge1);
-    float  v = f * dot(ray.direction, q);
-
-    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
-        float t = f * dot(tri.posedge2, q);
-
-        [branch]if (t > 0 && t < max_distance) {
-		  	const TriangleUvs TriUVs = triangle_get_UVs(tri_id);
-		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
-            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
-				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
-        		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-	                float2 BaseUv = TriUVs.UV0 * (1.0f - u - v) + TriUVs.UV1 * u + TriUVs.UV2 * v;
-        
-                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
-                    	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
-                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
-                    }
-
-	                #ifdef FadeMapping
-	                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
-	                        	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
-	                            if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
-	                        }
-	                    }
-	                #endif
-
-
-		            #ifdef IgnoreGlassShadow
-		                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
-			            	#ifdef StainedGlassShadows
-			            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
-						        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]);
-		    					
-#ifdef ShadowGlassAttenuation
-								// if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Thin))
-			    				// 	throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
-			    				// else {
-
-		    						float Dotter = (dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
-		    						// if(Dotter > 0)
-				    					throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
-
-			    				// }
-#else
-		    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
-#endif
-		    				#endif
-		                	return false;
-		                }
-		            #endif
-		        }
-            #endif
-			return true;
-        }
-    }
-    return false;
-}
 inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout float max_distance, int mesh_id, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
 
@@ -974,108 +915,6 @@ inline void Closest_Hit_Compute(SmallerRay ray, inout float MinDist) {
         return;
 }
 
-
-inline bool VisabilityCheckCompute(SmallerRay ray, float dist) {
-        uint2 stack[16];
-        int stack_size = 0;
-        uint2 current_group;
-
-        uint oct_inv4;
-        int tlas_stack_size = -1;
-        int mesh_id = -1;
-        SmallerRay ray2;
-        int TriOffset = 0;
-        int NodeOffset = 0;
-
-        ray2 = ray;
-
-        oct_inv4 = ray_get_octant_inv4(ray.direction);
-
-        current_group.x = (uint)0;
-        current_group.y = (uint)0x80000000;
-        int MatOffset = 0;
-        int Reps = 0;
-        float3 through = 0;
-        [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
-        	uint2 triangle_group;
-            [branch]if (current_group.y & 0xff000000) {
-                uint child_index_offset = firstbithigh(current_group.y);
-                
-                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
-                uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
-                uint child_node_index = current_group.x + relative_index;
-                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
-
-                current_group.y &= ~(1 << child_index_offset);
-
-                if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
-
-	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
-                
-                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, dist, TempNode);
-
- 				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
-                triangle_group.y = (hitmask & 0x00ffffff);
-
-                Reps++;
-            } else {
-                triangle_group = current_group;
-                current_group = (uint2)0;
-            }
-
-            if(triangle_group.y != 0) {
-                [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
-                    uint mesh_offset = firstbithigh(triangle_group.y);
-                    triangle_group.y &= ~(1 << mesh_offset);
-                    mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
-                    NodeOffset = _MeshData[mesh_id].NodeOffset;
-                    TriOffset = _MeshData[mesh_id].TriOffset;
-
-                    if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
-
-                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
-
-                    tlas_stack_size = stack_size;
-
-                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
-
-                    MatOffset = _MeshData[mesh_id].MaterialOffset;
-                    ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
-                    ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
-
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
-
-                    current_group.x = (uint)root_index;
-                    current_group.y = (uint)0x80000000;
-                } else {
-					while (triangle_group.y != 0) {                        
-                        uint triangle_index = firstbithigh(triangle_group.y);
-                        triangle_group.y &= ~(1 << triangle_index);
-	                    if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, dist, through, MatOffset)) {
-							return false;
-	                    }
-                    }
-                }
-            }
-
-            if ((current_group.y & 0xff000000) == 0) {
-                if (stack_size == 0) {//thread has finished traversing
-                    break;
-                }
-
-                if (stack_size == tlas_stack_size) {
-					NodeOffset = 0;
-                    TriOffset = 0;
-                    tlas_stack_size = -1;
-                    ray = ray2;
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
-                }
-                current_group = stack[--stack_size];
-            }
-        }
-        return true;
-}
 
 
 
@@ -2823,3 +2662,548 @@ float3 phase_draine_sample(const float2 xi, const float3 wi, const float g, cons
     const float z2 = sqrt(1.0 - deflection_cos * deflection_cos);
     return mul(make_frame(wi), float3(z2 * cos(2.0f * PI * xi.y), z2 * sin(2.0f * PI * xi.y), deflection_cos));
 }
+#ifdef TTDisplacement
+float copysignf(float a, float b) {
+	return a * sign(b);
+}
+
+bool intersectPatch(Prism TP, float3 q[5], SmallerRay ray, int id, float tmax, float tmin, inout float3 texcoord, inout int finalid, float MaxMax, inout float LocalT) {
+	// ray is rtDeclareVariable(Ray,ray,rtCurrentRay,) in OptiX
+	float3 q00 = q[0], q10 = q[1], q11 = q[2], q01 = q[3];
+	float3 e10 = q10 - q00; // q01---------------q11
+	float3 e11 = q11 - q10; // |                   |
+	float3 e00 = q01 - q00; // | e00           e11 |  we precompute
+	float3 qn  = q[4];      // |        e10        |  qn = cross(q10-q00,q01-q11)
+	q00 -= ray.origin;      // q00---------------q10
+	q10 -= ray.origin;
+	float a = dot(cross(q00, ray.direction), e00); // the equation is
+	float c = dot(qn, ray.direction);              // a + b u + c u^2
+	float b = dot(cross(q10, ray.direction), e11); // first compute a+b+c
+	b -= a + c;                                    // and then b
+	float det = b*b - 4*a*c;
+	if (det < 0) return false;      // see the right part of Figure 8.5
+	det = sqrt(det);          // we -use_fast_math in CUDA_NVRTC_OPTIONS
+	float u1, u2;             // two roots (u parameter)
+	float t = MaxMax, u, v; // need solution for the smallest t > 0  
+	if (c == 0) {                        // if c == 0, it is a trapezoid
+		u1  = -a/b; u2 = -1;              // and there is only one root
+	} else {                             // (c != 0 in Stanford models)
+		u1  = (-b - copysignf(det, b))/2; // numerically "stable" root
+		u2  = a/u1;                       // Viete's formula for u1*u2
+		u1 /= c;
+	}
+	if (0 <= u1 && u1 <= 1) {                // is it inside the patch?
+		float3 pa = lerp(q00, q10, u1);       // point on edge e10 (Figure 8.4)
+		float3 pb = lerp(e00, e11, u1);       // it is, actually, pb - pa
+		float3 n  = cross(ray.direction, pb);
+		det = dot(n, n);
+		n = cross(n, pa);
+		float t1 = dot(n, pb);
+		float v1 = dot(n, ray.direction);     // no need to check t1 < t		
+		if (t1 > 0 && 0 <= v1 && v1 <= det) { // if t1 > ray.tmax, 					
+			t = t1/det; u = u1; v = v1/det;    // it will be rejected				
+		}                                     // in rtPotentialIntersection
+	}
+	if (0 <= u2 && u2 <= 1) {                // it is slightly different,
+		float3 pa = lerp(q00, q10, u2);       // since u1 might be good
+		float3 pb = lerp(e00, e11, u2);       // and we need 0 < t2 < t1
+		float3 n  = cross(ray.direction, pb);
+		det = dot(n, n);
+		n = cross(n, pa);
+		float t2 = dot(n, pb)/det;
+		float v2 = dot(n, ray.direction);
+		if (0 <= v2 && v2 <= det && t > t2 && t2 > 0) {
+			t = t2; u = u2; v = v2/det;
+		}
+	}
+	// if (rtPotentialIntersection(t)) {
+	if (t > 0 && t < MaxMax) {
+		float3 du = lerp(e10, q11 - q01, v);
+		float3 dv = lerp(e00, e11, u);
+		LocalT = t;
+		texcoord = float3(u, v, 0);
+		finalid = id;
+		return true;
+	}
+	return false;
+}
+
+inline bool IntersectPrismTriangle(float3 pos0, float3 v1, float3 v2, SmallerRay ray, inout float Min, inout float Max, float max_distance, inout float LocalT) {
+	float3 posedge1 = v1 - pos0;
+	float3 posedge2 = v2 - pos0;
+
+    float3 h = cross(ray.direction, posedge2);
+    float  a = dot(posedge1, h);
+
+    float  f = rcp(a);
+    float3 s = ray.origin - pos0;
+    float  u = f * dot(s, h);
+
+    if (u >= 0.0f && u <= 1.0f) {
+        float3 q = cross(s, posedge1);
+        float  v = f * dot(ray.direction, q);
+
+        if (v >= 0.0f && u + v <= 1.0f) {
+            float t = f * dot(posedge2, q);
+
+            if (t > 0 && t < max_distance) {
+				LocalT = t;
+            	return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+bool IntersectPrism(Prism TP, SmallerRay ray, inout float tmin, inout float tmax, float maxmax) {
+	float3 texcoord;
+	int finalid = -1;
+	bool IntersectedA = false;
+	{
+		float LocalT = 0;
+		if(IntersectPrismTriangle(TP.V[0], TP.V[1], TP.V[2], ray, tmin, tmax, maxmax, LocalT)) {
+			IntersectedA = true;
+			tmax = max(tmax, LocalT);
+			tmin = min(tmin, LocalT);
+		}
+	}
+	{
+		float LocalT = 0;
+		if(IntersectPrismTriangle(TP.E[2], TP.E[1], TP.E[0], ray, tmin, tmax, maxmax, LocalT)) {
+			IntersectedA = true;
+			tmax = max(tmax, LocalT);
+			tmin = min(tmin, LocalT);
+		}
+	}
+	{
+		float3 q[5] = {
+			TP.V[1],
+			TP.V[0],
+			TP.E[0],
+			TP.E[1],
+			cross(TP.V[0]-TP.V[1],TP.E[1]-TP.E[0])
+		};
+		float LocalT = 0;
+		if(intersectPatch(TP, q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
+			IntersectedA = true;
+			tmax = max(tmax, LocalT);
+			tmin = min(tmin, LocalT);
+		}
+	}
+	{
+		float3 q[5] = {
+			TP.V[2],
+			TP.V[1],
+			TP.E[1],
+			TP.E[2],
+			cross(TP.V[1]-TP.V[2],TP.E[2]-TP.E[1])
+		};
+
+		float LocalT = 0;
+		if(intersectPatch(TP, q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
+			IntersectedA = true;
+			tmax = max(tmax, LocalT);
+			tmin = min(tmin, LocalT);
+		}
+	}
+	{
+		float3 q[5] = {
+			TP.V[0],
+			TP.V[2],
+			TP.E[2],
+			TP.E[0],
+			cross(TP.V[2]-TP.V[0],TP.E[0]-TP.E[2])
+		};
+		float LocalT = 0;
+		if(intersectPatch(TP, q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
+			IntersectedA = true;
+			tmax = max(tmax, LocalT);
+			tmin = min(tmin, LocalT);
+		}
+	}
+
+	return IntersectedA;
+}
+
+float dot2( in float3 v ) { return dot(v,v); }
+
+float udTriangle( in float3 v1, in float3 v2, in float3 v3, in float3 p )
+{
+    // prepare data    
+    float3 v21 = v2 - v1; float3 p1 = p - v1;
+    float3 v32 = v3 - v2; float3 p2 = p - v2;
+    float3 v13 = v1 - v3; float3 p3 = p - v3;
+    float3 nor = cross( v21, v13 );
+
+    return sqrt( // inside/outside test    
+                 (sign(dot(cross(v21,nor),p1)) + 
+                  sign(dot(cross(v32,nor),p2)) + 
+                  sign(dot(cross(v13,nor),p3))<2.0) 
+                  ?
+                  // 3 edges    
+                  min( min( 
+                  dot2(v21*clamp(dot(v21,p1)/dot2(v21),0.0,1.0)-p1), 
+                  dot2(v32*clamp(dot(v32,p2)/dot2(v32),0.0,1.0)-p2) ), 
+                  dot2(v13*clamp(dot(v13,p3)/dot2(v13),0.0,1.0)-p3) )
+                  :
+                  // 1 face    
+                  dot(nor,p1)*dot(nor,p1)/dot2(nor) );
+}
+
+float3 triangleBarycentric (float3 s,
+float3 c0, float3 c1, float3 c2)
+{
+	float3 x0, x1, x2, b;
+	float d00, d01, d11, d20, d21, invDenom;
+	x0 = c1-c0; x1 = c2-c0; x2 = s - c0;
+	d00 = dot(x0, x0);
+	d01 = dot(x0, x1);
+	d11 = dot(x1, x1);
+	d20 = dot(x2, x0);
+	d21 = dot(x2, x1);
+	invDenom = 1.0 / (d00 * d11 - d01 * d01);
+	b.y = (d11 * d20 - d01 * d21) * invDenom;
+	b.z = (d00 * d21 - d01 * d20) * invDenom;
+	b.x = 1.0-b.y-b.z;
+	return b;
+}
+
+#define PDMNormEpsilon 1.0e-5f
+inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, CudaTriangleA Tri, int2 TempUv) {
+	const float2 HalfTEX0 = TOHALF(Tri.tex0);
+	const float2 HalfTEX1 = TOHALF(Tri.texedge1);
+	const float2 HalfTEX2 = TOHALF(Tri.texedge2);
+	float3 b = float3(1.0f - UV.x - UV.y, UV.x, UV.y);
+	float2 uva = HalfTEX0 * b.x + HalfTEX1 * b.y + HalfTEX2 * b.z;
+	float2 uvb = HalfTEX0 * (b.x + PDMNormEpsilon) + HalfTEX1 * b.y + HalfTEX2 * (b.z - PDMNormEpsilon);
+	float2 uvc = HalfTEX0 * b.x + HalfTEX1 * (b.y + PDMNormEpsilon) + HalfTEX2 * (b.z - PDMNormEpsilon);
+	float3 pa = TP.V[0] * b.x + TP.V[1] * b.y + TP.V[2] * b.z;
+	float3 pb = TP.V[0] * (b.x + PDMNormEpsilon) + TP.V[1] * b.y + TP.V[2] * (b.z - PDMNormEpsilon);
+	float3 pc = TP.V[0] * b.x + TP.V[1] * (b.y + PDMNormEpsilon) + TP.V[2] * (b.z - PDMNormEpsilon);
+	float3 N0 = i_octahedral_32(TP.N[0]);
+	float3 N1 = i_octahedral_32(TP.N[1]);
+	float3 N2 = i_octahedral_32(TP.N[2]);
+	float3 N = N0 * b.x + N1 * b.y + N2 * b.z;
+	float3 sa = pa + N * SampleTexture(uva, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
+	float3 sb = pb + N * SampleTexture(uvb, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
+	float3 sc = pc + N * SampleTexture(uvc, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
+	float3 Ns = cross(sc - sa, sb - sa);// / (PDMNormEpsilon * PDMNormEpsilon);
+	float3 geometric_normal = -normalize(cross(TP.V[1] - TP.V[0], TP.V[2] - TP.V[0]));
+
+	return normalize(normalize(Ns) - geometric_normal + N);
+}
+
+
+
+inline float4 PDM(inout RayHit ray_hit, Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, CudaTriangleA Tri, float trumin) {
+	float dt = 0.005f;
+	bool zeroed = trumin == 0;
+	tmin = FarPlane;
+	tmax = 0;
+	[branch]if(IntersectPrism(TP, ray, tmin, tmax, ray_hit.t)) {
+		const float DisplacementFactor = TempMat.DisplacementFactor;
+		float3 geometric_normal = -normalize(cross(TP.V[1] - TP.V[0], TP.V[2] - TP.V[0]));
+		if(tmin == tmax && zeroed) tmin = 0;
+		float t = tmin;
+		float3 s = ray.origin + ray.direction * t;
+		float hray = udTriangle(TP.V[0], TP.V[1], TP.V[2], s);
+		float3 C[] = {
+			TP.V[0] + (TP.E[0] - TP.V[0]) * hray,
+			TP.V[1] + (TP.E[1] - TP.V[1]) * hray,
+			TP.V[2] + (TP.E[2] - TP.V[2]) * hray
+		};
+		int Coun = 0;
+		float hsurf = 0; 
+		const float2 HalfTEX0 = TOHALF(Tri.tex0);
+		const float2 HalfTEX1 = TOHALF(Tri.texedge1);
+		const float2 HalfTEX2 = TOHALF(Tri.texedge2);
+		const float3 N0 = i_octahedral_32(TP.N[0]);
+		const float3 N1 = i_octahedral_32(TP.N[1]);
+		const float3 N2 = i_octahedral_32(TP.N[2]);
+		float hdiffprev = 1;
+		float hdiff =  1;
+		while(hray > hsurf && t < tmax) {
+			float DeltaH = dot(geometric_normal, (C[0] - s));//MIGHT BE DOT, NOT MULT
+			C[0] -= N0 * DeltaH;
+			C[1] -= N1 * DeltaH;
+			C[2] -= N2 * DeltaH;
+			float3 b = triangleBarycentric(s, C[0], C[1], C[2]);
+			float3 p = TP.V[0] * b.x + TP.V[1] * b.y + TP.V[2] * b.z;
+			hray = dot(s - p, s - p);//its the abs symbol tho?
+			float2 uv = HalfTEX0 * b.x + HalfTEX1 * b.y + HalfTEX2 * b.z;
+			hsurf = SampleTexture(uv, SampleDisplacement, TempMat) * DisplacementFactor + 0.01f;
+			hsurf *= hsurf;
+			hdiffprev = hdiff;
+			hdiff = hsurf-hray;
+			t = t + dt;
+			s = s + ray.direction * dt;
+		}
+		if(hray < hsurf) {
+			float dtt = dt * (abs(hdiff) / (abs(hdiffprev) + abs(hdiff) + 1e-8f));
+			t -= dtt;
+			float3 phit = ray.origin + ray.direction * t;
+			float3 b = triangleBarycentric(phit, C[0], C[1], C[2]);
+			ray_hit.t = t;
+			ray_hit.u = b.y;
+			ray_hit.v = b.z;
+
+
+			return float4(0,0,0, t);//normalize(Ns) * 0.5f + 0.5f;
+		}
+	}
+	return -1;
+}
+
+
+float4 PDMShadow(Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, CudaTriangleA Tri, float trumax, float trumin) {
+	float dt = 0.01f;
+	bool zeroed = trumin == 0;
+	trumax = tmax;
+	tmin = FarPlane;
+	tmax = 0;
+	if(IntersectPrism(TP, ray, tmin, tmax, trumax)) {
+		const float DisplacementFactor = TempMat.DisplacementFactor;
+		float3 geometric_normal = -normalize(cross(TP.V[1] - TP.V[0], TP.V[2] - TP.V[0]));
+		if(tmin == tmax && zeroed) tmin = 0;
+		float t = tmin;
+		float3 s = ray.origin + ray.direction * t;
+		float hray = udTriangle(TP.V[0], TP.V[1], TP.V[2], s);
+		float3 C[] = {
+			TP.V[0] + (TP.E[0] - TP.V[0]) * hray,
+			TP.V[1] + (TP.E[1] - TP.V[1]) * hray,
+			TP.V[2] + (TP.E[2] - TP.V[2]) * hray
+		};
+		float hsurf = 0; 
+		float2 HalfTEX0 = TOHALF(Tri.tex0);
+		float2 HalfTEX1 = TOHALF(Tri.texedge1);
+		float2 HalfTEX2 = TOHALF(Tri.texedge2);
+		float3 N0 = i_octahedral_32(TP.N[0]);
+		float3 N1 = i_octahedral_32(TP.N[1]);
+		float3 N2 = i_octahedral_32(TP.N[2]);
+		while(hray > hsurf && t < tmax) {
+			float DeltaH = dot(geometric_normal, (C[0] - s));//MIGHT BE DOT, NOT MULT
+			C[0] -= N0 * DeltaH;
+			C[1] -= N1 * DeltaH;
+			C[2] -= N2 * DeltaH;
+			float3 b = triangleBarycentric(s, C[0], C[1], C[2]);
+			float3 p = TP.V[0] * b.x + TP.V[1] * b.y + TP.V[2] * b.z;
+			hray = dot(s - p, s - p);//its the abs symbol tho?
+			float2 uv = HalfTEX0 * b.x + HalfTEX1 * b.y + HalfTEX2 * b.z;
+			hsurf = SampleTexture(uv, SampleDisplacement, TempMat) * DisplacementFactor + 0.01f;
+			hsurf *= hsurf;
+			t = t + dt;
+			s = s + ray.direction * dt;
+		}
+		if(hray < hsurf) {
+			return 1;
+		}
+	}
+	return -1;
+}
+#endif
+inline bool rayBoxIntersection2(const float3 ray_orig, const float3 ray_dir, const float3 Min, const float3 Max, float tMax, inout float t1, inout float t0) {
+    const float3 tmp_min = (Min - ray_orig) / ray_dir;
+    const float3 tmp_max = (Max - ray_orig) / ray_dir;
+    const float3 tmin = min(tmp_min, tmp_max);
+    const float3 tmax = max(tmp_min, tmp_max);
+    t0 = max(tmin.x, max(tmin.y, max(tmin.z, 0))); // Usually ray_tmin = 0
+    t1 = min(tmax.x, min(tmax.y, min(tmax.z, tMax)));
+    return (t0 <= t1);
+}
+
+
+//shadow_triangle
+//triangle_shadow
+//putting these^ here cuz I ALWAYS ctrl + f for the WRONG term when trying to find this function...
+inline bool triangle_intersect_shadow(int mesh_id, int tri_id, const SmallerRay ray, const float max_distance, inout float3 throughput, const int MatOffset) {
+    TrianglePos tri = triangle_get_positions(tri_id);
+
+	#ifdef TTDisplacement
+	    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+	    if(_IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
+            int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;	    	
+		    float3 Max = max(max(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), max(max(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+		    float3 Min = min(min(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), min(min(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+
+		    float trumax = 0;
+		    float trumin = 0;
+		    rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
+		    float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
+		    if(A.w != -1) {
+		    	return true;
+		    }
+		}
+	#endif
+
+    float3 h = cross(ray.direction, tri.posedge2);
+    float  a = dot(tri.posedge1, h);
+
+    float  f = rcp(a);
+    float3 s = ray.origin - tri.pos0;
+    float  u = f * dot(s, h);
+
+    float3 q = cross(s, tri.posedge1);
+    float  v = f * dot(ray.direction, q);
+
+    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
+        float t = f * dot(tri.posedge2, q);
+
+        [branch]if (t > 0 && t < max_distance) {
+		  	const TriangleUvs TriUVs = triangle_get_UVs(tri_id);
+			#ifndef TTDisplacement
+		    	const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            #endif
+            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
+				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
+        		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+	                float2 BaseUv = TriUVs.UV0 * (1.0f - u - v) + TriUVs.UV1 * u + TriUVs.UV2 * v;
+        
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                    	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+                    }
+
+	                #ifdef FadeMapping
+	                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+	                        	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+	                            if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+	                        }
+	                    }
+	                #endif
+
+
+		            #ifdef IgnoreGlassShadow
+		                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
+			            	#ifdef StainedGlassShadows
+			            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
+						        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]);
+		    					
+#ifdef ShadowGlassAttenuation
+								// if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Thin))
+			    				// 	throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+			    				// else {
+
+		    						float Dotter = (dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
+		    						// if(Dotter > 0)
+				    					throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+
+			    				// }
+#else
+		    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+#endif
+		    				#endif
+		                	return false;
+		                }
+		            #endif
+		        }
+            #endif
+			return true;
+        }
+    }
+    return false;
+}
+
+inline bool VisabilityCheckCompute(SmallerRay ray, float dist) {
+        uint2 stack[16];
+        int stack_size = 0;
+        uint2 current_group;
+
+        uint oct_inv4;
+        int tlas_stack_size = -1;
+        int mesh_id = -1;
+        SmallerRay ray2;
+        int TriOffset = 0;
+        int NodeOffset = 0;
+
+        ray2 = ray;
+
+        oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+        current_group.x = (uint)0;
+        current_group.y = (uint)0x80000000;
+        int MatOffset = 0;
+        int Reps = 0;
+        float3 through = 0;
+        [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+        	uint2 triangle_group;
+            [branch]if (current_group.y & 0xff000000) {
+                uint child_index_offset = firstbithigh(current_group.y);
+                
+                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+                uint child_node_index = current_group.x + relative_index;
+                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+
+                current_group.y &= ~(1 << child_index_offset);
+
+                if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+                
+                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, dist, TempNode);
+
+ 				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
+                triangle_group.y = (hitmask & 0x00ffffff);
+
+                Reps++;
+            } else {
+                triangle_group = current_group;
+                current_group = (uint2)0;
+            }
+
+            if(triangle_group.y != 0) {
+                [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+                    uint mesh_offset = firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << mesh_offset);
+                    mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
+                    NodeOffset = _MeshData[mesh_id].NodeOffset;
+                    TriOffset = _MeshData[mesh_id].TriOffset;
+
+                    if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
+
+                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+                    tlas_stack_size = stack_size;
+
+                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
+
+                    MatOffset = _MeshData[mesh_id].MaterialOffset;
+                    ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
+                    ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
+
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+                    current_group.x = (uint)root_index;
+                    current_group.y = (uint)0x80000000;
+                } else {
+					while (triangle_group.y != 0) {                        
+                        uint triangle_index = firstbithigh(triangle_group.y);
+                        triangle_group.y &= ~(1 << triangle_index);
+	                    if (triangle_intersect_shadow(mesh_id, triangle_group.x + triangle_index, ray, dist, through, MatOffset)) {
+							return false;
+	                    }
+                    }
+                }
+            }
+
+            if ((current_group.y & 0xff000000) == 0) {
+                if (stack_size == 0) {//thread has finished traversing
+                    break;
+                }
+
+                if (stack_size == tlas_stack_size) {
+					NodeOffset = 0;
+                    TriOffset = 0;
+                    tlas_stack_size = -1;
+                    ray = ray2;
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+                }
+                current_group = stack[--stack_size];
+            }
+        }
+        return true;
+}
+
