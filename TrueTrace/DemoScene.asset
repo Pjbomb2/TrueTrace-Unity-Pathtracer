@@ -26,12 +26,12 @@ MonoBehaviour:
   DoFAperature: 0.2
   DoFAperatureScale: 1
   DoFFocal: 5.2216897
-  PPExposure: 0
+  PPExposure: 1
   ExposureAuto: 0
   PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 1
+  DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1

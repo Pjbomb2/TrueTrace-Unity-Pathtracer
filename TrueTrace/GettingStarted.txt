@@ -3,10 +3,11 @@ For more in depth/full details, go to the Readme on the Truetrace Github(at leas
 
 
 To get started:
-1. After importing the unity package, for a new scene you want to open the PathTracer tab on the top bar, and click "Arrange Hierarchy"
-2. After doing this, your scene should now be in the format required by the path tracer
-3. Now you can click "Build Aggregated BVH" to build the acceleration structure for all objects, and just wait for the "Remaining Objects" to turn green before entering play mode(this can be ignored if wanted)
-4. After that is done, you can just enter play mode and play as normal
+1. First, import the unity package.  After doing this you will need to restart unity this one time, so that the bindless plugin initialized properly.
+2. After restarting, for a new scene you want to open the PathTracer tab on the top bar, and click "Arrange Hierarchy"
+3. After doing this, your scene should now be in the format required by the path tracer
+4. Now you can click "Build Aggregated BVH" to build the acceleration structure for all objects, and just wait for the "Remaining Objects" to turn green before entering play mode(this can be ignored if wanted)
+5. After that is done, you can just enter play mode and play as normal
 
 
 Adding new objects

@@ -68,6 +68,10 @@ for bringing bindless textures to unity!
 ### If you like what I do and want to support me or this project, Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 ### You can contact me easiest through my discord server(above) or my [twitter](https://x.com/Pjbomb2) with bugs, ideas, or thoughts on the project!
 
+## First Install Note
+<ul>
+  <li>After you first install TrueTrace, you will need to restart the unity project this one time, so that the bindless plugin can initialize properly.</li>
+</ul>
 
 ## Adding new objects
 ### Automatic methods

@@ -2193,7 +2193,7 @@ float3 SampleDirectionSphere(float u1, float u2)
 #define BucketCount 4
 #define PropDepth 5
 #define CacheCapacity (BucketCount * 1024 * 1024)
-static const uint HashOffset = (4 * 1024 * 1024 * 16);
+static const uint HashOffset = (BucketCount * 1024 * 1024 * 16);
 
 RWByteAddressBuffer VoxelDataBufferA;
 ByteAddressBuffer VoxelDataBufferB;

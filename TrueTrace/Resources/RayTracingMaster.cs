@@ -997,17 +997,17 @@ namespace TrueTrace {
                 if(LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {ASVGFCode.ClearAll(); _RandomNumsB.ReleaseSafe(); ASVGFCode.init(SourceWidth, SourceHeight, TargetWidth, TargetHeight); CommonFunctions.CreateRenderTexture(ref _RandomNumsB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);}
                 if(TTPostProc.Initialized) TTPostProc.ClearAll();
                 TTPostProc.init(SourceWidth, SourceHeight);
-
+                int BucketCount = 4;
                 InitRenderTexture(true);
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
                 #if !DisableRadianceCache
                     CommonFunctions.CreateDynamicBuffer(ref CacheBuffer, SourceWidth * SourceHeight, 48);
-                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferA, 4 * 1024 * 1024 + 1024 * 1024, 16, ComputeBufferType.Raw);
-                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferB, 4 * 1024 * 1024 + 1024 * 1024, 16, ComputeBufferType.Raw);
+                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferA, BucketCount * 4 * 1024 * 1024 + 1024 * 1024 * BucketCount, 4, ComputeBufferType.Raw);
+                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferB, BucketCount * 4 * 1024 * 1024 + 1024 * 1024 * BucketCount, 4, ComputeBufferType.Raw);
 
-                    int[] EEEE = new int[4 * 1024 * 1024 * 4 + 1024 * 1024];
+                    int[] EEEE = new int[BucketCount * 4 * 1024 * 1024 + 1024 * 1024 * BucketCount];
                     VoxelDataBufferA.SetData(EEEE);
                     VoxelDataBufferB.SetData(EEEE);
                 #endif
@@ -1221,7 +1221,7 @@ namespace TrueTrace {
                     if(DoKernelProfiling) cmd.EndSample("RadCacheClear");
 
                     if(DoKernelProfiling) cmd.BeginSample("RadCacheCompact");
-                        cmd.DispatchCompute(GenerateShader, CompactKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
+                        cmd.DispatchCompute(GenerateShader, CompactKernel, Mathf.CeilToInt((1024.0f * 1024.0f) / 256.0f), 1, 1);
                     if(DoKernelProfiling) cmd.EndSample("RadCacheCompact");
                 #endif
                 TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UpscalerMethod == 2, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA, LocalTTSettings.DoChromaAber || LocalTTSettings.DoBCS || LocalTTSettings.DoVignette);

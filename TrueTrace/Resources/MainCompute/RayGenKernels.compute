@@ -87,11 +87,12 @@ void CacheResolve(uint3 id : SV_DispatchThreadID) {//we dont need to compress th
                 Dat *= Ratio;
                 ResultantVox.xyz = Dat * 1e3f;
             }
-            if(FrameCount > 90) {
+            if(FrameCount > 230) {
                 ResultantVox.xyz = (((float3)ResultantVox.xyz / 1e3f) / (float)(SampleCount + FrameCount)) * 1e3f;
                 FrameCount = 0;
                 SampleCount = 1;
-                // ResultantHash = 0;
+                ResultantHash = 0;
+                ResultantVox = 0;
             }
             ResultantVox.w = (SampleCount | ((FrameCount & 0xFF) << 24));
         }
@@ -99,6 +100,10 @@ void CacheResolve(uint3 id : SV_DispatchThreadID) {//we dont need to compress th
 
     VoxelDataBufferA.Store(HashOffset + (id.x) * 4, ResultantHash);//I am read and writing to the same hash buffer, this could be a problem
     VoxelDataBufferA.Store4(id.x * 16, ResultantVox);
+    // int idd2 = 0;
+    // if(FindHashEntry(ResultantHash, idd2))
+    //     VoxelDataBufferA.Store4(idd2 * 16, ResultantVox);
+
 #endif
 }
 

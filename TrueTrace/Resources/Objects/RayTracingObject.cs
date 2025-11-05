@@ -347,6 +347,11 @@ namespace TrueTrace {
 				SubMeshCount = (SkinnedRend.sharedMaterials).Length;
 		 		SharedMaterials = SkinnedRend.sharedMaterials;
 		 	} else {
+		 		try{
+			 		Debug.LogError("GameObject " + this.gameObject.name + " had no MeshRenderer or SkinnedMeshRenderer, so RayTracingObject was deleted.");
+				} catch(System.Exception E) {
+			 		Debug.LogError("Deleted GameObject had no MeshRenderer or SkinnedMeshRenderer, so RayTracingObject was deleted.");
+				}
 		 		DestroyImmediate(this);
 		 		WasDeleted = true;
 		 		return;

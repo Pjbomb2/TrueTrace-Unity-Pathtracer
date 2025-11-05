@@ -144,7 +144,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
         float wldScale = rsqrt(dot(USGNorm, USGNorm));
         USGNorm = -mul(wldScale, USGNorm);
         if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
-        if(TTMat.MatType == CutoutIndex) USGNorm = Geomnorm;
     }
 
     bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
@@ -480,6 +479,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                 CachePathLength = ((CachePathLength & ~(0x7C000000)) | (((CurBounce < 30 && ((MaterialLobe == 3) || (MaterialLobe == 0 && TTMat.roughness < 0.2f))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
             }
             CachePathLength = (CachePathLength & ~64) | ((MaterialLobe == 3) << 6);
+        }
+    #endif
+    #ifdef RadCache 
+        if(CurBounce > 4 && luminance(Color.Indirect) > 0.0) {
+            if(GTX.x % 16 != 0) return;
+            else throughput *= 16.0f;
         }
     #endif
     if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
