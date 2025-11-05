@@ -361,6 +361,7 @@ namespace TrueTrace {
 
 
 
+
 #if TTTriSplitting && !HardwareRT
         public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles, int* ReverseIndexesLightCounter, bool IsSkinned) {//need to make sure incomming is transformed to world space already
 #else
@@ -368,8 +369,8 @@ namespace TrueTrace {
 #endif
             PrimCount = Tris.Count;          
             MaxDepth = 0;
-            // Tris2 = Tris;
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
             
             nodes2Array = new NativeArray<NodeBounds>(PrimCount * 2, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             nodes2 = (NodeBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(nodes2Array);
@@ -380,9 +381,9 @@ namespace TrueTrace {
             SAHArray = new NativeArray<float>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             SAH = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(SAHArray);
 
-            DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
+            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
 
-            FinalIndices = new int[PrimCount];
 
             AABB TriAABB = new AABB();
             Vector3 Scaler = new Vector3(0.0001f,0.0001f,0.0001f);
@@ -397,26 +398,20 @@ namespace TrueTrace {
                 float ThisPhi = AreaOfTriangle(AggTriangles[Target].pos0, AggTriangles[Target].pos0 + AggTriangles[Target].posedge1, AggTriangles[Target].pos0 + AggTriangles[Target].posedge2) * LuminanceWeights[i];
                 LightBounds TempBound = new LightBounds(TriAABB, -Norms[i], ThisPhi, 0,Precomputed, 1, 0);
                 LightTris[i] = TempBound;
-                FinalIndices[i] = i;
+                temp[i] = i;
                 SAH[i] = (TriAABB.BBMax.x + TriAABB.BBMin.x) * 0.5f;
                 Union(ref nodes2[0].aabb, ref TempBound);
             }
 
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
-            CommonFunctions.DeepClean(ref FinalIndices);
+            CommonFunctions.RadixSort(temp, DimensionedIndices, ref SAH, PrimCount);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + PrimCount, ref SAH, PrimCount);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + (PrimCount * 2), ref SAH, PrimCount);
 
 
             aabb_left = new LightBounds();
             aabb_right = new LightBounds();
-            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
-            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
             indices_going_left_array = new NativeArray<bool>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
 

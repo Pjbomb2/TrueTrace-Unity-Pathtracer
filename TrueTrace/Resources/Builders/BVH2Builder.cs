@@ -18,7 +18,10 @@ namespace TrueTrace {
         private ObjectSplit split = new ObjectSplit();
         public float* SAH;
         public AABB* Primitives;
+        public int* RadixPrefixSum;
         
+
+        public NativeArray<int> RadixPrefixArray;
         public NativeArray<BVHNode2Data> BVH2NodesArray;
         public NativeArray<int> DimensionedIndicesArray;
         public NativeArray<int> tempArray;
@@ -31,6 +34,7 @@ namespace TrueTrace {
             if(tempArray.IsCreated) tempArray.Dispose();
             if(indices_going_left_array.IsCreated) indices_going_left_array.Dispose();
             if(SAHArray.IsCreated) SAHArray.Dispose();
+            if(RadixPrefixArray.IsCreated) RadixPrefixArray.Dispose();
             
         }
 
@@ -47,53 +51,54 @@ namespace TrueTrace {
             split.cost = float.MaxValue;//SA * (float)index_count;
             split.index = -1;
             split.dimension = -1;
-            split.aabb_left.init();
             split.aabb_right.init();
 
-            int Offset;
             float left_cost;
-            float cost;
             int first_right;
             int i;
+            int* LocalDimensions;
             for(int dimension = 0; dimension < 3; dimension++) {
                 aabb_right.init();
-                Offset = PrimCount * dimension + first_index;
+                LocalDimensions = DimensionedIndices + (PrimCount * dimension + first_index);
                 first_right = index_count;
+                float MaxCost = split.cost;
                 for(i = 1; i < index_count; i++) {
-                    aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i - 1]]);
+                    aabb_right.Extend(ref Primitives[LocalDimensions[i - 1]]);
                     SAH[i] = surface_area(ref aabb_right) * (float)i;
-                    if(SAH[i] > split.cost) {
+                    if(SAH[i] >= MaxCost) {
                         first_right = i + 1;
                         break;
                     }
                 }
                 aabb_right.init();
                 for(i = index_count - 1; i >= first_right; i--)
-                    aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+                    aabb_right.Extend(ref Primitives[LocalDimensions[i]]);
 
                 for(i = first_right - 1; i > 0; i--) {
-                    aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+                    aabb_right.Extend(ref Primitives[LocalDimensions[i]]);
 
                     left_cost = surface_area(ref aabb_right) * (float)(index_count - i);
                     if(left_cost >= split.cost) break;
-                    cost = SAH[i] + left_cost;
+                    SAH[i] += left_cost;
 
-                    if(cost <= split.cost) {
-                        split.cost = cost;
+                    if(SAH[i] < split.cost) {
+                        split.cost = SAH[i];
                         split.index = first_index + i;
                         split.dimension = dimension;
                         split.aabb_right = aabb_right;
                     }
                 }
             }
-            Offset = split.dimension * PrimCount;
+            LocalDimensions = DimensionedIndices + (split.dimension * PrimCount);
             int Index;
             int Index2 = split.index;
+            aabb_right.init();
             for(i = first_index; i < Index2; i++) {
-                Index = DimensionedIndices[Offset + i];
-                split.aabb_left.Extend(ref Primitives[Index]);
+                Index = LocalDimensions[i];
+                aabb_right.Extend(ref Primitives[Index]);
                 indices_going_left[Index] = true;
             }
+            split.aabb_left = aabb_right;
 
 
 
@@ -140,99 +145,49 @@ namespace TrueTrace {
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
-        float HalfArea(ref AABB aabb) {
-            Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
-
-            float x = d.x + d.y;
-            float y = d.z;
-            float z = d.x * d.y;
-            float area = x * y + z;
-
-            return area;//d.x * d.y + d.y * d.z + d.z * d.x; 
-        }
-
-        float TotalSAH = 0;
-        private float TravDown(int Parent, int Depth) {
-            if(Depth > 30) return 0;
-            float TempSAH = 0;
-            if(BVH2Nodes[Parent].count == 0) {
-                TempSAH += TravDown(BVH2Nodes[Parent].left, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
-                TempSAH += TravDown(BVH2Nodes[Parent].left + 1, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left  +1].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
-                TempSAH += 1;
-            } else {
-                TempSAH += 4.0f ;
-            }
-            return TempSAH;
-        }
-
-        public float ComputeGlobalCost(int NodeCount)
-        {
-            float cost = 0.0f;
-
-
-            float rootArea = HalfArea(ref BVH2Nodes[0].aabb);
-            for (int i = 2; i < NodeCount; i++)
-            {
-                float probHitNode = HalfArea(ref BVH2Nodes[i].aabb) / rootArea;
-
-                if (BVH2Nodes[i].count == 0)
-                {
-                    cost += 1.0f * probHitNode;
-                }
-                else
-                {
-                    cost += 1.0f * 1.0f * probHitNode;
-                }
-            }
-            return cost;
-        }
-
-
         public unsafe BVH2Builder(AABB* Triangles, int PrimCount) {//Bottom Level Acceleration Structure Builder
             this.PrimCount = PrimCount;
             Primitives = Triangles;
-            FinalIndices = new int[PrimCount];
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             BVH2NodesArray = new NativeArray<BVHNode2Data>(PrimCount * 2, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             BVH2Nodes = (BVHNode2Data*)NativeArrayUnsafeUtility.GetUnsafePtr(BVH2NodesArray);
             DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
             SAHArray = new NativeArray<float>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             SAH = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(SAHArray);
+            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
+            RadixPrefixArray = new NativeArray<int>(6144, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            RadixPrefixSum = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(RadixPrefixArray);
             BVH2Nodes[0].aabb.init();
+
             for(int i = 0; i < PrimCount; i++) {
-                FinalIndices[i] = i;
+                temp[i] = i;
                 SAH[i] = (Triangles[i].BBMax.x + Triangles[i].BBMin.x) * 0.5f;
                 BVH2Nodes[0].aabb.Extend(ref Triangles[i]);
             }
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Triangles[i].BBMax.y + Triangles[i].BBMin.y) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Triangles[i].BBMax.z + Triangles[i].BBMin.z) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
-
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            CommonFunctions.RadixSort(temp, DimensionedIndices, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (Triangles[i].BBMax.y + Triangles[i].BBMin.y) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + PrimCount, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (Triangles[i].BBMax.z + Triangles[i].BBMin.z) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + (PrimCount * 2), ref SAH, ref RadixPrefixSum, PrimCount);
+            RadixPrefixArray.Dispose();
 
             indices_going_left_array = new NativeArray<bool>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
-            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
-            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
             aabb_right = new AABB();
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount);
 
-            // ConvertFromOptimizer(0, 0, 0, ref usedNodes);
-            // TotalSAH = TravDown(0, 0);
-            // Debug.Log("SAH Post-Opt: " + TotalSAH);
-            // float TotalSAH2 = ComputeGlobalCost(nodeIndex);
-            // Debug.LogError("SAH Cost: " + TotalSAH + " : Killers: " + TotalSAH2);
             indices_going_left_array.Dispose();
-            tempArray.Dispose();
             SAHArray.Dispose();
             int BVHNodeCount = BVH2NodesArray.Length;
-            NativeArray<int>.Copy(DimensionedIndicesArray, 0, FinalIndices, 0, PrimCount);
+            NativeArray<int>.Copy(DimensionedIndicesArray, 0, tempArray, 0, PrimCount);
             DimensionedIndicesArray.Dispose();
+            FinalIndices = tempArray.ToArray();
+            tempArray.Dispose();
         }
         NativeArray<AABB> PrimAABBs;
         public unsafe BVH2Builder(AABB[] MeshAABBs) {//Top Level Acceleration Structure

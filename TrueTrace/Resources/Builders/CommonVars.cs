@@ -1292,6 +1292,97 @@ namespace CommonVars
             NewMat.CausticStrength = 1;
             return NewMat;
         }
+        static unsafe uint getKey(float value)
+        {
+            // Integer comparisons between numbers returned from this function behave
+            // as if the original float values where compared.
+            // Simple reinterpretation works only for [0, ...], but this also handles negatives
+            uint f = *(uint*)&value;
+            uint mask = (uint)((int)f >> 31 | (1 << 31));
+            return f ^ mask;
+        }
+
+        static unsafe void tinybvh_swap(int** a, int** b)
+        {
+            int* t = *a;
+            *a = *b;
+            *b = t;
+        }
+        public static unsafe void RadixSort( int* input, int* output, ref float* SAH, int len) {
+            // http://stereopsis.com/radix.html - Beats std::sort unless for small inputs (say len <= ~64)
+            int radixSize = 11;
+            int binSize = 1 << radixSize;
+            int mask = binSize - 1;
+            int passes = 3;
+            int[] prefixSum = new int[binSize * passes];
+            // Compute histogram for all passes
+            for (int i = 0; i < len; i++) {
+                uint key = getKey(SAH[input[i]]);
+                prefixSum[((key >> (0 * radixSize)) & mask) + 0 * binSize]++;
+                prefixSum[((key >> (1 * radixSize)) & mask) + 1 * binSize]++;
+                prefixSum[((key >> (2 * radixSize)) & mask) + 2 * binSize]++;
+            }
+            // Compute prefix sum for all passes
+            int sum0 = 0, sum1 = 0, sum2 = 0;
+            for (int i = 0; i < binSize; i++) {
+                int temp0 = prefixSum[i + 0 * binSize];
+                int temp1 = prefixSum[i + 1 * binSize];
+                int temp2 = prefixSum[i + 2 * binSize];
+                prefixSum[i + 0 * binSize] = sum0;
+                prefixSum[i + 1 * binSize] = sum1;
+                prefixSum[i + 2 * binSize] = sum2;
+                sum0 += temp0;
+                sum1 += temp1; 
+                sum2 += temp2;
+            }
+            // Sort from LSB to MSB in radix-sized steps
+            for (int i = 0; i < passes; i++) {
+                for (int j = 0; j < len; j++) {
+                    int element = input[j];
+                    uint key0 = getKey(SAH[element]);
+                    output[(prefixSum[((key0 >> (i * radixSize)) & mask) + i * binSize]++)] = element;
+                }
+                tinybvh_swap( &input, &output );
+            }
+            DeepClean(ref prefixSum);
+        }
+
+        public static unsafe void RadixSort( int* input, int* output, ref float* SAH, ref int* prefixSum, int len) {
+            // http://stereopsis.com/radix.html - Beats std::sort unless for small inputs (say len <= ~64)
+            int radixSize = 11;
+            int binSize = 1 << radixSize;
+            int mask = binSize - 1;
+            int passes = 3;
+            // Compute histogram for all passes
+            for (int i = 0; i < len; i++) {
+                uint key = getKey(SAH[input[i]]);
+                prefixSum[((key >> (0 * radixSize)) & mask) + 0 * binSize]++;
+                prefixSum[((key >> (1 * radixSize)) & mask) + 1 * binSize]++;
+                prefixSum[((key >> (2 * radixSize)) & mask) + 2 * binSize]++;
+            }
+            // Compute prefix sum for all passes
+            int sum0 = 0, sum1 = 0, sum2 = 0;
+            for (int i = 0; i < binSize; i++) {
+                int temp0 = prefixSum[i + 0 * binSize];
+                int temp1 = prefixSum[i + 1 * binSize];
+                int temp2 = prefixSum[i + 2 * binSize];
+                prefixSum[i + 0 * binSize] = sum0;
+                prefixSum[i + 1 * binSize] = sum1;
+                prefixSum[i + 2 * binSize] = sum2;
+                sum0 += temp0;
+                sum1 += temp1; 
+                sum2 += temp2;
+            }
+            // Sort from LSB to MSB in radix-sized steps
+            for (int i = 0; i < passes; i++) {
+                for (int j = 0; j < len; j++) {
+                    int element = input[j];
+                    uint key0 = getKey(SAH[element]);
+                    output[(prefixSum[((key0 >> (i * radixSize)) & mask) + i * binSize]++)] = element;
+                }
+                tinybvh_swap( &input, &output );
+            }
+        }
 
 
         #if UNITY_EDITOR

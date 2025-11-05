@@ -15,34 +15,6 @@ namespace TrueTrace {
 
         float Dot(ref Vector3 A, ref Vector3 B) {return A.x * B.x + A.y * B.y + A.z * B.z;}
         float Dot(Vector3 A) {return A.x * A.x + A.y * A.y + A.z * A.z;}
-        float Length(Vector3 a) {return (float)Math.Sqrt((double)(a.x * a.x + a.y * a.y + a.z * a.z));}
-        float Length(ref Vector3 a) {return (float)Math.Sqrt((double)(a.x * a.x + a.y * a.y + a.z * a.z));}
-
-        public float Distance(Vector3 a, Vector3 b)
-        {
-            a.x -= b.x;
-            a.y -= b.y;
-            a.z -= b.z;
-            return Length(ref a);
-        }
-
-        public void Normalize(ref Vector3 a)
-        {
-            float num = Length(ref a);
-            if (num > 9.99999974737875E-06)
-            {
-                float inversed = 1 / num;
-                a.x *= inversed;
-                a.y *= inversed;
-                a.z *= inversed;
-            }
-            else
-            {
-                a.x = 0;
-                a.y = 0;
-                a.z = 0;
-            }
-        }
 
         public float* cost;
         public Decision* decisions;
