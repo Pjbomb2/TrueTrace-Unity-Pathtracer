@@ -3296,23 +3296,15 @@ Slider AperatureSlider;
         }
 
 
-        RayCastMaterialSelector TempTest;
-        int AFrame = -1;
         int FramesSinceDOF = 0;
         string PrevLocTTSettingsName = "";
         void Update() {
-            if(AFrame != -1) {
+            if(RayMaster.RaycastSelectedIndex != -1) {
                RayTracingObjectEditor[] editors = (RayTracingObjectEditor[])Resources.FindObjectsOfTypeAll(typeof(RayTracingObjectEditor));
                if (editors.Length > 0) {
-                  editors[0].SetSelected(AFrame);
+                  editors[0].SetSelected(RayMaster.RaycastSelectedIndex);
                }
-               AFrame = -1;
-            }
-            if(Application.isFocused && Input.GetMouseButton(2) && !Input.GetKey(KeyCode.LeftControl)) {
-               if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
-                  if(TempTest == null) TempTest = new RayCastMaterialSelector();
-                  AFrame = TempTest.CastRay(RayTracingMaster._camera, RayMaster.SourceWidth, RayMaster.SourceHeight);
-               }
+               RayMaster.RaycastSelectedIndex = -1;
             }
             if(RayMaster != null) {
                if(Application.isPlaying && RayTracingMaster.RayMaster != null && RayTracingMaster.RayMaster.LocalTTSettings != null) {

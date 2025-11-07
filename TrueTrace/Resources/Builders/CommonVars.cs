@@ -16,11 +16,12 @@ namespace CommonVars
         Radius = 0.0f;
        }
        public void Validate(float padding) {
-        Radius = Mathf.Max(Radius, padding);
+        if(Radius < padding)
+            Radius = padding;
        }
 
-       public void Extend(Vector3 A) {
-        Radius = Mathf.Max(Radius, Vector3.Distance(Center, A));
+       public void Extend(in Vector3 A) {
+        Radius = (float)System.Math.Max(Radius, Vector3.Distance(Center, A));
        }
     }
 
@@ -456,7 +457,7 @@ namespace CommonVars
             Pad1 = 0;
         }
 
-        public LightBounds(AABB aabb, Vector3 W, float Phi, float Theta_o, float Theta_e, int lc, int p1) {
+        public LightBounds(in AABB aabb, in Vector3 W, float Phi, float Theta_o, float Theta_e, int lc, int p1) {
             b = aabb;
             w = W;
             phi = Phi;
@@ -478,7 +479,7 @@ namespace CommonVars
             public Vector3 W;
             public float cosTheta;
 
-            public DirectionCone(Vector3 w, float cosTheta) {
+            public DirectionCone(in Vector3 w, float cosTheta) {
                 W = w;
                 this.cosTheta = cosTheta;
             }
@@ -493,7 +494,7 @@ namespace CommonVars
         public uint cosTheta_oe;
         public int left;
 
-        public CompactLightBVHData(Vector3 BBMax, Vector3 BBMin, uint W, float Phi, uint cosTheta_oe, int left) {
+        public CompactLightBVHData(in Vector3 BBMax, in Vector3 BBMin, uint W, float Phi, uint cosTheta_oe, int left) {
             this.BBMax = BBMax;
             this.BBMin = BBMin;
             w = W;
@@ -515,7 +516,7 @@ namespace CommonVars
             BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         }
 
-        public AABB(CudaTriangle Tri) { 
+        public AABB(in CudaTriangle Tri) { 
             BBMax = Tri.pos0;
             BBMin = Tri.pos0;
             Extend(Tri.pos0 + Tri.posedge1);
@@ -531,7 +532,7 @@ namespace CommonVars
             Extend(Tri.pos0 + Tri.posedge2);
             // this.Validate(new Vector3(0.1f,0.1f,0.1f));
         }
-        public void TransformAABB(Matrix4x4 Mat) { 
+        public void TransformAABB(in Matrix4x4 Mat) { 
             Vector3 center = 0.5f * (BBMin + BBMax);
             Vector3 extent = 0.5f * (BBMax - BBMin);
             Vector3 new_center = CommonFunctions.transform_position(Mat, center);
@@ -574,7 +575,7 @@ namespace CommonVars
             if (aabb.BBMax.z < BBMax.z)
                 BBMax.z = aabb.BBMax.z;
         }
-        public void Create(Vector3 A, Vector3 B)
+        public void Create(in Vector3 A, in Vector3 B)
         {
             this.BBMax = A;//new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
             this.BBMin = A;//new Vector3(System.Math.Min(A.x, B.x), System.Math.Min(A.y, B.y), System.Math.Min(A.z, B.z));
@@ -623,7 +624,7 @@ namespace CommonVars
                 BBMax.z = aabb.BBMax.z;
         }
 
-        public AABB Union(AABB aabb)
+        public AABB Union(in AABB aabb)
         {
             AABB ResultAABB;
             ResultAABB.BBMax = BBMax;
@@ -644,7 +645,7 @@ namespace CommonVars
             return ResultAABB;
         }
 
-        public void Extend(Vector3 P)
+        public void Extend(in Vector3 P)
         {
 
             if (P.x < BBMin.x)
@@ -661,7 +662,7 @@ namespace CommonVars
                 BBMax.z = P.z;
         }
 
-        public bool IsInside(Vector3 P)
+        public bool IsInside(in Vector3 P)
         {
 
             if (P.x < BBMin.x)
@@ -679,7 +680,7 @@ namespace CommonVars
             return false;
         }
 
-        public void Validate(Vector3 Scale)
+        public void Validate(in Vector3 Scale)
         {
             for (int i2 = 0; i2 < 3; i2++)
             {
@@ -904,10 +905,10 @@ namespace CommonVars
     public static class CommonFunctions
     {
 
-        public static Vector4 ToVector4(Vector3 A, float B) {
+        public static Vector4 ToVector4(in Vector3 A, float B) {
             return new Vector4(A.x, A.y, A.z, B);
         }
-        public static Vector3 ToVector3(Vector4 A) {
+        public static Vector3 ToVector3(in Vector4 A) {
             return new Vector3(A.x, A.y, A.z);
         }
 
@@ -927,7 +928,7 @@ namespace CommonVars
             if (TargetBuffer != null) TargetBuffer?.Dispose();
             TargetBuffer = new ComputeBuffer(Count, Stride, ComputeType, ComputeMode);
         }
-        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride)
+        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, in List<T> data, int stride)
             where T : struct
         {
             // Do we already have a compute buffer?
@@ -954,7 +955,7 @@ namespace CommonVars
             }
         }
 
-        unsafe public static void Aggregate(ref BVHNode8DataCompressed[] AggNodes, TrueTrace.BVH8Builder BVH)
+        unsafe public static void Aggregate(ref BVHNode8DataCompressed[] AggNodes, in TrueTrace.BVH8Builder BVH)
         {//Compress the CWBVH
             BVHNode8DataCompressed TempBVHNode = new BVHNode8DataCompressed();
             int BVHLength = BVH.cwbvhnode_count;
@@ -993,28 +994,21 @@ namespace CommonVars
         }
 
         //Better Bounding Box Transformation by Zuex(I got it from Zuen)
-        public static Vector3 transform_position(Matrix4x4 matrix, Vector3 position)
+        public static Vector3 transform_position(in Matrix4x4 m, in Vector3 position)
         {
             return new Vector3(
-                matrix[0, 0] * position.x + matrix[0, 1] * position.y + matrix[0, 2] * position.z + matrix[0, 3],
-                matrix[1, 0] * position.x + matrix[1, 1] * position.y + matrix[1, 2] * position.z + matrix[1, 3],
-                matrix[2, 0] * position.x + matrix[2, 1] * position.y + matrix[2, 2] * position.z + matrix[2, 3]
+                m.m00 * position.x + m.m01 * position.y + m.m02 * position.z + m.m03,
+                m.m10 * position.x + m.m11 * position.y + m.m12 * position.z + m.m13,
+                m.m20 * position.x + m.m21 * position.y + m.m22 * position.z + m.m23
             );
         }
-        public static Vector3 transform_direction(Matrix4x4 matrix, Vector3 direction)
+        public static Vector3 transform_direction(in Matrix4x4 m, in Vector3 direction)
         {
             return new Vector3(
-                Mathf.Abs(matrix[0, 0]) * direction.x + Mathf.Abs(matrix[0, 1]) * direction.y + Mathf.Abs(matrix[0, 2]) * direction.z,
-                Mathf.Abs(matrix[1, 0]) * direction.x + Mathf.Abs(matrix[1, 1]) * direction.y + Mathf.Abs(matrix[1, 2]) * direction.z,
-                Mathf.Abs(matrix[2, 0]) * direction.x + Mathf.Abs(matrix[2, 1]) * direction.y + Mathf.Abs(matrix[2, 2]) * direction.z
+                (float)System.Math.Abs(m.m00) * direction.x + (float)System.Math.Abs(m.m01) * direction.y + (float)System.Math.Abs(m.m02) * direction.z,
+                (float)System.Math.Abs(m.m10) * direction.x + (float)System.Math.Abs(m.m11) * direction.y + (float)System.Math.Abs(m.m12) * direction.z,
+                (float)System.Math.Abs(m.m20) * direction.x + (float)System.Math.Abs(m.m21) * direction.y + (float)System.Math.Abs(m.m22) * direction.z
             );
-        }
-        public static void abs(ref Matrix4x4 matrix)
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                for (int i2 = 0; i2 < 4; i2++) matrix[i, i2] = Mathf.Abs(matrix[i, i2]);
-            }
         }
         public static void SetComputeBuffer(this ComputeShader Shader, int kernel, string name, ComputeBuffer buffer)
         {
@@ -1052,12 +1046,7 @@ namespace CommonVars
             if (Buff != null) {Buff.Release(); Buff = null;}
         }
 
-        static Vector2 msign(Vector2 v)
-        {
-            return new Vector2((v.x >= 0.0f) ? 1.0f : -1.0f, (v.y >= 0.0f) ? 1.0f : -1.0f);
-        }
-
-        public static uint PackOctahedral(Vector3 nor)
+        public static uint PackOctahedral(in Vector3 nor)
         {
             const float halfMaxUInt16 = 32767.5f;
 
@@ -1077,11 +1066,11 @@ namespace CommonVars
         }
 
 
-        public static Vector3 UnpackOctahedral(uint data) {
+        public static Vector3 UnpackOctahedral(in uint data) {
             uint ivx = (uint)(data) & 65535u; 
             uint ivy = (uint)(data>>16 ) & 65535u; 
             Vector2 v = new Vector2(ivx/32767.5f, ivy/32767.5f) - Vector2.one;
-            Vector3 nor = new Vector3(v.x, v.y, 1.0f - Mathf.Abs(v.x) - Mathf.Abs(v.y)); // Rune Stubbe's version,
+            Vector3 nor = new Vector3(v.x, v.y, 1.0f - (float)System.Math.Abs(v.x) - (float)System.Math.Abs(v.y)); // Rune Stubbe's version,
             float t = Mathf.Max(-nor.z,0.0f);                     // much faster than original
             nor.x += (nor.x >= 0) ? -t : t;
             nor.y += (nor.y >= 0) ? -t : t;
@@ -1171,7 +1160,7 @@ namespace CommonVars
             return System.Runtime.InteropServices.Marshal.SizeOf<T>();
         }
 
-        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data)
+        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, in List<T> data)
             where T : struct
         {
             int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
@@ -1188,7 +1177,7 @@ namespace CommonVars
                 if (buffer == null) buffer = new ComputeBuffer(1, stride);
             }
         }
-        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, T[] data)
+        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, in T[] data)
             where T : struct
         {
             int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
@@ -1232,7 +1221,7 @@ namespace CommonVars
             return (((int)FlagVar >> (int)flag) & (int)1) == 1;
         }
 
-        public static uint packRGBE(Color v)
+        public static uint packRGBE(in Color v)
         {
             Vector3 va = new Vector3(v.r, v.g, v.b);
             float max_abs = va.x;//, Mathf.Max(va.y, va.z));

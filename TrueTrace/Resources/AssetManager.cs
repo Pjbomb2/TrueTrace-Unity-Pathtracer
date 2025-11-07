@@ -1594,7 +1594,10 @@ namespace TrueTrace {
 
         BVH2Builder BVH;
         unsafe public void ConstructNewTLAS() {
-
+            if(TLASTask != null) {
+                TLASTask.Wait();
+                TLASTask.Dispose();
+            }
             #if HardwareRT
                 int TotLength = 0;
                 int MeshOffset = 0;
@@ -2268,13 +2271,15 @@ namespace TrueTrace {
                         TempMesh.Transform = TargetTransform.worldToLocalMatrix;
                         MyMeshesCompacted[InstanceRenderQue[i].CompactedMeshData] = TempMesh;
                     #if !HardwareRT
-                        TargetTransform.hasChanged = false;
+                        InstanceRenderTransforms[i].hasChanged = false;
                     #endif
                         MeshAABBs[InstanceRenderQue[i].CompactedMeshData] = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
                         AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
                         aabb.TransformAABB(TargetTransform.localToWorldMatrix);                  
                         TransformedAABBs[InstanceRenderQue[i].CompactedMeshData] = aabb;
-                        if(!ObjsToUpdate.Contains(InstanceRenderQue[i].InstanceParent)) ObjsToUpdate.Add(InstanceRenderQue[i].InstanceParent);
+                        #if HardwareRT
+                            if(!ObjsToUpdate.Contains(InstanceRenderQue[i].InstanceParent)) ObjsToUpdate.Add(InstanceRenderQue[i].InstanceParent);
+                        #endif
                     }
                 }
 

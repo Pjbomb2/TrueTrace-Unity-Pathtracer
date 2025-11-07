@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
-     
+using UnityEngine.InputSystem; 
+
 namespace TrueTrace {
     public class FlyCamera : MonoBehaviour {
         bool isPaused = false;
@@ -36,31 +37,14 @@ namespace TrueTrace {
             lastMouse = transform.eulerAngles;
         }
         void Update () {
-            bool PressedT = UseAltScheme || Input.GetMouseButtonDown(1);
-            // if(PressedT && !IsPressingT) {
-            //     if(!StopMovement) {
-            //         // Cursor.lockState = CursorLockMode.None;
-            //         StopMovement = true;
-            //     } else  {
-            //         // Cursor.lockState = CursorLockMode.Locked;
-            //         StopMovement = false;   
-            //     }
-            // }
-            // if(Input.GetMouseButtonDown(1)) {
-            //     // Cursor.lockState = CursorLockMode.Locked;
-            //     StopMovement = false;
-            // } else {
-            //     StopMovement = true;
+            bool PressedT = UseAltScheme || Mouse.current.rightButton.wasPressedThisFrame;
+            StopMovement = !Mouse.current.rightButton.isPressed;
 
-            // }
-            // if(PressedT) {
-            //     IsPressingT = true;
-            // } else {IsPressingT = false;}
-            StopMovement = !Input.GetMouseButton(1);
-
-            if(Input.GetMouseButton(1)) {
-                if(!isPaused2) lastMouse = new Vector3(-Input.GetAxis("Mouse Y") * camSens, Input.GetAxis("Mouse X") * camSens, 0 );
-                else lastMouse = Vector3.zero;
+            if(Mouse.current.rightButton.isPressed) {
+                if(!isPaused2) {
+                    Vector2 delta = Mouse.current.delta.ReadValue();
+                    lastMouse = new Vector3(-delta.y * camSens * 0.1f, delta.x * camSens * 0.1f, 0 );
+                } else lastMouse = Vector3.zero;
                 lastMouse = new Vector3(transform.eulerAngles.x + lastMouse.x , transform.eulerAngles.y + lastMouse.y, 0);
                 if(lastMouse.x < 280) {
                     if(lastMouse.x < 95) {
@@ -73,7 +57,7 @@ namespace TrueTrace {
             if(UseAltScheme || !StopMovement) {
                     transform.eulerAngles = lastMouse;
                 Vector3 p = GetBaseInput();
-                if (Input.GetKey (KeyCode.LeftShift) || Input.GetKey (KeyCode.RightShift)){
+                if (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed){
                     totalRun += Time.deltaTime;
                     p  = p * totalRun * shiftAdd;
                     p.x = Mathf.Clamp(p.x, -maxShift, maxShift);
@@ -87,7 +71,7 @@ namespace TrueTrace {
            
                 p = p * Time.deltaTime;
                Vector3 newPosition = transform.position;
-                if (Input.GetKey(KeyCode.Space)){ //If player wants to move on X and Z axis only
+                if (Keyboard.current.spaceKey.isPressed){ //If player wants to move on X and Z axis only
                     transform.Translate(p);
                     newPosition.x = transform.position.x;
                     newPosition.z = transform.position.z;
@@ -101,25 +85,21 @@ namespace TrueTrace {
         }
          
         private Vector3 GetBaseInput() { //returns the basic values, if it's 0 than it's not active.
-            Vector3 p_Velocity = new Vector3();
-            if (Input.GetKey (KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) {
-                p_Velocity += new Vector3(0, 0 , 1);
-            }
-            if (Input.GetKey (KeyCode.S) || Input.GetKey(KeyCode.DownArrow)){
+            var keyboard = Keyboard.current;
+            Vector3 p_Velocity = Vector3.zero;
+
+            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)
+                p_Velocity += new Vector3(0, 0, 1);
+            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)
                 p_Velocity += new Vector3(0, 0, -1);
-            }
-            if (Input.GetKey (KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)){
+            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)
                 p_Velocity += new Vector3(-1, 0, 0);
-            }
-            if (Input.GetKey (KeyCode.D) || Input.GetKey(KeyCode.RightArrow)){
+            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed)
                 p_Velocity += new Vector3(1, 0, 0);
-            }
-            if (Input.GetKey (KeyCode.PageUp) || Input.GetKey(KeyCode.E)){
+            if (keyboard.pageUpKey.isPressed || keyboard.eKey.isPressed)
                 p_Velocity += new Vector3(0, 1, 0);
-            }
-            if (Input.GetKey (KeyCode.PageDown) || Input.GetKey(KeyCode.Q)){
+            if (keyboard.pageDownKey.isPressed || keyboard.qKey.isPressed)
                 p_Velocity += new Vector3(0, -1, 0);
-            }
             return p_Velocity;
         }
     }

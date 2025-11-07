@@ -147,6 +147,10 @@ namespace TrueTrace {
         [HideInInspector] public Texture3D AGXCustomTex;
         private Material _addMaterial;
         private Material _FireFlyMaterial;
+#if UNITY_EDITOR
+        RayCastMaterialSelector TempTest;
+#endif
+        [HideInInspector] public int RaycastSelectedIndex = -1;
         [HideInInspector] public int _currentSample = 0;
         private static bool _meshObjectsNeedRebuilding = false;
         public static List<RayTracingLights> _rayTracingLights = new List<RayTracingLights>();
@@ -472,6 +476,16 @@ namespace TrueTrace {
         }
 
         private void RunUpdate() {
+#if UNITY_EDITOR
+            if (UnityEngine.InputSystem.Mouse.current.middleButton.isPressed && !UnityEngine.InputSystem.Keyboard.current.leftCtrlKey.isPressed) {
+                Vector2 mousePos = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+                if (mousePos.x >= 0 && mousePos.x < RayMaster.SourceWidth &&
+                    mousePos.y >= 0 && mousePos.y < RayMaster.SourceHeight) {
+                  if(TempTest == null) TempTest = new RayCastMaterialSelector();
+                  RaycastSelectedIndex = TempTest.CastRay(RayTracingMaster._camera, RayMaster.SourceWidth, RayMaster.SourceHeight);
+               }
+            }
+#endif
             ShadingShader.SetVector("SunDir", Assets.SunDirection);
             if (!LocalTTSettings.Accumulate || IsFocusing || IsFocusingDelta) {
                 SampleCount = 0;
@@ -676,7 +690,7 @@ namespace TrueTrace {
             SetVector("Segment", CurrentHorizonalPatch, cmd);
             SetVector("HDRILongLat", LocalTTSettings.HDRILongLat, cmd);
             SetVector("HDRIScale", LocalTTSettings.HDRIScale, cmd);
-            SetVector("MousePos", Input.mousePosition, cmd);
+            SetVector("MousePos", UnityEngine.InputSystem.Mouse.current.position.ReadValue(), cmd);
             SetVector("FogColor", LocalTTSettings.FogColor, cmd);
             if(LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ASVGFCode.shader.SetVector("CamDelta", E);
             if(LocalTTSettings.DenoiserMethod == 1 && LocalTTSettings.UseReSTIRGI) ReSTIRASVGFCode.shader.SetVector("CamDelta", E);

@@ -953,7 +953,9 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     // if (pc.firefly_filter_enable != 0) {
       max_l = min(max_l, pcfirefly_bias + percentiles.y + pcfirefly_ipr_factor * (percentiles.y - percentiles.x));
     // }
-
+    if(Lowered && spatial_moments_hf.x != 0) {
+    	temporal_moments_histlen_hf.b = round(temporal_moments_histlen_hf.b * saturate(spatial_moments_hf.x));
+    }
     if (spatial_moments_hf.x /* = yuv_luminance(irr)*/ > max_l) {
       const float factor = max_l / spatial_moments_hf.x;
       color_curr_hf *= factor;
@@ -994,6 +996,9 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
 
 
+		// if(Lowered) {
+		// 		temporal_moments_histlen_hf.b *= exp(-spatial_moments_hf);//
+		// }
 		// Adjust the history length, taking the antilag factors into account
 		float hist_len_hf = min(temporal_moments_histlen_hf.b * pow(1.0 - antilag_alpha_hf, 10) + 1.0, 256.0);
 		float hist_len_lf = min(temporal_moments_histlen_hf.a * pow(1.0 - antilag_alpha_lf, 10) + 1.0, 256.0);
@@ -1009,9 +1014,13 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 		alpha_color_hf = lerp(alpha_color_hf, 1.0, antilag_alpha_hf);
 		alpha_moments_hf = lerp(alpha_moments_hf, 1.0, antilag_alpha_hf);
 
+
+
 		// Blend!
 		out_color_lf = mix_SH(temporal_color_lf, color_curr_lf, alpha_color_lf);
 		out_color_hf.rgb = lerp(temporal_color_hf.rgb, color_curr_hf.rgb, alpha_color_hf);
+
+
 
 		out_moments_histlen_hf.rg = lerp(temporal_moments_histlen_hf.rg, spatial_moments_hf.rg, alpha_moments_hf);
 		out_moments_histlen_hf.b = hist_len_hf;
@@ -1442,8 +1451,9 @@ inline void filter_image(
 	// // 	// is just not enough to get reasonable filtering. Ignore luminance in this case,
 	// // 	// and perform a depth-normal-guided bilateral blur.
 		lum_mean_hf = 0;//filtered_moments.x;
+		float lum_variance_hf = max(1e-8, filtered_moments.y - filtered_moments.x * filtered_moments.x);
 		sigma_l_hf = 0;
-	// 	if(hist_len_hf > 1) sigma_l_hf = 0.005f;
+		if(spec_iteration != 0 && lum_variance_hf != 1e-8 && lum_variance_hf < 1.0f) sigma_l_hf = 0.0001f;
 	}
 
 	// reduce the HF filter sensitivity to normals when the lighting is invalidated

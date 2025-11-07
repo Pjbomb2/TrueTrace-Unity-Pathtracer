@@ -43,7 +43,7 @@ namespace TrueTrace {
 
             RayCastShader.SetInt("screen_width", SourceWidth);
             RayCastShader.SetInt("screen_height", SourceHeight);
-            RayCastShader.SetVector("ScreenPosition", Input.mousePosition);
+            RayCastShader.SetVector("ScreenPosition", UnityEngine.InputSystem.Mouse.current.position.ReadValue());
             RayCastShader.SetFloat("NearPlane", _camera.nearClipPlane);
             RayCastShader.SetFloat("FarPlane", _camera.farClipPlane);
             RayCastShader.SetMatrix("CamInvProj", _camera.projectionMatrix.inverse);

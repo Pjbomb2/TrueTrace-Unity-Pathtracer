@@ -1678,6 +1678,7 @@ namespace TrueTrace {
                 }
                 else {
                     if(AssetManager.Assets != null) {
+                        if(AssetManager.Assets.RemoveQue != null)
                         if(!AssetManager.Assets.RemoveQue.Contains(this)) {
                             if(QueInProgress == 2) {
                                 AssetManager.Assets.UpdateQue.Remove(this);
