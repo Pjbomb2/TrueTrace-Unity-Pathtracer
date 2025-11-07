@@ -942,7 +942,7 @@ namespace TrueTrace {
             float Length(Vector3 a) {return (float)Math.Sqrt((double)(a.x * a.x + a.y * a.y + a.z * a.z));}
 
 
-            float Priority(AABB triBox, CudaTriangle triangle)
+            float Priority(ref AABB triBox, ref CudaTriangle triangle)
             {
                 Vector3 Sizes = triBox.BBMax - triBox.BBMin;
                 return (float)System.Math.Pow(LargestExtent(ref Sizes) * (HalfArea(ref Sizes) * 2.0f - Length(Vector3.Cross(triangle.posedge1, triangle.posedge2)) * 0.5f), 1f / 3f);
@@ -970,10 +970,11 @@ namespace TrueTrace {
                 float totalPriority = 0.0f;
                 NativeArray<float> PrioritiesArray = new NativeArray<float>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
                 float* Priorities = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(PrioritiesArray);
-
+                AABB TempAABB = new AABB();
                 for (int i = 0; i < Coun; i++) {
                     triangle = AggTriangles[i];
-                    Priorities[i] = Priority(new AABB(triangle), triangle);
+                    TempAABB.SetAABB(ref triangle);
+                    Priorities[i] = Priority(ref TempAABB, ref triangle);
                     totalPriority += Priorities[i];
                 }
 
@@ -998,8 +999,6 @@ namespace TrueTrace {
                 NativeArray<int> ReverseIndexesCounterArray = default;
                 int* ReverseIndexesCounter = default;
                 if(HasLightTriangles) {
-                    ReverseIndexesLightCounterArray = new NativeArray<int>(Coun2, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-                    ReverseIndexesLightCounter = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(ReverseIndexesLightCounterArray);
                     ReverseIndexesArray = new NativeArray<int>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
                     ReverseIndexes = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(ReverseIndexesArray);
                     ReverseIndexesCounterArray = new NativeArray<int>(Coun, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
@@ -1008,11 +1007,13 @@ namespace TrueTrace {
                 int counter = 0;
 
                 SplitData[] stack = new SplitData[64];
+                AABB[] lrBox = new AABB[2];
+                AABB triBox = new AABB();
                 for (int i = 0; i < Coun; i++) {
                     triangle = AggTriangles[i];
-                    AABB triBox = new AABB(triangle);
+                    triBox.SetAABB(ref triangle);
 
-                    float priority = Priority(triBox, triangle);
+                    float priority = Priority(ref triBox, ref triangle);
                     int splitCount = GetSplitCount(priority, totalPriority, Coun);
 
                     int stackPtr = 0;
@@ -1047,16 +1048,15 @@ namespace TrueTrace {
                             splitPos = midPos;
                         }
 
-                        AABB[] lrBox = triangle.Split(splitAxis, splitPos);
-                        lrBox[0].ShrinkToFit(TempSplit.box);
-                        lrBox[1].ShrinkToFit(TempSplit.box);
+                        triangle.Split(splitAxis, splitPos, ref lrBox);
+                        lrBox[0].ShrinkToFit(ref TempSplit.box);
+                        lrBox[1].ShrinkToFit(ref TempSplit.box);
 
                         float leftExtent = lrBox[0].LargestExtent(lrBox[0].LargestAxis());
                         float rightExtent = lrBox[1].LargestExtent(lrBox[1].LargestAxis());
                         
-                        int leftCount = (int)(float)System.Math.Round(TempSplit.splitsLeft * (leftExtent / (leftExtent + rightExtent)));
-                        leftCount = Mathf.Max(leftCount, 1);
-                        leftCount = Mathf.Min(TempSplit.splitsLeft - 1, leftCount);
+                        int leftCount = (int)System.Math.Round(TempSplit.splitsLeft * (leftExtent / (leftExtent + rightExtent)));
+                        leftCount = (int)System.Math.Min(TempSplit.splitsLeft - 1, (int)System.Math.Max(leftCount,1));
 
                         int rightCount = TempSplit.splitsLeft - leftCount;
 
@@ -1070,6 +1070,7 @@ namespace TrueTrace {
                         stack[stackPtr++] = B;
                     }
                 }
+                CommonFunctions.DeepClean(ref stack);
                 AggTriangles = NewTrisArray.ToArray();
                 NewTrisArray.Dispose();
 
@@ -1077,6 +1078,8 @@ namespace TrueTrace {
                     Triangles[i].Validate(ParentScale);
                 }
                 if(HasLightTriangles) {
+                    ReverseIndexesLightCounterArray = new NativeArray<int>(Coun2, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                    ReverseIndexesLightCounter = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(ReverseIndexesLightCounterArray);
                     for(int i = 0; i < Coun2; i++) {
                         LightTriData TempTri = LightTriangles[i];
                         ReverseIndexesLightCounter[i] = ReverseIndexesCounter[TempTri.TriTarget];            
@@ -1128,7 +1131,7 @@ namespace TrueTrace {
 #if TTExtraVerbose && TTVerbose
             MainWatch.Stop("CWBVH Conversion");
 #endif
-            CommonFunctions.DeepClean(ref BVH2.FinalIndices);
+            BVH2.FinalIndicesArray.Dispose();
             BVH2.Dispose();
             BVH2 = null;
 
@@ -1141,7 +1144,6 @@ namespace TrueTrace {
             #else
                 for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[i] = i;
             #endif
-                    // Debug.LogError("Allocated: " + BVH.PrevAlloc + ", Actual: " + BVH.cwbvhnode_count + ", Orig Tri Count: " + PrevLength);
 
             if (IsSkinnedGroup || IsDeformable) {
                 WorkingSetCWBVH = new List<Layer2>();
@@ -1445,6 +1447,11 @@ namespace TrueTrace {
                 Vector3 ScaleFactor = IsSingle ? new Vector3(1,1,1) : new Vector3((float)System.Math.Pow(1.0f / scalex, 2.0f), (float)System.Math.Pow(1.0f / scaley, 2.0f), (float)System.Math.Pow(1.0f / scalez, 2.0f));
                 int InitOff = TransformIndexes[i].IndexOffset;
                 int IndEnd = TransformIndexes[i].IndexOffsetEnd;
+                uint* UVPtr = (uint*)CurMeshData.UVsArray.GetUnsafeReadOnlyPtr();
+                uint* NormPtr = (uint*)CurMeshData.NormalsArray.GetUnsafeReadOnlyPtr();
+                uint* TanPtr = (uint*)CurMeshData.TangentsArray.GetUnsafeReadOnlyPtr();
+                uint* ColPtr = (uint*)CurMeshData.ColorsArray.GetUnsafeReadOnlyPtr();
+
                 for (int i3 = InitOff; i3 < IndEnd; i3++) {
                     V1 = CurMeshData.Verticies[i3] + Ofst;
                     V1 = TransMat * V1;
@@ -1452,17 +1459,17 @@ namespace TrueTrace {
 
                     Tan1 = TransMat.MultiplyVector((Vector3)CurMeshData.Tangents[i3]);
                     Normalize(ref Tan1);
-                    CurMeshData.TangentsArray.ReinterpretStore(i3, CommonFunctions.PackOctahedral(Tan1));
+                    TanPtr[i3] = CommonFunctions.PackOctahedral(Tan1);
 
                     Norm1 = new Vector3(CurMeshData.Normals[i3].x * ScaleFactor.x, CurMeshData.Normals[i3].y * ScaleFactor.y, CurMeshData.Normals[i3].z * ScaleFactor.z);
                     Norm1 = TransMat.MultiplyVector(Norm1);
                     // Norm1 = TransMat * Scale(ScaleFactor, CurMeshData.Normals[i3]);
                     Normalize(ref Norm1);
-                    CurMeshData.NormalsArray.ReinterpretStore(i3, CommonFunctions.PackOctahedral(Norm1));
+                    NormPtr[i3] = CommonFunctions.PackOctahedral(Norm1);
                     
-                    CurMeshData.ColorsArray.ReinterpretStore(i3, CommonFunctions.packRGBE(CurMeshData.Colors[i3]));
+                    ColPtr[i3] = CommonFunctions.packRGBE(CurMeshData.Colors[i3]);
                     
-                    CurMeshData.UVsArray.ReinterpretStore(i3, ((uint)Mathf.FloatToHalf(CurMeshData.UVs[i3].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[i3].y));
+                    UVPtr[i3] = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[i3].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[i3].y);
                 }
 
 
@@ -1475,25 +1482,25 @@ namespace TrueTrace {
                     V2 = CurMeshData.Verticies[Index2];
                     V3 = CurMeshData.Verticies[Index3];
 
-                    TempTri.tex0 = CurMeshData.UVsArray.ReinterpretLoad<uint>(Index1);
-                    TempTri.texedge1 = CurMeshData.UVsArray.ReinterpretLoad<uint>(Index2);
-                    TempTri.texedge2 = CurMeshData.UVsArray.ReinterpretLoad<uint>(Index3);
+                    TempTri.tex0 = UVPtr[Index1];
+                    TempTri.texedge1 = UVPtr[Index2];
+                    TempTri.texedge2 = UVPtr[Index3];
 
                     TempTri.pos0 = V1;
                     TempTri.posedge1 = V2 - V1;
                     TempTri.posedge2 = V3 - V1;
 
-                    TempTri.norm0 = CurMeshData.NormalsArray.ReinterpretLoad<uint>(Index1);
-                    TempTri.norm1 = CurMeshData.NormalsArray.ReinterpretLoad<uint>(Index2);
-                    TempTri.norm2 = CurMeshData.NormalsArray.ReinterpretLoad<uint>(Index3);
+                    TempTri.norm0 = NormPtr[Index1];
+                    TempTri.norm1 = NormPtr[Index2];
+                    TempTri.norm2 = NormPtr[Index3];
 
-                    TempTri.tan0 = CurMeshData.TangentsArray.ReinterpretLoad<uint>(Index1);
-                    TempTri.tan1 = CurMeshData.TangentsArray.ReinterpretLoad<uint>(Index2);
-                    TempTri.tan2 = CurMeshData.TangentsArray.ReinterpretLoad<uint>(Index3);
+                    TempTri.tan0 = TanPtr[Index1];
+                    TempTri.tan1 = TanPtr[Index2];
+                    TempTri.tan2 = TanPtr[Index3];
                     
-                    TempTri.VertColA = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index1);
-                    TempTri.VertColB = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index2);
-                    TempTri.VertColC = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index3);
+                    TempTri.VertColA = ColPtr[Index1];
+                    TempTri.VertColB = ColPtr[Index2];
+                    TempTri.VertColC = ColPtr[Index3];
 
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
                     TempTri.IsEmissive = 0;
@@ -1664,6 +1671,7 @@ namespace TrueTrace {
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
                     var Instances = FindObjectsOfType(typeof(InstancedObject)) as InstancedObject[];
                     int Count = Instances.Length;
+                    InstancedManager.NeedsToReinit = true;
                     for(int i = 0; i < Count; i++) {
                         if(Instances[i].InstanceParent == this) Instances[i].OnParentClear();
                     }
@@ -1700,6 +1708,7 @@ namespace TrueTrace {
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
                     var Instances = FindObjectsOfType(typeof(InstancedObject)) as InstancedObject[];
                     int Count = Instances.Length;
+                    InstancedManager.NeedsToReinit = true;
                     for(int i = 0; i < Count; i++) {
                         if(Instances[i].InstanceParent == this) Instances[i].OnParentClear();
                     }

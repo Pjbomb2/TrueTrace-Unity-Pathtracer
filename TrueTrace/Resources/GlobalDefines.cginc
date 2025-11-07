@@ -21,7 +21,7 @@
 // #define UseTextureLOD
 #define EONDiffuse
 // #define AdvancedBackground
-#define UseBRDFLights
+// #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
@@ -30,7 +30,7 @@
 #define ReSTIRReflectionRefinement
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
-// #define ClayMetalOverride
+#define ClayMetalOverride
 // #define IgnoreBackfacingEmissive
 // #define AltFadeMapping
 // #define MoreAO

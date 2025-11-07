@@ -26,7 +26,7 @@ MonoBehaviour:
   DoFAperature: 0.2
   DoFAperatureScale: 1
   DoFFocal: 5.2216897
-  PPExposure: 1
+  PPExposure: 0
   ExposureAuto: 0
   PPToneMap: 1
   PPTAA: 0

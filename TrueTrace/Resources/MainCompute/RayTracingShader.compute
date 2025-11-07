@@ -460,7 +460,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                     Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
                     GridVoxel TempVox = RetrieveCacheData(GenHashPrecompedLayer(pos, Layer, Geomnorm));
                     float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-                    Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
+                    Color.Indirect += Rad * Color.throughput * Color.Data.xyz * bsdf;// * 2.0f;// * bsdf;
 
                     if(MaterialLobe == 3 || Refracted) {
                         TempVox = RetrieveCacheData(GenHash(pos, i_octahedral_32(octahedral_32(-Geomnorm))));
@@ -706,7 +706,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && (ImprovedPrimaryHit || DoPartialRendering))) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
-                    bsdf_diffuse *= rcp(saturate(maxillum));
+                    // bsdf_diffuse *= rcp(saturate(maxillum));
+                    bsdf_diffuse *= rcp(saturate(max(max(bsdf_diffuse.x, bsdf_diffuse.y), bsdf_diffuse.z)));
 
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
@@ -1433,7 +1434,7 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
         int2 NeighbPos = id.xy + reflprojection * int2(screen_width, screen_height);
         if(any(NeighbPos < 0 || NeighbPos >= int2(screen_width, screen_height))) return;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
-            CorrectedDistanceTex[NeighbPos] = length(NewPos - CamPos);// / 120.0f;
+            CorrectedDistanceTex[NeighbPos] = length(NewPos - CamPos) / 120.0f;
             MVTexture[NeighbPos] = (reflprojection);
         }
 
@@ -1473,7 +1474,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
         reflprojection *= dot(reflprojection * float2(screen_width, screen_height), reflprojection * float2(screen_width, screen_height)) > 0.00001f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
-            CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
+            CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos) / 120.0f;
             MVTexture[id.xy] = (reflprojection);
         }
 }

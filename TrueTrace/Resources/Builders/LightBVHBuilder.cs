@@ -127,8 +127,10 @@ namespace TrueTrace {
         private float* SAH;
         private bool* indices_going_left;
         private int* temp;
-        public int[] FinalIndices;
+        // public int[] FinalIndices;
+        private int* RadixPrefixSum;
 
+        public NativeArray<int> RadixPrefixArray;
         public NativeArray<LightBounds> LightTrisArray;
         public NativeArray<NodeBounds> nodes2Array;
         public NativeArray<int> DimensionedIndicesArray;
@@ -384,6 +386,8 @@ namespace TrueTrace {
             tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
 
+            RadixPrefixArray = new NativeArray<int>(6144, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            RadixPrefixSum = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(RadixPrefixArray);
 
             AABB TriAABB = new AABB();
             Vector3 Scaler = new Vector3(0.0001f,0.0001f,0.0001f);
@@ -403,11 +407,15 @@ namespace TrueTrace {
                 Union(ref nodes2[0].aabb, ref TempBound);
             }
 
-            CommonFunctions.RadixSort(temp, DimensionedIndices, ref SAH, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            CommonFunctions.RadixSort(temp, DimensionedIndices, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
             for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
-            CommonFunctions.RadixSort(temp, DimensionedIndices + PrimCount, ref SAH, PrimCount);
+            CommonFunctions.RadixSort(temp, DimensionedIndices + PrimCount, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
             for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
-            CommonFunctions.RadixSort(temp, DimensionedIndices + (PrimCount * 2), ref SAH, PrimCount);
+            CommonFunctions.RadixSort(temp, DimensionedIndices + (PrimCount * 2), ref SAH, ref RadixPrefixSum, PrimCount);
+            RadixPrefixArray.Dispose();
 
 
             aabb_left = new LightBounds();
@@ -554,29 +562,31 @@ namespace TrueTrace {
             SAHArray = new NativeArray<float>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
-
             nodes2Array = new NativeArray<NodeBounds>(PrimCount * 2, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             nodes2 = (NodeBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(nodes2Array);
             DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
             SAH = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(SAHArray);
 
+            RadixPrefixArray = new NativeArray<int>(6144, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            RadixPrefixSum = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(RadixPrefixArray);
 
-            FinalIndices = new int[PrimCount];
+            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
 
             for(int i = 0; i < PrimCount; i++) {
-                FinalIndices[i] = i;
+                temp[i] = i;
                 SAH[i] = (LightTris[i].b.BBMax.x + LightTris[i].b.BBMin.x) * 0.5f;
                 Union(ref nodes2[0].aabb, ref LightTris[i]);
             }
 
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            CommonFunctions.RadixSort(temp, DimensionedIndices, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + PrimCount, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + (PrimCount * 2), ref SAH, ref RadixPrefixSum, PrimCount);
 
 
             aabb_left = new LightBounds();
@@ -584,8 +594,6 @@ namespace TrueTrace {
 
             indices_going_left_array = new NativeArray<bool>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
-            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
-            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
 
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount, 1);
@@ -691,40 +699,38 @@ namespace TrueTrace {
             NativeArray<LightBounds>.Copy(Tris, 0, LightTrisArray, 0, PrimCount);
             LightTris = (LightBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(LightTrisArray);
 
-
             nodes2 = (NodeBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(nodes2Array);
             DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
             SAH = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(SAHArray);
-
-
+            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
+            indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
 
             for(int i = 0; i < PrimCount; i++) {
                 indices_going_left[i] = false;
-                temp[i] = 0;
+                temp[i] = i;
                 nodes[i] = ZeroBound2;
                 nodes[i + PrimCount] = ZeroBound2;
                 nodes2[i] = ZeroBound;
                 nodes2[i + PrimCount] = ZeroBound;
-                FinalIndices[i] = i;
                 SAH[i] = (LightTris[i].b.BBMax.x + LightTris[i].b.BBMin.x) * 0.5f;
                 Union(ref nodes2[0].aabb, ref LightTris[i]);
             }
 
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
-            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
-            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            CommonFunctions.RadixSort(temp, DimensionedIndices, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + PrimCount, ref SAH, ref RadixPrefixSum, PrimCount);
+            UnsafeUtility.MemClear(RadixPrefixSum, 6144 * 4);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
+            CommonFunctions.RadixSort(temp, DimensionedIndices + (PrimCount * 2), ref SAH, ref RadixPrefixSum, PrimCount);
+            for(int i = 0; i < PrimCount; i++) {temp[i] = 0;}
+
 
 
             aabb_left = new LightBounds();
             aabb_right = new LightBounds();
 
-            indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
-            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
 
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount, 1);
@@ -826,6 +832,7 @@ namespace TrueTrace {
             if(LightTrisArray.IsCreated) LightTrisArray.Dispose();
             if(indices_going_left_array.IsCreated) indices_going_left_array.Dispose();
             if(tempArray.IsCreated) tempArray.Dispose();
+            if(RadixPrefixArray.IsCreated) RadixPrefixArray.Dispose();
             if(SAHArray.IsCreated) SAHArray.Dispose();
             if(DimensionedIndicesArray.IsCreated) DimensionedIndicesArray.Dispose();
             if(nodes2Array.IsCreated) nodes2Array.Dispose();
@@ -835,7 +842,6 @@ namespace TrueTrace {
             // indices_going_left_array.Dispose();
             // tempArray.Dispose();
             CommonFunctions.DeepClean(ref ParentList);
-            CommonFunctions.DeepClean(ref FinalIndices);
             CommonFunctions.DeepClean(ref nodes);
 #if !DontUseSGTree
             CommonFunctions.DeepClean(ref SGTree);

@@ -17,7 +17,7 @@ namespace TrueTrace {
         float Dot(Vector3 A) {return A.x * A.x + A.y * A.y + A.z * A.z;}
 
         public float* cost;
-        public Decision* decisions;
+        public uint* decisions;
         public int[] cwbvh_indices;
         public BVHNode8Data* BVH8Nodes;
         public int cwbvhindex_count;
@@ -26,10 +26,29 @@ namespace TrueTrace {
 
 
         public NativeArray<float> costArray;
-        public NativeArray<Decision> decisionsArray;
+        public NativeArray<uint> decisionsArray;
         public NativeArray<BVHNode8Data> BVH8NodesArray;
         public BVHNode8Data ZeroedData = new BVHNode8Data();
         
+        private int GetType(uint A) {
+            return (int)(A & 0b11);
+        }
+        private int GetDistLeft(uint A) {
+            return (int)((A >> 2) & 0b111);
+        }
+        private int GetDistRight(uint A) {
+            return (int)((A >> 5) & 0b111);
+        }
+        private void SetType(ref uint A, int Type) {
+            A = (uint)((A & ~0b11) | Type);
+        }
+        private void SetDistLeft(ref uint A, int DistLeft) {
+            A = (uint)(A & ~0b11100) | (uint)((DistLeft & 0b111) << 2);
+        }
+        private void SetDistRight(ref uint A, int DistRight) {
+            A = (uint)(A & ~0b11100000) | (uint)((DistRight & 0b111) << 5);
+        }
+
         public struct Decision {
             public int Type;//Types: 0 is LEAF, 1 is INTERNAL, 2 is DISTRIBUTE
             public int dist_left;
@@ -57,7 +76,7 @@ namespace TrueTrace {
                 float cost_leaf = surface_area(ref node.aabb) * (float)num_primitives;
                 for(int i = 0; i < 7; i++) {
                     cost[node_index + i] = cost_leaf;
-                    decisions[node_index + i].Type = 0;
+                    SetType(ref decisions[node_index + i], 0);
                 }
             } else {
                 num_primitives = 
@@ -86,15 +105,15 @@ namespace TrueTrace {
                             if(cost_leaf < cost_internal) {
                                 cost[node_index] = cost_leaf;
 
-                                decisions[node_index].Type = 0;
+                                SetType(ref decisions[node_index], 0);
                             } else {
                                 cost[node_index] = cost_internal;
 
-                                decisions[node_index].Type = 1;
+                                SetType(ref decisions[node_index], 1);
                             }
 
-                            decisions[node_index].dist_left = dist_left;
-                            decisions[node_index].dist_right = dist_right;
+                            SetDistLeft(ref decisions[node_index], dist_left);
+                            SetDistRight(ref decisions[node_index], dist_right);
                         }
 
                         for(int i = 1; i < 7; i++) {
@@ -116,9 +135,9 @@ namespace TrueTrace {
                             cost[node_index + i] = cost_distribute;
 
                             if(dist_left != -1) {
-                                decisions[node_index + i].Type = 2;
-                                decisions[node_index + i].dist_left = dist_left;
-                                decisions[node_index + i].dist_right = dist_right;
+                                SetType(ref decisions[node_index + i], 2);
+                                SetDistLeft(ref decisions[node_index + i], dist_left);
+                                SetDistRight(ref decisions[node_index + i], dist_right);
                             } else {
                                 decisions[node_index + i] = decisions[node_index + i - 1];
                             }
@@ -135,17 +154,17 @@ namespace TrueTrace {
                 return;
             }
 
-            int dist_left = decisions[node_index * 7 + i].dist_left;
-            int dist_right = decisions[node_index * 7 + i].dist_right;
+            int dist_left = GetDistLeft(decisions[node_index * 7 + i]);
+            int dist_right = GetDistRight(decisions[node_index * 7 + i]);
 
 
-            if(decisions[nodes[node_index].left * 7 + dist_left].Type == 2) {
+            if(GetType(decisions[nodes[node_index].left * 7 + dist_left]) == 2) {
                 get_children(nodes[node_index].left, dist_left, ref child_count, ref children);
             } else {
                 children[child_count++] = nodes[node_index].left;
             }
 
-            if(decisions[(nodes[node_index].left + 1) * 7 + dist_right].Type == 2) {
+            if(GetType(decisions[(nodes[node_index].left + 1) * 7 + dist_right]) == 2) {
                 get_children(nodes[node_index].left + 1, dist_right, ref child_count, ref children);   
             } else {
                 children[child_count++] = nodes[node_index].left + 1;
@@ -212,7 +231,7 @@ namespace TrueTrace {
             }
         }
 
-        uint count_primitives(int node_index, ref int[] indices) {
+        uint count_primitives(int node_index, ref int* indices) {
 
             uint NodeCount = nodes[node_index].count;
             if(NodeCount > 0) {
@@ -236,7 +255,7 @@ namespace TrueTrace {
         }
 
 
-    unsafe void collapse(ref int[] indices_bvh, int node_index_cwbvh, int node_index_bvh) {
+    unsafe void collapse(ref int* indices_bvh, int node_index_cwbvh, int node_index_bvh) {
           BVHNode8Data node = BVH8Nodes[node_index_cwbvh];
           AABB aabb = nodes[node_index_bvh].aabb;
           
@@ -296,7 +315,7 @@ namespace TrueTrace {
             node.quantized_max_z[i] = (byte)(uint)(max_z + 0.9999999f);
 
 
-            int type = decisions[child_index * 7].Type;
+            int type = GetType(decisions[child_index * 7]);
             if(type == 0) {
                 uint triangle_count = count_primitives(child_index, ref indices_bvh);
                 for(int j = 0; j < triangle_count; j++)
@@ -316,10 +335,11 @@ namespace TrueTrace {
             int child_index = children[i];
             if(child_index == -1) continue;
     
-            if(decisions[child_index * 7].Type == 1) {
+            if(GetType(decisions[child_index * 7]) == 1) {
                 collapse(ref indices_bvh, (int)node.base_index_child + ((byte)node.meta[i] & 31) - 24, child_index);
             }
         }
+        CommonFunctions.DeepClean(ref children);
     }
 
         float surface_area(ref AABB aabb) {
@@ -340,15 +360,14 @@ namespace TrueTrace {
         }
         // public int PrevAlloc = 0;
         public BVH8Builder(ref BVH2Builder BVH2) {//Bottom Level CWBVH Builder
-            int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
-            int BVH2IndicesCount = BVH2.FinalIndices.Length;
+            int BVH2NodesCount = BVH2.BVHNodeCount;
+            int BVH2IndicesCount = BVH2.PrimCount;
             cost2 = new float[8,8];
             costpreset = new float[8,8];
             costArray = new NativeArray<float>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
-            decisionsArray = new NativeArray<Decision>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            decisionsArray = new NativeArray<uint>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
-            decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
-            
+            decisions = (uint*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
             
             nodes = BVH2.BVH2Nodes;
             assignment = new int[8];
@@ -357,25 +376,25 @@ namespace TrueTrace {
             cwbvhindex_count = 0;
             cwbvhnode_count = 1;
             calculate_cost(0);
+            costArray.Dispose();
             cwbvh_indices = new int[BVH2IndicesCount];
             BVH8NodesArray = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
             collapse(ref BVH2.FinalIndices, 0, 0);
             BVH2.BVH2NodesArray.Dispose();
-            costArray.Dispose();
             decisionsArray.Dispose();
 
         }
 
         public BVH8Builder(BVH2Builder BVH2) {//Top Level CWBVH Builder
-            int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
-            int BVH2IndicesCount = BVH2.FinalIndices.Length;
+            int BVH2NodesCount = BVH2.BVHNodeCount;
+            int BVH2IndicesCount = BVH2.PrimCount;
             cost2 = new float[8,8];
             costpreset = new float[8,8];
             costArray = new NativeArray<float>(BVH2NodesCount * 7,  Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
-            decisionsArray = new NativeArray<Decision>(BVH2NodesCount * 7,  Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            decisionsArray = new NativeArray<uint>(BVH2NodesCount * 7,  Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
-            decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
+            decisions = (uint*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
             
             nodes = BVH2.BVH2Nodes;
             children_copy = new int[8];
@@ -402,8 +421,8 @@ namespace TrueTrace {
 
 
         public void NoAllocRebuild(BVH2Builder BVH2) {//Top Level CWBVH Builder
-            int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
-            int BVH2IndicesCount = BVH2.FinalIndices.Length;
+            int BVH2NodesCount = BVH2.BVHNodeCount;
+            int BVH2IndicesCount = BVH2.PrimCount;
             for(int i = 0; i < 8; i++) {
                 for(int j = 0; j < 8; j++) {
                     cost2[i,j] = 0;
@@ -414,7 +433,7 @@ namespace TrueTrace {
                 slot_filled[i] = false;
             }
             cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
-            decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
+            decisions = (uint*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
             for(int i = 0; i < BVH2NodesCount; i++)
                 BVH8Nodes[i] = ZeroedData;
             

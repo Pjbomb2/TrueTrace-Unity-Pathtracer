@@ -80,7 +80,7 @@ namespace TrueTrace {
 
         public void RenderInstances() {
             if(DoRendering) {
-                if(InstanceIndexes == null || TempQue == null || TempQue.Count == 0 || NeedsToReinit) InitRelationships();
+                if(InstanceIndexes == null || TempQue == null || NeedsToReinit) InitRelationships();
                 int Coun1 = TempQue.Count;
                 for(int i = 0; i < Coun1; i++) {
                     if (InstanceIndexes.TryGetValue(TempQue[i], out InstanceData ExistingList)) {
