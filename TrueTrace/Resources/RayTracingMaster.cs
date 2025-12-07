@@ -90,10 +90,10 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture MultiMapMeshIDTextureInitial;
         [HideInInspector] public RenderTexture MultiMapMeshIDTexture;
 #endif
-        private RenderTexture MVTexture;
-        private RenderTexture GIReservoirA;
-        private RenderTexture GIReservoirB;
-        private RenderTexture GIReservoirC;
+        public RenderTexture MVTexture;
+        private ComputeBuffer GIReservoirA;
+        private ComputeBuffer GIReservoirB;
+        private ComputeBuffer GIReservoirC;
 
 
         private RenderTexture PSRGBuff;
@@ -762,7 +762,7 @@ namespace TrueTrace {
 
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
-            ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "TTMotionVectorTexture");
+            ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "TEX_PT_MOTION", "TTMotionVectorTexture");
 
 
             if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
@@ -937,8 +937,8 @@ namespace TrueTrace {
             
             if(LocalTTSettings.UseReSTIRGI && ReSTIRInitialized) {
                 AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGIKernel);
-                ReSTIRGI.SetTexture(ReSTIRGIKernel, "ReservoirA", FlipFrame ? GIReservoirB : GIReservoirA);
-                ReSTIRGI.SetTexture(ReSTIRGIKernel, "ReservoirB", !FlipFrame ? GIReservoirB : GIReservoirA);
+                ReSTIRGI.SetBuffer(ReSTIRGIKernel, "ReservoirA", FlipFrame ? GIReservoirB : GIReservoirA);
+                ReSTIRGI.SetBuffer(ReSTIRGIKernel, "ReservoirB", !FlipFrame ? GIReservoirB : GIReservoirA);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "WorldPosC", GIWorldPosA);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "WorldPosA", FlipFrame ? GIWorldPosB : GIWorldPosC);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "WorldPosB", !FlipFrame ? GIWorldPosB : GIWorldPosC);
@@ -956,21 +956,21 @@ namespace TrueTrace {
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "Gradient", GradientsB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
-                ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
+                ReSTIRGI.SetBuffer(ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
                 ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel, "GlobalColors", LightingBuffer);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNums", _RandomNums);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
-                ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
+                ReSTIRGI.SetBuffer(ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
 
                 AssetManager.Assets.SetLightData(ReSTIRGI, ReSTIRGISpatialKernel + 1);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "GradientWrite", GradientsA);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "Gradient", GradientsB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "WorldPosB", GIWorldPosA);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "NEEPosB", GINEEPosC);
-                ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ReservoirB", GIReservoirC);
+                ReSTIRGI.SetBuffer(ReSTIRGISpatialKernel+1, "ReservoirB", GIReservoirC);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNums", _RandomNums);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
@@ -1126,9 +1126,14 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref _target, SourceWidth, SourceHeight, CommonFunctions.RTHalf4, RenderTextureReadWrite.sRGB);
                 CommonFunctions.CreateRenderTexture(ref _converged, SourceWidth, SourceHeight, CommonFunctions.RTFull4, RenderTextureReadWrite.sRGB);
                 if(LocalTTSettings.UseReSTIRGI) {
-                    CommonFunctions.CreateRenderTextureArray(ref GIReservoirA, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
-                    CommonFunctions.CreateRenderTextureArray(ref GIReservoirB, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
-                    CommonFunctions.CreateRenderTextureArray(ref GIReservoirC, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                    CommonFunctions.CreateDynamicBuffer(ref GIReservoirA, SourceWidth * SourceHeight, 60);
+                    CommonFunctions.CreateDynamicBuffer(ref GIReservoirB, SourceWidth * SourceHeight, 60);
+                    CommonFunctions.CreateDynamicBuffer(ref GIReservoirC, SourceWidth * SourceHeight, 60);
+
+
+                    // CommonFunctions.CreateRenderTextureArray(ref GIReservoirA, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                    // CommonFunctions.CreateRenderTextureArray(ref GIReservoirB, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                    // CommonFunctions.CreateRenderTextureArray(ref GIReservoirC, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
                     CommonFunctions.CreateRenderTexture(ref GINEEPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                     CommonFunctions.CreateRenderTexture(ref GINEEPosC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                     CommonFunctions.CreateRenderTexture(ref GIWorldPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1166,9 +1171,12 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref GINEEPosA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GradientsA, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                 CommonFunctions.CreateRenderTexture(ref GradientsB, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
-                CommonFunctions.CreateRenderTextureArray(ref GIReservoirA, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTextureArray(ref GIReservoirB, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTextureArray(ref GIReservoirC, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                    CommonFunctions.CreateDynamicBuffer(ref GIReservoirA, SourceWidth * SourceHeight, 60);
+                    CommonFunctions.CreateDynamicBuffer(ref GIReservoirB, SourceWidth * SourceHeight, 60);
+                    CommonFunctions.CreateDynamicBuffer(ref GIReservoirC, SourceWidth * SourceHeight, 60);
+                // CommonFunctions.CreateRenderTextureArray(ref GIReservoirA, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                // CommonFunctions.CreateRenderTextureArray(ref GIReservoirB, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                // CommonFunctions.CreateRenderTextureArray(ref GIReservoirC, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1525,115 +1533,115 @@ namespace TrueTrace {
     }
 
 
-#if UNITY_EDITOR
-    [CustomEditor(typeof(RayTracingMaster))]
-    public class RayTracingMasterEditor : Editor
-    {
-        private VisualElement CreateVerticalBox(string Name) {
-            VisualElement VertBox = new VisualElement();
-            // VertBox.style.flexDirection = FlexDirection.Row;
-            return VertBox;
-        }
+// #if UNITY_EDITOR
+//     [CustomEditor(typeof(RayTracingMaster))]
+//     public class RayTracingMasterEditor : Editor
+//     {
+//         private VisualElement CreateVerticalBox(string Name) {
+//             VisualElement VertBox = new VisualElement();
+//             // VertBox.style.flexDirection = FlexDirection.Row;
+//             return VertBox;
+//         }
 
-        private VisualElement CreateHorizontalBox(string Name) {
-            VisualElement HorizBox = new VisualElement();
-            HorizBox.style.flexDirection = FlexDirection.Row;
-            return HorizBox;
-        }
+//         private VisualElement CreateHorizontalBox(string Name) {
+//             VisualElement HorizBox = new VisualElement();
+//             HorizBox.style.flexDirection = FlexDirection.Row;
+//             return HorizBox;
+//         }
 
 
-        public class FloatSliderPair {
-            public VisualElement DynamicContainer;
-            public Label DynamicLabel;
-            public Slider DynamicSlider;
-            public FloatField DynamicField;
-        }
-        FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
-            FloatSliderPair NewPair = new FloatSliderPair();
-            NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
-            NewPair.DynamicLabel = new Label(Name);
-            NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
-            NewPair.DynamicField = new FloatField() {value = InitialValue};
-            NewPair.DynamicSlider.style.width = SliderWidth;
-            NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
-            NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
-            NewPair.DynamicContainer.Add(NewPair.DynamicField);
-            return NewPair;
-        }
+//         public class FloatSliderPair {
+//             public VisualElement DynamicContainer;
+//             public Label DynamicLabel;
+//             public Slider DynamicSlider;
+//             public FloatField DynamicField;
+//         }
+//         FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
+//             FloatSliderPair NewPair = new FloatSliderPair();
+//             NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
+//             NewPair.DynamicLabel = new Label(Name);
+//             NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+//             NewPair.DynamicField = new FloatField() {value = InitialValue};
+//             NewPair.DynamicSlider.style.width = SliderWidth;
+//             NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
+//             NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
+//             NewPair.DynamicContainer.Add(NewPair.DynamicField);
+//             return NewPair;
+//         }
 
-        public override VisualElement CreateInspectorGUI()
-        {
-            var t1 = (targets);
-            int TargCount = t1.Length;
-            var t =  t1[0] as RayTracingMaster;
-            VisualElement MainContainer = CreateVerticalBox("Main Container");
-                Toggle RenderInSceneToggle = new Toggle() {value = t.HDRPorURPRenderInScene, text = "Render in Scene View(HDRP/URP ONLY)"};
-                RenderInSceneToggle.RegisterValueChangedCallback(evt => {t.HDRPorURPRenderInScene = evt.newValue;});
-                MainContainer.Add(RenderInSceneToggle);
+//         public override VisualElement CreateInspectorGUI()
+//         {
+//             var t1 = (targets);
+//             int TargCount = t1.Length;
+//             var t =  t1[0] as RayTracingMaster;
+//             VisualElement MainContainer = CreateVerticalBox("Main Container");
+//                 Toggle RenderInSceneToggle = new Toggle() {value = t.HDRPorURPRenderInScene, text = "Render in Scene View(HDRP/URP ONLY)"};
+//                 RenderInSceneToggle.RegisterValueChangedCallback(evt => {t.HDRPorURPRenderInScene = evt.newValue;});
+//                 MainContainer.Add(RenderInSceneToggle);
 
-                ObjectField LocalTTSettingsField = new ObjectField("Local TT Settings Override");
-                LocalTTSettingsField.objectType = typeof(TTSettings);
-                LocalTTSettingsField.value = t.LocalTTSettings;
-                LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
-                MainContainer.Add(LocalTTSettingsField);
+//                 ObjectField LocalTTSettingsField = new ObjectField("Local TT Settings Override");
+//                 LocalTTSettingsField.objectType = typeof(TTSettings);
+//                 LocalTTSettingsField.value = t.LocalTTSettings;
+//                 LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
+//                 MainContainer.Add(LocalTTSettingsField);
                 
-                IntegerField SamplesPerFrameField = new IntegerField("Samples per Frame");
-                SamplesPerFrameField.value = t.LocalTTSettings.SamplesPerFrame;
-                SamplesPerFrameField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.SamplesPerFrame = evt.newValue;});
-                MainContainer.Add(SamplesPerFrameField);
+//                 IntegerField SamplesPerFrameField = new IntegerField("Samples per Frame");
+//                 SamplesPerFrameField.value = t.LocalTTSettings.SamplesPerFrame;
+//                 SamplesPerFrameField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.SamplesPerFrame = evt.newValue;});
+//                 MainContainer.Add(SamplesPerFrameField);
 
-#if EnablePhotonMapping
-                 VisualElement SpacerA = new VisualElement();
-                 SpacerA.style.height = 10;
-                MainContainer.Add(SpacerA);
+// #if EnablePhotonMapping
+//                  VisualElement SpacerA = new VisualElement();
+//                  SpacerA.style.height = 10;
+//                 MainContainer.Add(SpacerA);
 
-                FloatField DirectionalLightCoverageRadiusField = new FloatField("Photon Mapping Radius Coverage");
-                DirectionalLightCoverageRadiusField.value = t.LocalTTSettings.PhotonMapRadiusCoverage;
-                DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonMapRadiusCoverage = evt.newValue;});
-                MainContainer.Add(DirectionalLightCoverageRadiusField);
+//                 FloatField DirectionalLightCoverageRadiusField = new FloatField("Photon Mapping Radius Coverage");
+//                 DirectionalLightCoverageRadiusField.value = t.LocalTTSettings.PhotonMapRadiusCoverage;
+//                 DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonMapRadiusCoverage = evt.newValue;});
+//                 MainContainer.Add(DirectionalLightCoverageRadiusField);
 
-                IntegerField PerLightGuidingResolutionField = new IntegerField("Photon Mapping Per-Light Guiding Resolution");
-                PerLightGuidingResolutionField.value = t.LocalTTSettings.PhotonGuidingPerLightGuidingResolution;
-                PerLightGuidingResolutionField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingPerLightGuidingResolution = evt.newValue;});
-                MainContainer.Add(PerLightGuidingResolutionField);
+//                 IntegerField PerLightGuidingResolutionField = new IntegerField("Photon Mapping Per-Light Guiding Resolution");
+//                 PerLightGuidingResolutionField.value = t.LocalTTSettings.PhotonGuidingPerLightGuidingResolution;
+//                 PerLightGuidingResolutionField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingPerLightGuidingResolution = evt.newValue;});
+//                 MainContainer.Add(PerLightGuidingResolutionField);
 
-                IntegerField TotalPhotonsField = new IntegerField("Photon Mapping Total Photons Per Frame");
-                TotalPhotonsField.value = t.LocalTTSettings.PhotonGuidingTotalPhotonsPerFrame;
-                TotalPhotonsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingTotalPhotonsPerFrame = evt.newValue;});
-                MainContainer.Add(TotalPhotonsField);
+//                 IntegerField TotalPhotonsField = new IntegerField("Photon Mapping Total Photons Per Frame");
+//                 TotalPhotonsField.value = t.LocalTTSettings.PhotonGuidingTotalPhotonsPerFrame;
+//                 TotalPhotonsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingTotalPhotonsPerFrame = evt.newValue;});
+//                 MainContainer.Add(TotalPhotonsField);
 
-                FloatField CausticIntensityMultiplierField = new FloatField("Caustic Intensity Multiplier");
-                CausticIntensityMultiplierField.value = t.LocalTTSettings.CausticIntensityMultiplier;
-                CausticIntensityMultiplierField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.CausticIntensityMultiplier = evt.newValue;});
-                MainContainer.Add(CausticIntensityMultiplierField);
+//                 FloatField CausticIntensityMultiplierField = new FloatField("Caustic Intensity Multiplier");
+//                 CausticIntensityMultiplierField.value = t.LocalTTSettings.CausticIntensityMultiplier;
+//                 CausticIntensityMultiplierField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.CausticIntensityMultiplier = evt.newValue;});
+//                 MainContainer.Add(CausticIntensityMultiplierField);
 
-                FloatField PhotonRatioField = new FloatField("Guiding vs Guided Photon Ratio");
-                PhotonRatioField.value = t.LocalTTSettings.PhotonGuidingRatio;
-                PhotonRatioField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingRatio = Mathf.Clamp(evt.newValue, 0.001f, 0.999f);});
-                MainContainer.Add(PhotonRatioField);
+//                 FloatField PhotonRatioField = new FloatField("Guiding vs Guided Photon Ratio");
+//                 PhotonRatioField.value = t.LocalTTSettings.PhotonGuidingRatio;
+//                 PhotonRatioField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingRatio = Mathf.Clamp(evt.newValue, 0.001f, 0.999f);});
+//                 MainContainer.Add(PhotonRatioField);
                 
-                VisualElement SpacerB = new VisualElement();
-                SpacerB.style.height = 10;
-                MainContainer.Add(SpacerB);
-#endif
+//                 VisualElement SpacerB = new VisualElement();
+//                 SpacerB.style.height = 10;
+//                 MainContainer.Add(SpacerB);
+// #endif
 
-                Toggle DebugTexToggle = new Toggle() {value = t.EnableDebugTexture, text = "Enable Debug Texture"};
-                DebugTexToggle.RegisterValueChangedCallback(evt => {t.EnableDebugTexture = evt.newValue;});
-                MainContainer.Add(DebugTexToggle);
+//                 Toggle DebugTexToggle = new Toggle() {value = t.EnableDebugTexture, text = "Enable Debug Texture"};
+//                 DebugTexToggle.RegisterValueChangedCallback(evt => {t.EnableDebugTexture = evt.newValue;});
+//                 MainContainer.Add(DebugTexToggle);
 
-                // if(t.LocalTTSettings.ToneMapper == 7) {
-                    ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");
-                    OverrideAGX.objectType = typeof(Texture3D);
-                    OverrideAGX.value = t.AGXCustomTex;
-                    OverrideAGX.RegisterValueChangedCallback(evt => {t.AGXCustomTex = evt.newValue as Texture3D;});
-                    MainContainer.Add(OverrideAGX);
-                // }
+//                 // if(t.LocalTTSettings.ToneMapper == 7) {
+//                     ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");
+//                     OverrideAGX.objectType = typeof(Texture3D);
+//                     OverrideAGX.value = t.AGXCustomTex;
+//                     OverrideAGX.RegisterValueChangedCallback(evt => {t.AGXCustomTex = evt.newValue as Texture3D;});
+//                     MainContainer.Add(OverrideAGX);
+//                 // }
 
-            return MainContainer;
-        }
+//             return MainContainer;
+//         }
 
-    }
-#endif
+//     }
+// #endif
 
 
 }

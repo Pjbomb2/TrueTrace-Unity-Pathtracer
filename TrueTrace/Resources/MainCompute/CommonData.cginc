@@ -137,8 +137,7 @@ bool DoExposure;
 StructuredBuffer<float> Exposure;
 
 
-RWTexture2DArray<uint4> ReservoirA;
-Texture2DArray<uint4> ReservoirB;
+
 
 RWTexture2D<uint4> WorldPosA;
 Texture2D<uint4> WorldPosB;
@@ -1501,7 +1500,7 @@ inline float3 LoadSurfaceInfoPrev2(int2 id) {
 	}	    
 }
 
-inline float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
+float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
     uint4 Target = PrimaryTriDataPrev[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
     MyMeshDataCompacted Mesh = _MeshData[Target.x];
@@ -2132,6 +2131,11 @@ inline bool plane_distance_disocclusion_check(const float3 current_pos, const fl
     return dist_to_plane > 0.01f;
 }
 
+inline float plane_distance_disocclusion_check2(const float3 current_pos, const float3 history_pos, const float3 current_normal) {
+    float3  to_current    = current_pos - history_pos;
+    float dist_to_plane = abs(dot(to_current, current_normal));
+    return dist_to_plane;
+}
 
 // 'optDepth' is the value of optical depth.
 // 'height' is the altitude.

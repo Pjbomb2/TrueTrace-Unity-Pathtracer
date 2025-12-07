@@ -960,9 +960,9 @@ float3 EvaluateDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float3 diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index);
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += (diffuse + sheen / PI);// * P[2];
+        reflectance += (diffuse + sheen / PI) * P[2];// * P[2];
 
-        forwardPdf += forwardDiffusePdfW * P[2];
+        forwardPdf += forwardDiffusePdfW * P[2] / PI;
     }
 
     // -- specular
@@ -971,8 +971,8 @@ float3 EvaluateDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
 
         float3 specular = EvaluateDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, pixel_index);
 
-        reflectance += specular;
-        forwardPdf += forwardMetallicPdfW / (4.0f * abs(dot(wo, wm)));
+        reflectance += specular / PI * P[0];
+        forwardPdf += forwardMetallicPdfW / (4.0f * abs(dot(wo, wm))) * P[0] * PI;
     }
 
     // -- transmission
