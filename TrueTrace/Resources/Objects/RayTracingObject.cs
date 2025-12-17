@@ -212,9 +212,7 @@ namespace TrueTrace {
 									Index[j] = i;
 									break;
 								}
-
 							}
-
 						}
 					}
 				}

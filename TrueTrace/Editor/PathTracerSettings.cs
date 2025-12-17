@@ -2570,6 +2570,56 @@ Toolbar toolbar;
       }
 
 
+       private void UndoAllInstances() {
+          GameObject[] GottenObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+          foreach(var Obj in GottenObjects) {
+            if(!Obj.name.Equals("InstancedStorage")) {
+                if(!Obj.scene.IsValid()) {
+                  GameObject[] InstanceQues = PrefabUtility.FindAllInstancesOfPrefab(SelectiveField.value as GameObject);
+                  int QueCount = InstanceQues.Length;
+                  ParentObject OrigPObj = null;
+                  RayTracingObject OrigRObj = null;
+                  string OrigName = "";
+                  if(QueCount > 0) {
+                     InstancedObject[] TempVar = InstanceQues[0].GetComponentsInChildren<InstancedObject>();
+                     if(TempVar != null && TempVar.Length != 0) {
+                        if(TempVar[0].InstanceParent != null) {
+                           OrigPObj = TempVar[0].InstanceParent.GetComponent<ParentObject>();
+                           OrigRObj = TempVar[0].InstanceParent.GetComponent<RayTracingObject>();
+                           OrigName = TempVar[0].InstanceParent.gameObject.name;
+                        }
+                     }
+                  }
+                  for(int i = 0; i < QueCount; i++) {
+                     InstancedObject[] TempVar = InstanceQues[i].GetComponentsInChildren<InstancedObject>();
+                     if(TempVar != null && TempVar.Length != 0) {
+                        PrefabUtility.RevertPrefabInstance(InstanceQues[i],  InteractionMode.AutomatedAction);
+                        for(int i2 = 0; i2 < InstanceQues[i].transform.childCount; i2++) {
+                           if(OrigName.Contains(InstanceQues[i].transform.GetChild(i2).gameObject.name)) {
+                              InstanceQues[i].transform.GetChild(i2).gameObject.AddComponent<RayTracingObject>(OrigRObj);
+                              InstanceQues[i].transform.GetChild(i2).gameObject.AddComponent<ParentObject>();
+                           }
+                        }
+                     }
+                  }
+                  DestroyImmediate(OrigPObj.gameObject);
+                } else {
+                   var E = Obj.GetComponentsInChildren<InstancedObject>();
+                   foreach(var a in E) {
+                        GameObject TempOBJ = GameObject.Instantiate(a.InstanceParent.gameObject);
+                        TempOBJ.transform.parent = a.gameObject.transform.parent;
+                        TempOBJ.transform.position = a.gameObject.transform.position;
+                        TempOBJ.transform.rotation = a.gameObject.transform.rotation;
+                       DestroyImmediate(a.gameObject);
+                   }
+                   ParentData SourceParent = GrabChildren2(Obj.transform);
+
+                   SolveChildren(SourceParent);
+                }
+             }
+          }
+       }
+
       ObjectField SelectiveField;
 
        private void UndoInstances() {
@@ -2636,6 +2686,8 @@ Toolbar toolbar;
             }) {text = "Selective Auto Assign"};
          Button ReplaceInstanceButton = new Button(() => UndoInstances()) {text = "Undo Selective Instances"};
 
+         Button UndoAllInstancedButton = new Button(() => UndoAllInstances()) {text = "Undo All Instances"};
+
          
       
          ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force All Instances"};
@@ -2653,6 +2705,10 @@ Toolbar toolbar;
          HierarchyOptionsMenu.Add(SelectiveAutoAssignButton);
          HierarchyOptionsMenu.Add(ForceInstancesButton);
          HierarchyOptionsMenu.Add(StaticButton);
+         
+         HierarchyOptionsMenu.Add(MakeSpacer());
+
+         HierarchyOptionsMenu.Add(UndoAllInstancedButton);
       }
 
       public struct CustomGBufferData {
@@ -2873,6 +2929,7 @@ Slider AperatureSlider;
             MaterialPairingMenu.Add(InputMaterialField);
             toolbar = new Toolbar();
             rootVisualElement.Add(toolbar);
+           MaxSampCount = RayMaster.LocalTTSettings.MaxSampCount;
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
@@ -2941,7 +2998,6 @@ Slider AperatureSlider;
            DoF = RayMaster.LocalTTSettings.PPDoF;
            ClayMetalOverride = RayMaster.LocalTTSettings.ClayMetalOverride;
            ClayRoughnessOverride = RayMaster.LocalTTSettings.ClayRoughnessOverride;
-           MaxSampCount = RayMaster.LocalTTSettings.MaxSampCount;
            ClayColor = RayMaster.LocalTTSettings.ClayColor;
            GroundColor = RayMaster.LocalTTSettings.GroundColor;
            DoFAperature = RayMaster.LocalTTSettings.DoFAperature;
