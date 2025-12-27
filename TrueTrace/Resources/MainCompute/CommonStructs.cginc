@@ -32,6 +32,13 @@ StructuredBuffer<CudaTriangleA> AggTrisA;
 StructuredBuffer<CudaTriangleC> SkinnedMeshTriBufferPrev;
 StructuredBuffer<CudaTriangleB> AggTrisB;
 
+struct Prism {
+	float3 V[3];
+	float3 E[3];
+	uint N[3];
+};
+StructuredBuffer<Prism> PrismBuffer;
+
 struct AABB {
 	float3 BBMax;
 	float3 BBMin;
@@ -73,6 +80,9 @@ struct MyMeshDataCompacted {
 	int LightNodeSkinnedOffset;
 	uint PathFlags;
 	int SkinnedOffset;
+	#ifdef TTDisplacement
+	    int DisplacementOffset;
+	#endif
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;
@@ -155,6 +165,10 @@ struct IntersectionMat {//56
     float3 surfaceColor;
     float Rotation;
     float scatterDistance;
+#ifdef TTDisplacement
+    int2 DisplacementTex;//80
+    float DisplacementFactor;
+#endif
 };
 
 StructuredBuffer<IntersectionMat> _IntersectionMaterials;
@@ -173,6 +187,9 @@ struct MaterialData {//56
     int2 SecondaryAlbedoMask;
     int2 SecondaryNormalTex;
     int2 DiffTransTex;
+#ifdef TTDisplacement
+    int2 DisplacementTex;
+#endif
     float4 AlbedoTexScale;
     float4 SecondaryTexScaleOffset;
     float4 NormalTexScaleOffset;
@@ -221,6 +238,9 @@ struct MaterialData {//56
     float2 DiffTransRemap;
     float3 MatCapColor;
     float CausticStrength;
+#ifdef TTDisplacement
+    float DisplacementFactor;
+#endif
 };
 
 

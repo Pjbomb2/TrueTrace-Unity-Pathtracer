@@ -169,6 +169,7 @@ namespace TrueTrace {
                 string SecondaryAlbedoGUID = "null";
                 string SecondaryAlbedoMaskGUID = "null";
                 string NormalGUID = "null";
+                string DisplacementGUID = "null";
                 if(MatIndex != -1) {
                     RelevantMat = AssetManager.data.Material[MatIndex];
                     int TexCount = RelevantMat.AvailableTextures.Count;
@@ -209,6 +210,9 @@ namespace TrueTrace {
                                 case(TexturePurpose.Albedo):
                                     AlbedoGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
                                 break;
+                                case(TexturePurpose.Displacement):
+                                    DisplacementGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
                             }
                         }
                     }
@@ -238,7 +242,7 @@ namespace TrueTrace {
                     MatcapMaskGUID = MatcapMaskGUID,
                     SecondaryAlbedoGUID = SecondaryAlbedoGUID,
                     SecondaryAlbedoMaskGUID = SecondaryAlbedoMaskGUID,
-
+                    DisplacementGUID = DisplacementGUID,
                     ShaderName = TempMat.shader.name
                 };
                 if(CopyIndex != -1) PresetMaster.PresetFolders[FolderIndex].ContainedPresets[CopyIndex] = TempRay;
@@ -474,6 +478,15 @@ namespace TrueTrace {
                                         } else TempMat.SetTexture(TexName, null);
                                     }
                                 break;
+                                case(TexturePurpose.Displacement):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.DisplacementGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.DisplacementGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.DisplacementGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
                                 case(TexturePurpose.Emission):
                                     if (TempMat.HasProperty(TexName)) {
                                         if(!(RayObj.EmissionGUID.Equals("null"))) {
@@ -593,6 +606,7 @@ namespace TrueTrace {
                 string SecondaryAlbedoGUID = "null";
                 string SecondaryAlbedoMaskGUID = "null";
                 string NormalGUID = "null";
+                string DisplacementGUID = "null";
                 if(MatIndex != -1) {
                     RelevantMat = AssetManager.data.Material[MatIndex];
                     int TexCount = RelevantMat.AvailableTextures.Count;
@@ -633,6 +647,9 @@ namespace TrueTrace {
                                 case(TexturePurpose.Albedo):
                                     AlbedoGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
                                 break;
+                                case(TexturePurpose.Displacement):
+                                    DisplacementGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
                             }
                         }
                     }
@@ -660,7 +677,7 @@ namespace TrueTrace {
                     MatcapMaskGUID = MatcapMaskGUID,
                     SecondaryAlbedoGUID = SecondaryAlbedoGUID,
                     SecondaryAlbedoMaskGUID = SecondaryAlbedoMaskGUID,
-
+                    DisplacementGUID = DisplacementGUID,
                     ShaderName = TempMat.shader.name
                 };
                 if(CopyIndex != -1) PresetMaster.PresetFolders[FolderIndex].ContainedPresets[CopyIndex] = TempRay;
@@ -1144,6 +1161,10 @@ namespace TrueTrace {
                             EditorGUILayout.Space();
                             serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("ColorBleed").floatValue = EditorGUILayout.Slider("ColorBleed: ", t.LocalMaterials[Selected].ColorBleed, 0, 1.0f);
                             EditorGUILayout.Space();
+#if TTDisplacement
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("DisplacementFactor").floatValue = EditorGUILayout.Slider("Displacement: ", t.LocalMaterials[Selected].DisplacementFactor, 0, 1);
+                            EditorGUILayout.Space();
+#endif
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
                 }

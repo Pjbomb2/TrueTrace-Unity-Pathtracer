@@ -58,6 +58,18 @@ namespace TrueTrace {
         public int[] RTAccelHandle;
         public int[] RTAccelSubmeshOffsets;
 #endif
+#if TTDisplacement
+        [HideInInspector] public ComputeBuffer TriPrismBuffer;
+        [HideInInspector] public TriPrism[] TriPrisms;
+        public bool HasDisplacement;
+    #if HardwareRT
+        public AABB2[] SavedTrianglesArray;
+        public int AccelHandleIndex;
+        public GraphicsBuffer DisplacedTrianglesBuffer;
+    #endif
+        public int GlobalDispOffset;
+        public int LocalDisplacementCount;
+#endif    
         public LightBVHBuilder LBVH;
         public Task AsyncTask;
         public int ExistsInQue = -1;
@@ -174,6 +186,9 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref AggNodes);
             CommonFunctions.DeepClean(ref LightTriNorms);
             CommonFunctions.DeepClean(ref LuminanceWeights);
+            #if TTDisplacement
+                CommonFunctions.DeepClean(ref TriPrisms);
+            #endif
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
             if(BVH2 != null) BVH2.Dispose();
             BVH2 = null;
@@ -194,6 +209,9 @@ namespace TrueTrace {
             }
             if (TriBuffer != null)
             {
+#if TTDisplacement
+                TriPrismBuffer?.Release();
+#endif
                 LightTriBuffer?.Release();
                 LightTreeBuffer?.ReleaseSafe();
                 TriBuffer?.Release();
@@ -202,7 +220,6 @@ namespace TrueTrace {
             if(LBVH != null) {
                 LBVH.ClearAll();
             }
-
 
             #if AccurateLightTris
                 if(EmissionTexPixels != null) {
@@ -259,7 +276,15 @@ namespace TrueTrace {
         private bool NeedsToResetBuffers = true;
         public void SetUpBuffers() {
             if (NeedsToResetBuffers) {
-
+                #if TTDisplacement
+                    #if HardwareRT
+                        if(HasDisplacement) {
+                            DisplacedTrianglesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SavedTrianglesArray.Length, 24);
+                            DisplacedTrianglesBuffer.SetData(SavedTrianglesArray);                        
+                        }
+                    #endif
+                    if (TriPrismBuffer != null) TriPrismBuffer.Release();
+                #endif
                 if (LightTriBuffer != null) LightTriBuffer.Release();
                 if (TriBuffer != null) TriBuffer.Release();
                 if (BVHBuffer != null) BVHBuffer.Release();
@@ -280,6 +305,14 @@ namespace TrueTrace {
                         CommonFunctions.CreateComputeBuffer(ref LightTreeBuffer, LBVH.nodes);
 #endif
                     }
+#if TTDisplacement
+                    if(HasDisplacement) {
+                        CommonFunctions.CreateComputeBuffer(ref TriPrismBuffer, TriPrisms);
+                    } else {
+                        CommonFunctions.CreateDynamicBuffer(ref TriPrismBuffer, 1, CommonFunctions.GetStride<TriPrism>());
+                    }
+                    LocalDisplacementCount = TriPrismBuffer.count;
+#endif
                     CommonFunctions.CreateComputeBuffer(ref TriBuffer, AggTriangles);
                     CommonFunctions.CreateComputeBuffer(ref BVHBuffer, AggNodes);
                     LocalLightNodeCount = LightTreeBuffer.count;
@@ -308,7 +341,13 @@ namespace TrueTrace {
         public List<Texture> SecondaryAlbedoTexMasks;
         public List<int> SecondaryAlbedoTexMaskChannelIndex;
         public List<Texture> SecondaryAlbedoTexs;
-
+#if TTDisplacement
+        public List<Texture> DisplacementTexs;
+        public List<int> DisplacementTexChannelIndex;
+        List<(Texture2D texture, NativeArray<Color32> pixels)> DisplacementTexPixels;
+        List<Vector2> DisplacementTexWidthHeight;
+        List<Vector4> DisplacementTexScaleOffset;
+#endif
 
         #if AccurateLightTris
             List<(Texture2D texture, NativeArray<Color32> pixels)> EmissionTexPixels;
@@ -335,7 +374,7 @@ namespace TrueTrace {
             }
         }
 
-        private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref int TextureIndex, bool IsEmission = false) {
+        private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref int TextureIndex, bool IsEmission = false, bool IsDisplacement = false) {
             TextureIndex = 0;
             if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) != null) {
                 if(RefMat.x == 0) RefMat = new Vector4(Mat.GetTextureScale(TexName).x, Mat.GetTextureScale(TexName).y, Mat.GetTextureOffset(TexName).x, Mat.GetTextureOffset(TexName).y);
@@ -343,7 +382,34 @@ namespace TrueTrace {
                 TextureIndex = Texs.IndexOf(Tex) + 1;
                 if (TextureIndex != 0) {
                     return 0;
-                } else {
+                } 
+#if TTDisplacement
+                 else if(IsDisplacement) {
+
+                        RenderTexture tmp = RenderTexture.GetTemporary( 
+                            Tex.width,
+                            Tex.height,
+                            0,
+                            RenderTextureFormat.Default,
+                            RenderTextureReadWrite.Linear);
+                        Graphics.Blit(Tex, tmp);
+                        RenderTexture previous = RenderTexture.active;
+                        RenderTexture.active = tmp;
+                        Texture2D myTexture2D = new Texture2D(Tex.width, Tex.height);
+                        myTexture2D.ReadPixels(new Rect(0, 0, tmp.width, tmp.height), 0, 0);
+                        myTexture2D.Apply();
+                        RenderTexture.active = previous;
+                        RenderTexture.ReleaseTemporary(tmp);
+                        var rawData = myTexture2D.GetRawTextureData<Color32>();
+                        DisplacementTexPixels.Add((myTexture2D, rawData));
+                        // DestroyImmediate(myTexture2D);
+                        DisplacementTexWidthHeight.Add(new Vector2(Tex.width, Tex.height));
+                        Texs.Add(Tex);
+                        TextureIndex = Texs.Count;
+                        return 1;
+                    }
+#endif
+                else {
                     #if AccurateLightTris
                         if(IsEmission) {
                             RenderTexture tmp = RenderTexture.GetTemporary( 
@@ -419,6 +485,20 @@ namespace TrueTrace {
                 EmissionTexPixels = new List<(Texture2D texture, NativeArray<Color32> pixels)>();
                 EmissionTexWidthHeight = new List<Vector2>();
             #endif
+ #if TTDisplacement
+            if(DisplacementTexPixels != null) {
+                int DisplacementTexLeng = DisplacementTexPixels.Count;
+                for(int i = 0; i < DisplacementTexLeng; i++) {
+                    DisplacementTexPixels[i].pixels.Dispose();
+                }
+                DisplacementTexPixels = null;
+            }
+            DisplacementTexPixels = new List<(Texture2D texture, NativeArray<Color32> pixels)>();
+            DisplacementTexWidthHeight = new List<Vector2>();
+            DisplacementTexScaleOffset = new List<Vector4>();
+            MemorySafeClear<Texture>(ref DisplacementTexs);
+            MemorySafeClear<int>(ref DisplacementTexChannelIndex);
+#endif
             _Materials.Clear();
             MemorySafeClear<Texture>(ref AlbedoTexs);
             MemorySafeClear<Texture>(ref NormalTexs);
@@ -592,6 +672,16 @@ namespace TrueTrace {
                                 CurMat.Textures.MatCapMask.x = TempIndex; 
                                 if(Result == 1) MatCapMaskChannelIndex.Add(ReadIndex);
                             break;
+#if TTDisplacement
+                            case(TexturePurpose.Displacement):
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref DisplacementTexs, ref TempIndex, false, true); 
+                                CurMat.Textures.DisplacementTex.x = TempIndex; 
+                                if(Result == 1) {
+                                    DisplacementTexScaleOffset.Add(obj.LocalMaterials[i].TextureModifiers.MainTexScaleOffset);
+                                    DisplacementTexChannelIndex.Add(ReadIndex);
+                                }
+                            break;
+#endif
                         }
                     }
 
@@ -634,6 +724,10 @@ namespace TrueTrace {
         }
         public List<Transform> ChildObjectTransforms;
         public unsafe void LoadData() {
+#if TTDisplacement
+            HasDisplacement = false;
+            GlobalDispOffset = -1;
+#endif
             CommonFunctions.DeepClean(ref LightTriNorms);
             CommonFunctions.DeepClean(ref CachedTransforms);
             CommonFunctions.DeepClean(ref TransformIndexes);
@@ -986,8 +1080,12 @@ namespace TrueTrace {
         {
             NativeArray<int> ReverseIndexesLightCounterArray = default;
             int* ReverseIndexesLightCounter = default;
+            bool IsNonStandard = !IsSkinnedGroup && !IsDeformable;
+            #if TTDisplacement
+                IsNonStandard = IsNonStandard && !HasDisplacement;
+            #endif
 #if TTTriSplitting && !HardwareRT
-            if(!IsSkinnedGroup && !IsDeformable) {
+            if(IsNonStandard) {
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Start();
 #endif
@@ -1130,7 +1228,7 @@ namespace TrueTrace {
                 MainWatch.Start();
 #endif
 #if TTTriSplitting && !HardwareRT
-                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles, ReverseIndexesLightCounter, IsSkinnedGroup || IsDeformable);
+                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles, ReverseIndexesLightCounter, !IsNonStandard);
                 if(ReverseIndexesLightCounterArray != null && ReverseIndexesLightCounterArray.IsCreated) ReverseIndexesLightCounterArray.Dispose();
 #else
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles);
@@ -1431,6 +1529,32 @@ namespace TrueTrace {
         private float luminance(in Vector3 A) { return Dot(new Vector3(0.299f, 0.587f, 0.114f), A);}
 
 
+#if TTDisplacement
+    public Vector2 CalculateTriangleWidthAndHeight(Vector3 pointA, Vector3 pointB, Vector3 pointC) {
+        Vector3 sideAB = pointB - pointA;
+        Vector3 sideBC = pointC - pointB;
+        Vector3 sideAC = pointC - pointA;
+        float width = Vector3.Cross(sideAB, sideAC).magnitude;
+        float height = Vector3.Cross(sideAB, sideBC).magnitude;
+        return new Vector2(width, height);
+    }
+    private bool IsPointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c) {
+        // Compute edge functions (signed areas * 2)
+        float s = (a.y - c.y) * (p.x - c.x) + (c.x - a.x) * (p.y - c.y);
+        float t = (b.y - a.y) * (p.x - a.x) + (a.x - b.x) * (p.y - a.y);
+        float u = (c.y - b.y) * (p.x - b.x) + (b.x - c.x) * (p.y - b.y);
+        // If all have the same sign (or zero), point is inside
+        return (s >= 0 && t >= 0 && u >= 0) || (s <= 0 && t <= 0 && u <= 0);
+    }
+    public float FastRepeat(float t, float length) {
+        return t - (float)System.Math.Floor((double)(t / length)) * length;
+    }
+    public float SafeClamp(float X) {
+        if(X > 1 || X < 0) X = (X < 0 ? (1.0f - Mathf.Repeat(Mathf.Abs(X), 1.0f)) : Mathf.Repeat(Mathf.Abs(X), 1.0f));
+        return X; 
+    }
+#endif
+
         public unsafe async Task BuildTotal() {
 #if TTExtraVerbose && TTVerbose
             MainWatch = new TTStopWatch(Name);
@@ -1441,10 +1565,16 @@ namespace TrueTrace {
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
             Matrix4x4 ParentMat = CachedTransforms[0].WTL.inverse;
             Vector3 V1, V2, V3, Norm1, Tan1;
+            bool IsNonStandard = IsSkinnedGroup || IsDeformable;
+#if TTDisplacement
+            int DisplacementTexCount = DisplacementTexs.Count;
+            IsNonStandard = IsNonStandard || (DisplacementTexCount != 0);
+            if(DisplacementTexCount != 0) TriPrisms = new TriPrism[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
+#endif
 #if TTTriSplitting
     aabb_untransformed = new AABB();
     aabb_untransformed.init();
-    if(IsSkinnedGroup || IsDeformable) {
+    if(IsNonStandard) {
 #endif
             TrianglesArray = new NativeArray<AABB>((TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
@@ -1478,6 +1608,10 @@ namespace TrueTrace {
                 Vector3 ScaleFactor = IsSingle ? new Vector3(1,1,1) : new Vector3((float)System.Math.Pow(1.0f / scalex, 2.0f), (float)System.Math.Pow(1.0f / scaley, 2.0f), (float)System.Math.Pow(1.0f / scalez, 2.0f));
                 int InitOff = TransformIndexes[i].IndexOffset;
                 int IndEnd = TransformIndexes[i].IndexOffsetEnd;
+#if TTDisplacement
+                Vector2 MinUVOffset = Vector2.one;
+                Vector2 MaxUVOffset = Vector2.zero;
+#endif
                 uint* UVPtr = (uint*)CurMeshData.UVsArray.GetUnsafeReadOnlyPtr();
                 uint* NormPtr = (uint*)CurMeshData.NormalsArray.GetUnsafeReadOnlyPtr();
                 uint* TanPtr = (uint*)CurMeshData.TangentsArray.GetUnsafeReadOnlyPtr();
@@ -1521,6 +1655,11 @@ namespace TrueTrace {
                     
                     ColPtr[i3] = CommonFunctions.packRGBE(CurMeshData.Colors[i3]);
                     
+#if TTDisplacement
+                    MaxUVOffset = Vector2.Max(MaxUVOffset, CurMeshData.UVs[i3]);
+                    MinUVOffset = Vector2.Min(MinUVOffset, CurMeshData.UVs[i3]);
+#endif
+
                     UVPtr[i3] = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[i3].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[i3].y);
                 }
 
@@ -1558,10 +1697,75 @@ namespace TrueTrace {
                     TempTri.IsEmissive = 0;
                     AggTriangles[OffsetReal] = TempTri;
 #if TTTriSplitting
-    if(IsSkinnedGroup || IsDeformable) {
+        if(IsNonStandard) {
 #endif
                     Triangles[OffsetReal].Create(V1, V2);
                     Triangles[OffsetReal].Extend(V3);
+#if TTDisplacement
+                    if(DisplacementTexCount != 0)
+                    if(_Materials[(int)TempTri.MatDat].Textures.DisplacementTex.x == 0 || _Materials[(int)TempTri.MatDat].MatData.DisplacementFactor == 0) {
+                        TriPrisms[OffsetReal] = new TriPrism(TempTri, 0);
+                    } else {
+                        int ThisIndex = _Materials[(int)TempTri.MatDat].Textures.DisplacementTex.x - 1;
+                        float maxValue = 0.01f;
+                        Vector4 ScaleOffset = DisplacementTexScaleOffset[ThisIndex];
+                        Vector2 DiffA = MaxUVOffset - MinUVOffset;
+                        Vector2 InvScale = new Vector2(1.0f / DiffA.x, 1.0f / DiffA.y);
+                        // MaterialData TempDat = _Materials[(int)TempTri.MatDat];
+                        // TempDat.MatData.TextureModifiers.MainTexScaleOffset = new Vector4(InvScale.x * TempDat.MatData.TextureModifiers.MainTexScaleOffset.x, InvScale.y * TempDat.MatData.TextureModifiers.MainTexScaleOffset.y, -MinUVOffset.x, -MinUVOffset.y);
+                        // _Materials[(int)TempTri.MatDat] = TempDat;
+                        Vector2 TexWidthHeight = DisplacementTexWidthHeight[ThisIndex];
+                        Vector2 uv_p;
+                        Vector2 uvA = new Vector2(SafeClamp((Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)) - MinUVOffset.x) * InvScale.x), SafeClamp((Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF)) - MinUVOffset.y) * InvScale.y));
+                        Vector2 uvB = new Vector2(SafeClamp((Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)) - MinUVOffset.x) * InvScale.x), SafeClamp((Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF)) - MinUVOffset.y) * InvScale.y)); 
+                        Vector2 uvC = new Vector2(SafeClamp((Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)) - MinUVOffset.x) * InvScale.x), SafeClamp((Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)) - MinUVOffset.y) * InvScale.y));
+                        int texWidth = (int)TexWidthHeight.x;
+                        int texHeight = (int)TexWidthHeight.y;
+                        float invWidth = 1f / TexWidthHeight.x;
+                        float invHeight = 1f / TexWidthHeight.y;
+                        float minU = Mathf.Min(uvA.x, uvB.x, uvC.x);
+                        float maxU = Mathf.Max(uvA.x, uvB.x, uvC.x);
+                        float minV = Mathf.Min(uvA.y, uvB.y, uvC.y);
+                        float maxV = Mathf.Max(uvA.y, uvB.y, uvC.y);
+                        int minX = Mathf.Max(0, Mathf.FloorToInt(minU * TexWidthHeight.x));
+                        int maxX = Mathf.Min(texWidth, Mathf.CeilToInt(maxU * TexWidthHeight.x));
+                        int minY = Mathf.Max(0, Mathf.FloorToInt(minV * TexWidthHeight.y));
+                        int maxY = Mathf.Min(texHeight, Mathf.CeilToInt(maxV * TexWidthHeight.y));
+                        float scaleU = ScaleOffset.x;
+                        float offsetU = ScaleOffset.z;
+                        float scaleV = ScaleOffset.y;
+                        float offsetV = ScaleOffset.w;
+                        float dispFactor = _Materials[(int)TempTri.MatDat].MatData.DisplacementFactor / 255.0f;
+                        int channel = DisplacementTexChannelIndex[ThisIndex];
+                        Color32* pixels = (Color32*)NativeArrayUnsafeUtility.GetUnsafePtr(DisplacementTexPixels[ThisIndex].pixels);
+                        for (int y = minY; y < maxY; y++) {
+                            float pv = (float)y * invHeight;
+                            for (int x = minX; x < maxX; x++) {
+                                float pu = (float)x * invWidth;
+                                if (IsPointInTriangle(new Vector2(pu, pv), uvA, uvB, uvC)) {
+                                    float sampled_u = FastRepeat(x * scaleU * invWidth + offsetU, 1.0f);
+                                    float sampled_v = FastRepeat(y * scaleV * invHeight + offsetV, 1.0f);
+                                    int tex_x = (int)(sampled_u * TexWidthHeight.x);
+                                    int tex_y = (int)(sampled_v * TexWidthHeight.y);
+                                    int index = tex_y * texWidth + tex_x;
+                                    Color32 col = pixels[index];
+                                    float lum_byte = 0;
+                                    if (channel == 0) lum_byte = col.r;
+                                    else if (channel == 1) lum_byte = col.g;
+                                    else if (channel == 2) lum_byte = col.b;
+                                    else lum_byte = col.a;
+                                    float lum = lum_byte * dispFactor + 0.01f;
+                                    if (lum > maxValue) maxValue = lum;
+                                }
+                            }
+                        }
+                        TriPrisms[OffsetReal] = new TriPrism(TempTri, maxValue + 0.005f);
+                        HasDisplacement = true;                      
+                        Triangles[OffsetReal].Extend(TriPrisms[OffsetReal].Ea);
+                        Triangles[OffsetReal].Extend(TriPrisms[OffsetReal].Eb);
+                        Triangles[OffsetReal].Extend(TriPrisms[OffsetReal].Ec);
+                    }
+    #endif
                     Triangles[OffsetReal].Validate(ParentScale);
                     aabb_untransformed.Extend(ref Triangles[OffsetReal]);
 #if TTTriSplitting
@@ -1647,6 +1851,14 @@ namespace TrueTrace {
                 Construct();
                 {//Compile Triangles
                     int TriLength = AggTriangles.Length;
+#if TTDisplacement
+                    if(DisplacementTexCount != 0) {
+                        NativeArray<TriPrism> PrismArray = new NativeArray<TriPrism>(TriPrisms, Unity.Collections.Allocator.TempJob);
+                        TriPrism* PrismPointer = (TriPrism*)NativeArrayUnsafeUtility.GetUnsafePtr(PrismArray);
+                        for (int i = 0; i < TriLength; i++) TriPrisms[BVH.cwbvh_indices[i]] = PrismPointer[i];
+                        PrismArray.Dispose();
+                    }
+#endif
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);
                     CudaTriangle* VecPointer = (CudaTriangle*)NativeArrayUnsafeUtility.GetUnsafePtr(Vector3Array);
                     for (int i = 0; i < TriLength; i++) AggTriangles[BVH.cwbvh_indices[i]] = VecPointer[i];
@@ -1656,6 +1868,13 @@ namespace TrueTrace {
                 CommonFunctions.Aggregate(ref AggNodes, BVH);
                 BVH.BVH8NodesArray.Dispose();
             #else 
+#if TTDisplacement
+                if(HasDisplacement) {
+                    int Len = TrianglesArray.Length;
+                    SavedTrianglesArray = new AABB2[Len];
+                    for(int i = 0; i < Len; i++) SavedTrianglesArray[i] = new AABB2(Triangles[i]);
+                }
+#endif
                 if(IsSkinnedGroup || IsDeformable) {
                     Construct();
                     AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
@@ -1796,6 +2015,38 @@ namespace TrueTrace {
         //         }
         //     }
         // }
+#if TTDisplacement
+        public void OnDrawGizmos() {
+            if(TriPrisms != null && DisplacementTexs != null && DisplacementTexs.Count != 0) {
+                Matrix4x4 Mat = transform.localToWorldMatrix;
+                int Len = TriPrisms.Length;
+                for(int i = 0; i < Len; i++) {
+                    if(_Materials[(int)AggTriangles[i].MatDat].MatData.DisplacementFactor == 0) continue;
+                    TriPrism T = TriPrisms[i];
+                    // for(int i2 = 0; i2 < 3; i2++) {
+                        T.Va = CommonFunctions.transform_position(Mat, T.Va);
+                        T.Vb = CommonFunctions.transform_position(Mat, T.Vb);
+                        T.Vc = CommonFunctions.transform_position(Mat, T.Vc);
+                        T.Ea = CommonFunctions.transform_position(Mat, T.Ea);
+                        T.Eb = CommonFunctions.transform_position(Mat, T.Eb);
+                        T.Ec = CommonFunctions.transform_position(Mat, T.Ec);
+                    // }
+                    Gizmos.color = Color.white;
+                    Gizmos.DrawLine(T.Va, T.Ea);
+                    Gizmos.DrawLine(T.Vb, T.Eb);
+                    Gizmos.DrawLine(T.Vc, T.Ec);
+                    Gizmos.color = Color.blue;
+                    Gizmos.DrawLine(T.Va, T.Vb);
+                    Gizmos.DrawLine(T.Va, T.Vc);
+                    Gizmos.DrawLine(T.Vb, T.Vc);
+                    Gizmos.color = Color.green;
+                    Gizmos.DrawLine(T.Ea, T.Eb);
+                    Gizmos.DrawLine(T.Ea, T.Ec);
+                    Gizmos.DrawLine(T.Eb, T.Ec);
+                }
+            }
+        }
+#endif
 
   }
 
