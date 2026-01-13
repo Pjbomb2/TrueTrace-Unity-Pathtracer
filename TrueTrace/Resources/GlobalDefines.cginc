@@ -34,7 +34,7 @@
 // #define IgnoreBackfacingEmissive
 // #define AltFadeMapping
 // #define MoreAO
-#define TTDisplacement
+// #define TTDisplacement
 
 
 //END OF DEFINES

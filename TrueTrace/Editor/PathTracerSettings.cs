@@ -2958,7 +2958,7 @@ Slider AperatureSlider;
             MaterialPairingMenu.Add(InputMaterialField);
             toolbar = new Toolbar();
             rootVisualElement.Add(toolbar);
-           MaxSampCount = RayMaster.LocalTTSettings.MaxSampCount;
+            if(RayMaster != null) MaxSampCount = RayMaster.LocalTTSettings.MaxSampCount;
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});

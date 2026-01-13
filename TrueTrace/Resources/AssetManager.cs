@@ -1277,6 +1277,7 @@ namespace TrueTrace {
             if (ChildrenUpdated || ParentCountHasChanged || MaterialBuffer == null)
             {
                 int CurNodeOffset = 2 * (ParentsLength + InstanceRenderQue.Count);
+                int AggRenderedTriCount = 0;
                 int AggTriCount = 0;
                 int AggNodeCount = CurNodeOffset;
                 int LightTriCount = 0;
@@ -1331,6 +1332,7 @@ namespace TrueTrace {
                     TotalMatCount += RenderQue[i]._Materials.Count;
                     AggNodeCount += RenderQue[i].AggNodes.Length;
                     AggTriCount += RenderQue[i].AggTriangles.Length;
+                    AggRenderedTriCount += RenderQue[i].AggTriangles.Length;
                     LightTriCount += RenderQue[i].LightTriangles.Count;
                     #if TTDisplacement
                         if(RenderQue[i].HasDisplacement) AggDispCount += RenderQue[i].TriPrisms.Length;
@@ -1355,7 +1357,7 @@ namespace TrueTrace {
                 AggSGTreeNodeCount += CurSGNodeOffset;
 #if TTVerbose
                 Debug.Log("Light Tri Count: " + LightTriCount);
-                Debug.Log("Total Tri Count: " + AggTriCount);
+                Debug.Log("Total Tri Count(Sources): " + AggTriCount);
 #endif
                 if(LightTriCount == 0) {LightTriCount++; AggSGTreeNodeCount++;}
                 if(AggSGTreeSKINNEDNodeCount == 0) AggSGTreeSKINNEDNodeCount = 1;
@@ -1416,6 +1418,7 @@ namespace TrueTrace {
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArrayB", AggTriBufferB);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
+                    MeshFunctions.SetBuffer(LightTreeNodeBufferKernel, "LightNodesOut", LightTreeBufferA);
                     
                     CurSGNodeSkinnedOffset = AggSGTreeNodeCount;
 
@@ -1468,7 +1471,6 @@ namespace TrueTrace {
                                 int TempOffset = CurSGNodeOffset;
                                 cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
                                 cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[TempI].LocalLightNodeCount);
-                                cmd.SetComputeBufferParam(MeshFunctions, LightTreeNodeBufferKernel, "LightNodesOut", LightTreeBufferA);
                                 cmd.SetComputeBufferParam(MeshFunctions, LightTreeNodeBufferKernel, "LightNodesIn", RenderQue[TempI].LightTreeBuffer);
                                 cmd.DispatchCompute(MeshFunctions, LightTreeNodeBufferKernel, (int)Mathf.Ceil(RenderQue[TempI].LocalLightNodeCount / 372.0f), 1, 1);
                             }
@@ -1476,7 +1478,6 @@ namespace TrueTrace {
                                 int TempOffset = CurSGNodeSkinnedOffset;
                                 cmd.SetComputeIntParam(MeshFunctions, "Offset", TempOffset);
                                 cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[TempI].LocalLightNodeCount);
-                                cmd.SetComputeBufferParam(MeshFunctions, LightTreeNodeBufferKernel, "LightNodesOut", LightTreeBufferA);
                                 cmd.SetComputeBufferParam(MeshFunctions, LightTreeNodeBufferKernel, "LightNodesIn", RenderQue[TempI].LightTreeBuffer);
                                 cmd.DispatchCompute(MeshFunctions, LightTreeNodeBufferKernel, (int)Mathf.Ceil(RenderQue[TempI].LocalLightNodeCount / 372.0f), 1, 1);
                             }
@@ -1614,7 +1615,13 @@ namespace TrueTrace {
                             LightAABBs[CurLightMesh] = InstanceRenderQue[i].InstanceParent.LBVH.ParentBound.aabb;
                             CurLightMesh++;
                         }
+#if TTVerbose
+                        AggRenderedTriCount += InstanceRenderQue[i].InstanceParent.AggTriangles.Length;
+#endif
                     }
+#if TTVerbose
+                Debug.Log("Total Tri Count(Sources + Instanced): " + AggRenderedTriCount);
+#endif
                 }
 
                 if (LightMeshCount == 0) { LightMeshes.Add(new LightMeshData() { }); }

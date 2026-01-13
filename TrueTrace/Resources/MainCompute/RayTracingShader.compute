@@ -190,8 +190,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
     }
 #endif
     if(CurBounce == 0 && UseASVGF && !(TTMat.metallic == 1 && TTMat.roughness < 0.05f) && TTMat.specTrans != 1 && RandomNums[id].w == 1) {
-        // Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
-        // norm = i_octahedral_32(asuint(PrevScreenData.y));
+        Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
+        norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
 #if DebugView == DVGeomNorm
     if(CurBounce == 0) _DebugTex[id.xy] = float4(Geomnorm, 0);

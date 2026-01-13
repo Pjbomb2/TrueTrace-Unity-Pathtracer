@@ -417,7 +417,7 @@ namespace TrueTrace {
             _RandomNumsB.ReleaseSafe();
             if(ReSTIRASVGFCode != null) ReSTIRASVGFCode.ClearAll();
             CurBounceInfoBuffer.ReleaseSafe();
-            Atmo.Dispose();
+            if(Atmo != null) Atmo.Dispose();
             CDFX.ReleaseSafe();
             CDFY.ReleaseSafe();
             CDFTotalBuffer.ReleaseSafe();

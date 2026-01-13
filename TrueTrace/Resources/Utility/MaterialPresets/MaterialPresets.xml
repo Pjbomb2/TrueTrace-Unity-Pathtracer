@@ -57,8 +57,8 @@
             <z>1</z>
           </EmissionColor>
           <Tag>512</Tag>
-          <Roughness>0</Roughness>
-          <MatType>1</MatType>
+          <Roughness>0.6</Roughness>
+          <MatType>0</MatType>
           <TransmittanceColor>
             <x>1</x>
             <y>1</y>
@@ -66,18 +66,18 @@
           </TransmittanceColor>
           <IOR>1</IOR>
           <Metallic>0</Metallic>
-          <Sheen>0.1</Sheen>
-          <SheenTint>0</SheenTint>
+          <Sheen>21.5</Sheen>
+          <SheenTint>1</SheenTint>
           <SpecularTint>0</SpecularTint>
           <Clearcoat>0</Clearcoat>
           <ClearcoatGloss>0</ClearcoatGloss>
           <Anisotropic>0</Anisotropic>
           <AnisotropicRotation>0</AnisotropicRotation>
           <Flatness>0</Flatness>
-          <DiffTrans>0.306</DiffTrans>
+          <DiffTrans>0.474</DiffTrans>
           <SpecTrans>0</SpecTrans>
           <Specular>0</Specular>
-          <ScatterDist>5</ScatterDist>
+          <ScatterDist>0.33</ScatterDist>
           <MetallicRemap>
             <x>0</x>
             <y>1</y>
@@ -115,18 +115,19 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
-        <AlbedoGUID>4d56663d1e361c2499c3b4df35ce5609</AlbedoGUID>
+        <AlbedoGUID>f6315f33237ea5c47b18426d781a6090</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>4d56663d1e361c2499c3b4df35ce5609</AlphaGUID>
+        <AlphaGUID>f6315f33237ea5c47b18426d781a6090</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
-        <NormalGUID>null</NormalGUID>
+        <NormalGUID>f6315f33237ea5c47b18426d781a6090</NormalGUID>
         <DiffTransGUID>null</DiffTransGUID>
-        <ShaderName>Standard</ShaderName>
+        <ShaderName>GLTFUtility/Standard (Metallic)</ShaderName>
+        <DisplacementGUID>null</DisplacementGUID>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>

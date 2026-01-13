@@ -600,6 +600,10 @@ namespace TrueTrace {
             RayTracingMaster.ImageIsModified = false;
         }
 
+        public Animator[] TargetedAnims;
+        public float MaxAnimationLength = 0.0f;
+        public float DesiredFramerate = 30.0f;
+        public float CurFrame = 0.0f;
         public void Init() {
             switch(SelectedFunctionality) {
                 default:
@@ -663,9 +667,22 @@ namespace TrueTrace {
                     TimelineSettings.CameraList = CameraList;
                     RayTracingMaster.ImageIsModified = true;
                 break;
+                case(ImageGenType.TimedScreenShot):
+                    TargetedAnims = FindObjectsOfType<Animator>();
+                    // TargetedAnims = new Animator[1];
+                    // TargetedAnims[0] = GameObject.Find("CorpTie").GetComponent<Animator>();//FindObjectsOfType<Animator>();
+                    DesiredFramerate = 30.0f;
+                    CurFrame = 0.0f;
+                    foreach(var Obj in TargetedAnims) {
+                        Obj.speed = 0;
+                        AnimatorClipInfo[] TempClips = Obj.GetCurrentAnimatorClipInfo(0);
+                        if(TempClips != null && TempClips.Length >= 1) {
+                            MaxAnimationLength = Mathf.Max(MaxAnimationLength, TempClips[0].clip.length);
+                        }
+                    }
+                break;
             }
         }
-
         public void LateUpdate() {
             switch(SelectedFunctionality) {
                 default:
@@ -685,7 +702,14 @@ namespace TrueTrace {
                     if(((RayTracingMaster.SampleCount % SamplesBetweenShots) == SamplesBetweenShots - 1 && !ResetSampCountAfterShot) || (RayTracingMaster.SampleCount >= SamplesBetweenShots && ResetSampCountAfterShot)) {
                         IncrementRenderCounter();
                         ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
-                        UnityEditor.AssetDatabase.Refresh();
+                        // UnityEditor.AssetDatabase.Refresh();
+                        foreach(var Obj in TargetedAnims) {
+                            AnimatorClipInfo[] TempClips = Obj.GetCurrentAnimatorClipInfo(0);
+                            if(TempClips != null && TempClips.Length >= 1) {
+                                Obj.Play(0, -1, CurFrame);
+                            }
+                        }
+                        CurFrame += 1.0f / (MaxAnimationLength * DesiredFramerate);
                         if(ResetSampCountAfterShot) {
                             RayTracingMaster.SampleCount = 0;
                             RayTracingMaster.RayMaster.FramesSinceStart = 0;
@@ -722,16 +746,16 @@ namespace TrueTrace {
         private void DisplayCameraList() {
             GUIStyle TempStyle = new GUIStyle();
             TempStyle.fixedWidth = 120;
-            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(450), GUILayout.Height(300));
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(950), GUILayout.Height(300));
                 for(int i = 0; i < t.CameraList.Count; i++) {
                     var A = i;
                     GUILayout.BeginHorizontal();
                     if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable || t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) if(GUILayout.Button("Select", GUILayout.Width(50))) {SelectedCam = A;}
                     TTAdvancedImageGen.CameraListData TempDat = t.CameraList[i];
                         TempDat.ActivateCam = EditorGUILayout.ToggleLeft("", TempDat.ActivateCam, GUILayout.MaxWidth(15));
-                        TempDat.TargCam = EditorGUILayout.ObjectField(TempDat.TargCam, typeof(Camera), true, GUILayout.Width(150)) as Camera;
-                        TempDat.CamSettings = EditorGUILayout.ObjectField(TempDat.CamSettings, typeof(TTSettings), true, GUILayout.Width(150)) as TTSettings;
-                        if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) TempDat.OptionalDirector = EditorGUILayout.ObjectField(TempDat.OptionalDirector, typeof(UnityEngine.Playables.PlayableDirector), true, GUILayout.Width(150)) as UnityEngine.Playables.PlayableDirector;
+                        TempDat.TargCam = EditorGUILayout.ObjectField(TempDat.TargCam, typeof(Camera), true, GUILayout.Width(350)) as Camera;
+                        TempDat.CamSettings = EditorGUILayout.ObjectField(TempDat.CamSettings, typeof(TTSettings), true, GUILayout.Width(350)) as TTSettings;
+                        if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) TempDat.OptionalDirector = EditorGUILayout.ObjectField(TempDat.OptionalDirector, typeof(UnityEngine.Playables.PlayableDirector), true, GUILayout.Width(350)) as UnityEngine.Playables.PlayableDirector;
 
                     #if MultiMapScreenshot
                         TempDat.SaveImgMap = EditorGUILayout.ToggleLeft("GenMaps", TempDat.SaveImgMap, GUILayout.MaxWidth(75));
