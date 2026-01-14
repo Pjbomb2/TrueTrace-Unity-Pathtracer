@@ -33,7 +33,6 @@ StructuredBuffer<CudaTriangleC> SkinnedMeshTriBufferPrev;
 StructuredBuffer<CudaTriangleB> AggTrisB;
 
 struct Prism {
-	float3 V[3];
 	float3 E[3];
 	uint N[3];
 };

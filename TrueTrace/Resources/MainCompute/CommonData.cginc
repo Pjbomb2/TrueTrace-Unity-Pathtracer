@@ -2342,7 +2342,7 @@ float copysignf(float a, float b) {
 	return a * sign(b);
 }
 
-bool intersectPatch(Prism TP, float3 q[5], SmallerRay ray, int id, float tmax, float tmin, inout float3 texcoord, inout int finalid, float MaxMax, inout float LocalT) {
+bool intersectPatch(float3 q[5], SmallerRay ray, int id, float tmax, float tmin, inout float3 texcoord, inout int finalid, float MaxMax, inout float LocalT) {
 	// ray is rtDeclareVariable(Ray,ray,rtCurrentRay,) in OptiX
 	float3 q00 = q[0], q10 = q[1], q11 = q[2], q01 = q[3];
 	float3 e10 = q10 - q00; // q01---------------q11
@@ -2403,10 +2403,7 @@ bool intersectPatch(Prism TP, float3 q[5], SmallerRay ray, int id, float tmax, f
 	return false;
 }
 
-inline bool IntersectPrismTriangle(float3 pos0, float3 v1, float3 v2, SmallerRay ray, inout float Min, inout float Max, float max_distance, inout float LocalT) {
-	float3 posedge1 = v1 - pos0;
-	float3 posedge2 = v2 - pos0;
-
+inline bool IntersectPrismTriangle(float3 pos0, float3 posedge1, float3 posedge2, SmallerRay ray, inout float Min, inout float Max, float max_distance, inout float LocalT) {
     float3 h = cross(ray.direction, posedge2);
     float  a = dot(posedge1, h);
 
@@ -2431,13 +2428,15 @@ inline bool IntersectPrismTriangle(float3 pos0, float3 v1, float3 v2, SmallerRay
 }
 
 
-bool IntersectPrism(Prism TP, SmallerRay ray, inout float tmin, inout float tmax, float maxmax) {
+bool IntersectPrism(const CudaTriangleA tri, Prism TP, SmallerRay ray, inout float tmin, inout float tmax, float maxmax) {
 	float3 texcoord;
 	int finalid = -1;
 	bool IntersectedA = false;
+	const float3 AdjustedPosA = tri.pos0 + tri.posedge1;
+	const float3 AdjustedPosB = tri.pos0 + tri.posedge2;
 	{
 		float LocalT = 0;
-		if(IntersectPrismTriangle(TP.V[0], TP.V[1], TP.V[2], ray, tmin, tmax, maxmax, LocalT)) {
+		if(IntersectPrismTriangle(tri.pos0, tri.posedge1, tri.posedge2, ray, tmin, tmax, maxmax, LocalT)) {
 			IntersectedA = true;
 			tmax = max(tmax, LocalT);
 			tmin = min(tmin, LocalT);
@@ -2445,7 +2444,7 @@ bool IntersectPrism(Prism TP, SmallerRay ray, inout float tmin, inout float tmax
 	}
 	{
 		float LocalT = 0;
-		if(IntersectPrismTriangle(TP.E[2], TP.E[1], TP.E[0], ray, tmin, tmax, maxmax, LocalT)) {
+		if(IntersectPrismTriangle(TP.E[2], TP.E[1] - TP.E[2], TP.E[0] - TP.E[2], ray, tmin, tmax, maxmax, LocalT)) {
 			IntersectedA = true;
 			tmax = max(tmax, LocalT);
 			tmin = min(tmin, LocalT);
@@ -2453,14 +2452,14 @@ bool IntersectPrism(Prism TP, SmallerRay ray, inout float tmin, inout float tmax
 	}
 	{
 		float3 q[5] = {
-			TP.V[1],
-			TP.V[0],
+			AdjustedPosA,
+			tri.pos0,
 			TP.E[0],
 			TP.E[1],
-			cross(TP.V[0]-TP.V[1],TP.E[1]-TP.E[0])
+			cross(-tri.posedge1,TP.E[1]-TP.E[0])
 		};
 		float LocalT = 0;
-		if(intersectPatch(TP, q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
+		if(intersectPatch(q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
 			IntersectedA = true;
 			tmax = max(tmax, LocalT);
 			tmin = min(tmin, LocalT);
@@ -2468,15 +2467,15 @@ bool IntersectPrism(Prism TP, SmallerRay ray, inout float tmin, inout float tmax
 	}
 	{
 		float3 q[5] = {
-			TP.V[2],
-			TP.V[1],
+			AdjustedPosB,
+			AdjustedPosA,
 			TP.E[1],
 			TP.E[2],
-			cross(TP.V[1]-TP.V[2],TP.E[2]-TP.E[1])
+			cross(AdjustedPosA-AdjustedPosB,TP.E[2]-TP.E[1])
 		};
 
 		float LocalT = 0;
-		if(intersectPatch(TP, q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
+		if(intersectPatch(q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
 			IntersectedA = true;
 			tmax = max(tmax, LocalT);
 			tmin = min(tmin, LocalT);
@@ -2484,14 +2483,14 @@ bool IntersectPrism(Prism TP, SmallerRay ray, inout float tmin, inout float tmax
 	}
 	{
 		float3 q[5] = {
-			TP.V[0],
-			TP.V[2],
+			tri.pos0,
+			AdjustedPosB,
 			TP.E[2],
 			TP.E[0],
-			cross(TP.V[2]-TP.V[0],TP.E[0]-TP.E[2])
+			cross(tri.posedge2,TP.E[0]-TP.E[2])
 		};
 		float LocalT = 0;
-		if(intersectPatch(TP, q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
+		if(intersectPatch(q, ray, 0, tmax, tmin, texcoord, finalid, maxmax, LocalT)) {
 			IntersectedA = true;
 			tmax = max(tmax, LocalT);
 			tmin = min(tmin, LocalT);
@@ -2501,7 +2500,7 @@ bool IntersectPrism(Prism TP, SmallerRay ray, inout float tmin, inout float tmax
 	return IntersectedA;
 }
 
-float dot2( in float3 v ) { return dot(v,v); }
+inline float dot2( in float3 v ) { return dot(v,v); }
 
 float udTriangle( in float3 v1, in float3 v2, in float3 v3, in float3 p )
 {
@@ -2526,9 +2525,7 @@ float udTriangle( in float3 v1, in float3 v2, in float3 v3, in float3 p )
                   dot(nor,p1)*dot(nor,p1)/dot2(nor) );
 }
 
-float3 triangleBarycentric (float3 s,
-float3 c0, float3 c1, float3 c2)
-{
+float3 triangleBarycentric (float3 s, float3 c0, float3 c1, float3 c2) {
 	float3 x0, x1, x2, b;
 	float d00, d01, d11, d20, d21, invDenom;
 	x0 = c1-c0; x1 = c2-c0; x2 = s - c0;
@@ -2545,17 +2542,19 @@ float3 c0, float3 c1, float3 c2)
 }
 
 #define PDMNormEpsilon 1.0e-5f
-inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, CudaTriangleA Tri, int2 TempUv) {
+inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, const CudaTriangleA Tri, int2 TempUv) {
 	const float2 HalfTEX0 = TOHALF(Tri.tex0);
 	const float2 HalfTEX1 = TOHALF(Tri.texedge1);
 	const float2 HalfTEX2 = TOHALF(Tri.texedge2);
+	const float3 AdjustedPos1 = Tri.pos0 + Tri.posedge1;
+	const float3 AdjustedPos2 = Tri.pos0 + Tri.posedge2;
 	float3 b = float3(1.0f - UV.x - UV.y, UV.x, UV.y);
 	float2 uva = HalfTEX0 * b.x + HalfTEX1 * b.y + HalfTEX2 * b.z;
 	float2 uvb = HalfTEX0 * (b.x + PDMNormEpsilon) + HalfTEX1 * b.y + HalfTEX2 * (b.z - PDMNormEpsilon);
 	float2 uvc = HalfTEX0 * b.x + HalfTEX1 * (b.y + PDMNormEpsilon) + HalfTEX2 * (b.z - PDMNormEpsilon);
-	float3 pa = TP.V[0] * b.x + TP.V[1] * b.y + TP.V[2] * b.z;
-	float3 pb = TP.V[0] * (b.x + PDMNormEpsilon) + TP.V[1] * b.y + TP.V[2] * (b.z - PDMNormEpsilon);
-	float3 pc = TP.V[0] * b.x + TP.V[1] * (b.y + PDMNormEpsilon) + TP.V[2] * (b.z - PDMNormEpsilon);
+	float3 pa = Tri.pos0 * b.x + AdjustedPos1 * b.y + AdjustedPos2 * b.z;
+	float3 pb = Tri.pos0 * (b.x + PDMNormEpsilon) + AdjustedPos1 * b.y + AdjustedPos2 * (b.z - PDMNormEpsilon);
+	float3 pc = Tri.pos0 * b.x + AdjustedPos1 * (b.y + PDMNormEpsilon) + AdjustedPos2 * (b.z - PDMNormEpsilon);
 	float3 N0 = i_octahedral_32(TP.N[0]);
 	float3 N1 = i_octahedral_32(TP.N[1]);
 	float3 N2 = i_octahedral_32(TP.N[2]);
@@ -2564,29 +2563,31 @@ inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, C
 	float3 sb = pb + N * SampleTexture(uvb, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
 	float3 sc = pc + N * SampleTexture(uvc, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
 	float3 Ns = cross(sc - sa, sb - sa);// / (PDMNormEpsilon * PDMNormEpsilon);
-	float3 geometric_normal = -normalize(cross(TP.V[1] - TP.V[0], TP.V[2] - TP.V[0]));
+	float3 geometric_normal = -normalize(cross(Tri.posedge1, -Tri.posedge2));
 
 	return normalize(normalize(Ns) - geometric_normal + N);
 }
 
 
 
-inline float4 PDM(inout RayHit ray_hit, Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, CudaTriangleA Tri, float trumin) {
-	float dt = 0.005f;
+inline float4 PDM(inout RayHit ray_hit, const TrianglePos tri, Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, const CudaTriangleA Tri, float trumin) {//I am duplicating tri data still...
+	float dt = 0.001f;
 	bool zeroed = trumin == 0;
 	tmin = FarPlane;
 	tmax = 0;
-	[branch]if(IntersectPrism(TP, ray, tmin, tmax, ray_hit.t)) {
+	[branch]if(IntersectPrism(Tri, TP, ray, tmin, tmax, ray_hit.t)) {
 		const float DisplacementFactor = TempMat.DisplacementFactor;
-		float3 geometric_normal = -normalize(cross(TP.V[1] - TP.V[0], TP.V[2] - TP.V[0]));
+		float3 geometric_normal = -normalize(cross(Tri.posedge1, Tri.posedge2));
 		if(tmin == tmax && zeroed) tmin = 0;
 		float t = tmin;
-		float3 s = ray.origin + ray.direction * t;
-		float hray = udTriangle(TP.V[0], TP.V[1], TP.V[2], s);
+		float3 s = mad(ray.direction, t, ray.origin);
+		const float3 AdjustedPos1 = Tri.pos0 + Tri.posedge1;
+		const float3 AdjustedPos2 = Tri.pos0 + Tri.posedge2;
+		float hray = udTriangle(Tri.pos0, AdjustedPos1, AdjustedPos2, s);
 		float3 C[] = {
-			TP.V[0] + (TP.E[0] - TP.V[0]) * hray,
-			TP.V[1] + (TP.E[1] - TP.V[1]) * hray,
-			TP.V[2] + (TP.E[2] - TP.V[2]) * hray
+			Tri.pos0 + (TP.E[0] - Tri.pos0) * hray,
+			AdjustedPos1 + (TP.E[1] - AdjustedPos1) * hray,
+			AdjustedPos2 + (TP.E[2] - AdjustedPos2) * hray
 		};
 		int Coun = 0;
 		float hsurf = 0; 
@@ -2604,7 +2605,8 @@ inline float4 PDM(inout RayHit ray_hit, Prism TP, SmallerRay ray, float tmin, fl
 			C[1] -= N1 * DeltaH;
 			C[2] -= N2 * DeltaH;
 			float3 b = triangleBarycentric(s, C[0], C[1], C[2]);
-			float3 p = TP.V[0] * b.x + TP.V[1] * b.y + TP.V[2] * b.z;
+			// float3 p = Tri.pos0 * b.x + Tri.AdjustedPos1 * b.y + AdjustedPos2 * b.z;//Either fmad it or reduce it down to proper barycentrics?
+			float3 p = mad(Tri.posedge1, b.y, mad(Tri.posedge2, b.z, Tri.pos0));//Should be able to barycentric this natively
 			hray = dot(s - p, s - p);//its the abs symbol tho?
 			float2 uv = HalfTEX0 * b.x + HalfTEX1 * b.y + HalfTEX2 * b.z;
 			hsurf = SampleTexture(uv, SampleDisplacement, TempMat) * DisplacementFactor + 0.01f;
@@ -2612,12 +2614,11 @@ inline float4 PDM(inout RayHit ray_hit, Prism TP, SmallerRay ray, float tmin, fl
 			hdiffprev = hdiff;
 			hdiff = hsurf-hray;
 			t = t + dt;
-			s = s + ray.direction * dt;
+			s = mad(ray.direction, dt, s);
 		}
 		if(hray < hsurf) {
-			float dtt = dt * (abs(hdiff) / (abs(hdiffprev) + abs(hdiff) + 1e-8f));
-			t -= dtt;
-			float3 phit = ray.origin + ray.direction * t;
+			t -= dt * (abs(hdiff) / (abs(hdiffprev) + abs(hdiff) + 1e-8f));
+			float3 phit = mad(ray.direction, t, ray.origin);
 			float3 b = triangleBarycentric(phit, C[0], C[1], C[2]);
 			ray_hit.t = t;
 			ray_hit.u = b.y;
@@ -2631,23 +2632,25 @@ inline float4 PDM(inout RayHit ray_hit, Prism TP, SmallerRay ray, float tmin, fl
 }
 
 
-float4 PDMShadow(Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, CudaTriangleA Tri, float trumax, float trumin) {
+float4 PDMShadow(const TrianglePos tri, Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, const CudaTriangleA Tri, float trumax, float trumin) {
 	float dt = 0.01f;
 	bool zeroed = trumin == 0;
 	trumax = tmax;
 	tmin = FarPlane;
 	tmax = 0;
-	if(IntersectPrism(TP, ray, tmin, tmax, trumax)) {
+	if(IntersectPrism(Tri, TP, ray, tmin, tmax, trumax)) {
 		const float DisplacementFactor = TempMat.DisplacementFactor;
-		float3 geometric_normal = -normalize(cross(TP.V[1] - TP.V[0], TP.V[2] - TP.V[0]));
+		float3 geometric_normal = -normalize(cross(Tri.posedge1, Tri.posedge2));
 		if(tmin == tmax && zeroed) tmin = 0;
 		float t = tmin;
-		float3 s = ray.origin + ray.direction * t;
-		float hray = udTriangle(TP.V[0], TP.V[1], TP.V[2], s);
+		const float3 AdjustedPos1 = Tri.pos0 + Tri.posedge1;
+		const float3 AdjustedPos2 = Tri.pos0 + Tri.posedge2;
+		float3 s = mad(ray.direction, t, ray.origin);
+		float hray = udTriangle(Tri.pos0, AdjustedPos1, AdjustedPos2, s);
 		float3 C[] = {
-			TP.V[0] + (TP.E[0] - TP.V[0]) * hray,
-			TP.V[1] + (TP.E[1] - TP.V[1]) * hray,
-			TP.V[2] + (TP.E[2] - TP.V[2]) * hray
+			Tri.pos0 + (TP.E[0] - Tri.pos0) * hray,
+			AdjustedPos1 + (TP.E[1] - AdjustedPos1) * hray,
+			AdjustedPos2 + (TP.E[2] - AdjustedPos2) * hray
 		};
 		float hsurf = 0; 
 		float2 HalfTEX0 = TOHALF(Tri.tex0);
@@ -2662,13 +2665,13 @@ float4 PDMShadow(Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionM
 			C[1] -= N1 * DeltaH;
 			C[2] -= N2 * DeltaH;
 			float3 b = triangleBarycentric(s, C[0], C[1], C[2]);
-			float3 p = TP.V[0] * b.x + TP.V[1] * b.y + TP.V[2] * b.z;
+			float3 p = mad(Tri.posedge1, b.y, mad(Tri.posedge2, b.z, Tri.pos0));//Should be able to barycentric this natively
 			hray = dot(s - p, s - p);//its the abs symbol tho?
 			float2 uv = HalfTEX0 * b.x + HalfTEX1 * b.y + HalfTEX2 * b.z;
 			hsurf = SampleTexture(uv, SampleDisplacement, TempMat) * DisplacementFactor + 0.01f;
 			hsurf *= hsurf;
 			t = t + dt;
-			s = s + ray.direction * dt;
+			s = mad(ray.direction, dt, s);
 		}
 		if(hray < hsurf) {
 			return 1;
@@ -2697,13 +2700,13 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 	    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 	    if(_IntersectionMaterials[MaterialIndex].DisplacementFactor != 0 && _IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
             int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;	    	
-		    float3 Max = max(max(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), max(max(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
-		    float3 Min = min(min(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), min(min(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+		    float3 Max = max(max(tri.pos0, tri.pos0 + tri.posedge1), max(max(tri.pos0 + tri.posedge2, PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+		    float3 Min = min(min(tri.pos0, tri.pos0 + tri.posedge1), min(min(tri.pos0 + tri.posedge2, PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
 
 		    float trumax = 0;
 		    float trumin = 0;
 		    rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
-		    float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
+		    float4 A = PDMShadow(tri, PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
 		    if(A.w != -1) {
 		    	return true;
 		    }
@@ -2784,12 +2787,12 @@ inline void triangle_intersect_dist(const int tri_id, const SmallerRay ray, inou
         const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
         if(_IntersectionMaterials[MaterialIndex].DisplacementFactor != 0 && _IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
             int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;
-            float3 Max = max(max(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), max(max(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
-            float3 Min = min(min(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), min(min(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+            float3 Max = max(max(tri.pos0, tri.pos0 + tri.posedge1), max(max(tri.pos0 + tri.posedge2, PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+            float3 Min = min(min(tri.pos0, tri.pos0 + tri.posedge1), min(min(tri.pos0 + tri.posedge2, PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
             float trumax = 0;
             float trumin = 0;
             rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
-		    float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
+		    float4 A = PDMShadow(tri, PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
             if(A.w != -1) {
             	max_distance = A;
                 return;

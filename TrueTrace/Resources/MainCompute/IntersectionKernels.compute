@@ -29,13 +29,13 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
         const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
         if(_IntersectionMaterials[MaterialIndex].DisplacementFactor != 0 && _IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
             int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;
-            float3 Max = max(max(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), max(max(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
-            float3 Min = min(min(PrismBuffer[prism_id].V[0], PrismBuffer[prism_id].V[1]), min(min(PrismBuffer[prism_id].V[2], PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+            float3 Max = max(max(tri.pos0, tri.pos0 + tri.posedge1), max(max(tri.pos0 + tri.posedge2, PrismBuffer[prism_id].E[0]), max(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
+            float3 Min = min(min(tri.pos0, tri.pos0 + tri.posedge1), min(min(tri.pos0 + tri.posedge2, PrismBuffer[prism_id].E[0]), min(PrismBuffer[prism_id].E[1], PrismBuffer[prism_id].E[2])));
             float trumax = 0;
             float trumin = 0;
             rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
             float TT = ray_hit.t;
-            float4 A = PDM(ray_hit, PrismBuffer[prism_id], ray, 0.00f, TT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumin);
+            float4 A = PDM(ray_hit, tri, PrismBuffer[prism_id], ray, 0.00f, TT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumin);
             if(A.w != -1) {
                 ray_hit.mesh_id = mesh_id;
                 ray_hit.triangle_id = tri_id;

@@ -2016,36 +2016,36 @@ namespace TrueTrace {
         //     }
         // }
 #if TTDisplacement
-        public void OnDrawGizmos() {
-            if(TriPrisms != null && DisplacementTexs != null && DisplacementTexs.Count != 0) {
-                Matrix4x4 Mat = transform.localToWorldMatrix;
-                int Len = TriPrisms.Length;
-                for(int i = 0; i < Len; i++) {
-                    if(_Materials[(int)AggTriangles[i].MatDat].MatData.DisplacementFactor == 0) continue;
-                    TriPrism T = TriPrisms[i];
-                    // for(int i2 = 0; i2 < 3; i2++) {
-                        T.Va = CommonFunctions.transform_position(Mat, T.Va);
-                        T.Vb = CommonFunctions.transform_position(Mat, T.Vb);
-                        T.Vc = CommonFunctions.transform_position(Mat, T.Vc);
-                        T.Ea = CommonFunctions.transform_position(Mat, T.Ea);
-                        T.Eb = CommonFunctions.transform_position(Mat, T.Eb);
-                        T.Ec = CommonFunctions.transform_position(Mat, T.Ec);
-                    // }
-                    Gizmos.color = Color.white;
-                    Gizmos.DrawLine(T.Va, T.Ea);
-                    Gizmos.DrawLine(T.Vb, T.Eb);
-                    Gizmos.DrawLine(T.Vc, T.Ec);
-                    Gizmos.color = Color.blue;
-                    Gizmos.DrawLine(T.Va, T.Vb);
-                    Gizmos.DrawLine(T.Va, T.Vc);
-                    Gizmos.DrawLine(T.Vb, T.Vc);
-                    Gizmos.color = Color.green;
-                    Gizmos.DrawLine(T.Ea, T.Eb);
-                    Gizmos.DrawLine(T.Ea, T.Ec);
-                    Gizmos.DrawLine(T.Eb, T.Ec);
-                }
-            }
-        }
+        // public void OnDrawGizmos() {
+        //     if(TriPrisms != null && DisplacementTexs != null && DisplacementTexs.Count != 0) {
+        //         Matrix4x4 Mat = transform.localToWorldMatrix;
+        //         int Len = TriPrisms.Length;
+        //         for(int i = 0; i < Len; i++) {
+        //             if(_Materials[(int)AggTriangles[i].MatDat].MatData.DisplacementFactor == 0) continue;
+        //             TriPrism T = TriPrisms[i];
+        //             // for(int i2 = 0; i2 < 3; i2++) {
+        //                 T.Va = CommonFunctions.transform_position(Mat, T.Va);
+        //                 T.Vb = CommonFunctions.transform_position(Mat, T.Vb);
+        //                 T.Vc = CommonFunctions.transform_position(Mat, T.Vc);
+        //                 T.Ea = CommonFunctions.transform_position(Mat, T.Ea);
+        //                 T.Eb = CommonFunctions.transform_position(Mat, T.Eb);
+        //                 T.Ec = CommonFunctions.transform_position(Mat, T.Ec);
+        //             // }
+        //             Gizmos.color = Color.white;
+        //             Gizmos.DrawLine(T.Va, T.Ea);
+        //             Gizmos.DrawLine(T.Vb, T.Eb);
+        //             Gizmos.DrawLine(T.Vc, T.Ec);
+        //             Gizmos.color = Color.blue;
+        //             Gizmos.DrawLine(T.Va, T.Vb);
+        //             Gizmos.DrawLine(T.Va, T.Vc);
+        //             Gizmos.DrawLine(T.Vb, T.Vc);
+        //             Gizmos.color = Color.green;
+        //             Gizmos.DrawLine(T.Ea, T.Eb);
+        //             Gizmos.DrawLine(T.Ea, T.Ec);
+        //             Gizmos.DrawLine(T.Eb, T.Ec);
+        //         }
+        //     }
+        // }
 #endif
 
   }

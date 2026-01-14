@@ -775,9 +775,6 @@ namespace CommonVars
  [System.Serializable]
     public struct TriPrism
     {
-        public Vector3 Va;
-        public Vector3 Vb;
-        public Vector3 Vc;
         public Vector3 Ea;
         public Vector3 Eb;
         public Vector3 Ec;
@@ -788,9 +785,6 @@ namespace CommonVars
             // V = new Vector3[3];
             // E = new Vector3[3];
             // N = new Vector3[3];
-            Va = Tri.pos0;
-            Vb = Tri.pos0 + Tri.posedge1;
-            Vc = Tri.pos0 + Tri.posedge2;
             Na = Tri.norm0;
             Nb = Tri.norm1;
             Nc = Tri.norm2;
@@ -799,9 +793,9 @@ namespace CommonVars
             Vector3 norm2 = CommonFunctions.UnpackOctahedral(Tri.norm2);
             Vector3 GeometricNorm = Vector3.Cross(Tri.posedge1.normalized, Tri.posedge2.normalized).normalized;
             if(Vector3.Dot(GeometricNorm, norm0) < 0) GeometricNorm *= -1;
-            Ea = Va + wmax * (1.0f / Vector3.Dot(norm0, GeometricNorm)) * norm0;
-            Eb = Vb + wmax * (1.0f / Vector3.Dot(norm1, GeometricNorm)) * norm1;
-            Ec = Vc + wmax * (1.0f / Vector3.Dot(norm2, GeometricNorm)) * norm2;
+            Ea = Tri.pos0 + wmax * (1.0f / Vector3.Dot(norm0, GeometricNorm)) * norm0;
+            Eb = Tri.pos0 + Tri.posedge1 + wmax * (1.0f / Vector3.Dot(norm1, GeometricNorm)) * norm1;
+            Ec = Tri.pos0 + Tri.posedge2 + wmax * (1.0f / Vector3.Dot(norm2, GeometricNorm)) * norm2;
         }
     }
 
