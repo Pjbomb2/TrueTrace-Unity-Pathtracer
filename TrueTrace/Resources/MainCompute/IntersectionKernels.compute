@@ -35,7 +35,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
             float trumin = 0;
             rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
             float TT = ray_hit.t;
-            float4 A = PDM(ray_hit, tri, PrismBuffer[prism_id], ray, 0.00f, TT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumin);
+            float4 A = PDM(ray_hit, PrismBuffer[prism_id], ray, 0.00f, TT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumin);
             if(A.w != -1) {
                 ray_hit.mesh_id = mesh_id;
                 ray_hit.triangle_id = tri_id;
@@ -161,7 +161,8 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                             int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                             int tri_id = TempHit.triangle_id + triangleOffset;
                             int mesh_id = MeshOffsets[Indexes.x].y;
-                            int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[tri_id].MatDat);
+                            CudaTriangleA TempTri = AggTrisA[tri_id];
+                            int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + TempTri.MatDat);
                             if(mesh_id != MeshInd) {
                                 ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray2.direction));
                                 ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray2.origin, 1))).xyz;
@@ -170,13 +171,13 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                             if(_IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
                                 int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;
                                 Prism TP = PrismBuffer[prism_id];
-                                float3 Max = max(max(TP.V[0], TP.V[1]), max(max(TP.V[2], TP.E[0]), max(TP.E[1], TP.E[2])));
-                                float3 Min = min(min(TP.V[0], TP.V[1]), min(min(TP.V[2], TP.E[0]), min(TP.E[1], TP.E[2])));
+                                float3 Max = max(max(TempTri.pos0, TempTri.pos0 + TempTri.posedge1), max(max(TempTri.pos0 + TempTri.posedge2, TP.E[0]), max(TP.E[1], TP.E[2])));
+                                float3 Min = min(min(TempTri.pos0, TempTri.pos0 + TempTri.posedge1), min(min(TempTri.pos0 + TempTri.posedge2, TP.E[0]), min(TP.E[1], TP.E[2])));
                                 float trumax = 0;
                                 float trumin = 0;
                                 rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
                                 float TT = bestHit.t;
-                                float4 A = PDM(TempHit, TP, ray, 0, TT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumin);
+                                float4 A = PDM(TempHit, TP, ray, 0, TT, _IntersectionMaterials[MaterialIndex], TempTri, trumin);
                                 if(A.w < bestHit.t && A.w != -1) {
                                     bestHit = TempHit;
                                     continue;
@@ -468,7 +469,8 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                             int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                             tri_id += triangleOffset;
                             mesh_id = MeshOffsets[Indexes.x].y;
-                            int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[tri_id].MatDat);
+                            CudaTriangleA TempTri = AggTrisA[tri_id];
+                            int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + TempTri.MatDat);
                             if(mesh_id != MeshInd) {
                                 ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray2.direction));
                                 ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray2.origin, 1))).xyz;
@@ -477,12 +479,12 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                             if(_IntersectionMaterials[MaterialIndex].DisplacementTex.x != 0) {
                                 int prism_id = tri_id - _MeshData[mesh_id].TriOffset + _MeshData[mesh_id].DisplacementOffset;
                                 Prism TP = PrismBuffer[prism_id];
-                                float3 Max = max(max(TP.V[0], TP.V[1]), max(max(TP.V[2], TP.E[0]), max(TP.E[1], TP.E[2])));
-                                float3 Min = min(min(TP.V[0], TP.V[1]), min(min(TP.V[2], TP.E[0]), min(TP.E[1], TP.E[2])));
+                                float3 Max = max(max(TempTri.pos0, TempTri.pos0 + TempTri.posedge1), max(max(TempTri.pos0 + TempTri.posedge2, TP.E[0]), max(TP.E[1], TP.E[2])));
+                                float3 Min = min(min(TempTri.pos0, TempTri.pos0 + TempTri.posedge1), min(min(TempTri.pos0 + TempTri.posedge2, TP.E[0]), min(TP.E[1], TP.E[2])));
                                 float trumax = 0;
                                 float trumin = 0;
                                 rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
-                                float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, ShadowRayT, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
+                                float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, ShadowRayT, _IntersectionMaterials[MaterialIndex], TempTri, trumax, trumin);
                                 if( A.w != -1) return;
                                 else continue;
                             } else {

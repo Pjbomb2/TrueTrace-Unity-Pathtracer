@@ -2570,7 +2570,7 @@ inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, c
 
 
 
-inline float4 PDM(inout RayHit ray_hit, const TrianglePos tri, Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, const CudaTriangleA Tri, float trumin) {//I am duplicating tri data still...
+inline float4 PDM(inout RayHit ray_hit, Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, const CudaTriangleA Tri, float trumin) {//I am duplicating tri data still...
 	float dt = 0.001f;
 	bool zeroed = trumin == 0;
 	tmin = FarPlane;
@@ -2632,7 +2632,7 @@ inline float4 PDM(inout RayHit ray_hit, const TrianglePos tri, Prism TP, Smaller
 }
 
 
-float4 PDMShadow(const TrianglePos tri, Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, const CudaTriangleA Tri, float trumax, float trumin) {
+float4 PDMShadow(Prism TP, SmallerRay ray, float tmin, float tmax, IntersectionMat TempMat, const CudaTriangleA Tri, float trumax, float trumin) {
 	float dt = 0.01f;
 	bool zeroed = trumin == 0;
 	trumax = tmax;
