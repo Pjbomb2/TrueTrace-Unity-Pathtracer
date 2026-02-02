@@ -1311,6 +1311,21 @@ inline float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
     return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
 }
 
+inline float3 LoadSurfaceInfoPrevInCurrent(int2 id, inout uint Norm) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshData[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+        float3 USGNorm = mul(Inverse, cross(normalize(AggTrisA[Target.y].posedge1), normalize(AggTrisA[Target.y].posedge2)));
+        float wldScale = rsqrt(dot(USGNorm, USGNorm));
+        Norm = octahedral_32(-mul(wldScale, USGNorm));
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
 float3 LoadSurfaceInfo(int2 id) {
     uint4 Target = PrimaryTriData[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
@@ -1320,6 +1335,20 @@ float3 LoadSurfaceInfo(int2 id) {
     TriUV.x = asfloat(Target.z);
     TriUV.y = asfloat(Target.w);
     float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+float3 LoadSurfaceInfo(int2 id, inout uint Norm) {
+    uint4 Target = PrimaryTriData[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshData[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+        float3 USGNorm = mul(Inverse, cross(normalize(AggTrisA[Target.y].posedge1), normalize(AggTrisA[Target.y].posedge2)));
+        float wldScale = rsqrt(dot(USGNorm, USGNorm));
+        Norm = octahedral_32(-mul(wldScale, USGNorm));
     return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
 }
 

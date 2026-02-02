@@ -190,8 +190,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
     }
 #endif
     if(CurBounce == 0 && UseASVGF && !(TTMat.metallic == 1 && TTMat.roughness < 0.05f) && TTMat.specTrans != 1 && RandomNums[id].w == 1) {
-        Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
-        norm = i_octahedral_32(asuint(PrevScreenData.y));
+        // Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
+        // norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
 #if DebugView == DVGeomNorm
     if(CurBounce == 0) _DebugTex[id.xy] = float4(Geomnorm, 0);
@@ -1431,6 +1431,7 @@ void TTtoOIDNKernel(uint3 id : SV_DispatchThreadID) {
 }
 
 RWTexture2D<half> CorrectedDistanceTex;
+RWTexture2D<uint> CorrectedNormTex;
 
 
 #pragma kernel MVKernel
@@ -1439,7 +1440,8 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
 
         float3 OldPos = LoadSurfaceInfoPrev2(id.xy);
-        float3 NewPos = LoadSurfaceInfoPrevInCurrent(id.xy);
+        uint Norm;
+        float3 NewPos = LoadSurfaceInfoPrevInCurrent(id.xy, Norm);
 
                 // float4 toCam = mul(viewprojection, float4(OldPos, 1));
                 // float2 reflprojection = (toCam.xy / toCam.w) * 0.5f + 0.5f;
@@ -1452,6 +1454,7 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
         if(any(NeighbPos < 0 || NeighbPos >= int2(screen_width, screen_height))) return;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
             CorrectedDistanceTex[NeighbPos] = length(NewPos - CamPos);// / 120.0f;
+            CorrectedNormTex[NeighbPos] = Norm;// / 120.0f;
             MVTexture[NeighbPos] = (reflprojection);
         }
 
@@ -1473,7 +1476,8 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
 
         float3 OldPos = LoadSurfaceInfoCurrentInPrev2(id.xy);
-        float3 NewPos = LoadSurfaceInfo(id.xy);
+        uint Norm;
+        float3 NewPos = LoadSurfaceInfo(id.xy, Norm);
 
                 // float4 toCam = mul(viewprojection, float4(OldPos, 1));
                 // float2 reflprojection = (toCam.xy / toCam.w) * 0.5f + 0.5f;
@@ -1492,6 +1496,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         reflprojection *= dot(reflprojection * float2(screen_width, screen_height), reflprojection * float2(screen_width, screen_height)) > 0.00001f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
             CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
+            CorrectedNormTex[id.xy] = Norm;// / 120.0f;
             MVTexture[id.xy] = (reflprojection);
         }
 }

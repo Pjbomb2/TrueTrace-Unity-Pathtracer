@@ -76,6 +76,10 @@ namespace TrueTrace {
         private RenderTexture CorrectedDistanceTexA;
         private RenderTexture CorrectedDistanceTexB;
 
+        private RenderTexture CorrectedNormTexA;
+        private RenderTexture CorrectedNormTexB;
+
+
         private RenderTexture _target;
         private RenderTexture _converged;
         private RenderTexture _DebugTex;
@@ -454,6 +458,8 @@ namespace TrueTrace {
             ScreenSpaceInfoPrev.ReleaseSafe();
             GradientsA.ReleaseSafe();
             GradientsB.ReleaseSafe();
+            CorrectedNormTexA.ReleaseSafe();
+            CorrectedNormTexB.ReleaseSafe();
             CorrectedDistanceTexA.ReleaseSafe();
             CorrectedDistanceTexB.ReleaseSafe();
 #if EnablePhotonMapping
@@ -880,6 +886,7 @@ namespace TrueTrace {
             ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel, "MVTexture", MVTexture);
             ShadingShader.SetTexture(MVKernel, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            ShadingShader.SetTexture(MVKernel, "CorrectedNormTex", (FramesSinceStart2 % 2 == 0) ? CorrectedNormTexA : CorrectedNormTexB);
 
             AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel+2);
             ShadingShader.SetTexture(MVKernel+2, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
@@ -887,9 +894,11 @@ namespace TrueTrace {
             ShadingShader.SetTexture(MVKernel+2, "MVTexture", MVTexture);
             ShadingShader.SetTexture(MVKernel+2, "PSRGBuff", PSRGBuff);
             ShadingShader.SetTexture(MVKernel+2, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            ShadingShader.SetTexture(MVKernel+2, "CorrectedNormTex", (FramesSinceStart2 % 2 == 0) ? CorrectedNormTexA : CorrectedNormTexB);
 
             ShadingShader.SetTexture(MVKernel + 1, "MVTexture", MVTexture);
             ShadingShader.SetTexture(MVKernel+1, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            ShadingShader.SetTexture(MVKernel+1, "CorrectedNormTex", (FramesSinceStart2 % 2 == 0) ? CorrectedNormTexA : CorrectedNormTexB);
             ShadingShader.SetComputeBuffer(MVKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(MVKernel + 2, "GlobalColors", LightingBuffer);
             ShadingShader.SetTexture(MVKernel + 2, "ScreenSpaceInfo", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
@@ -1077,6 +1086,8 @@ namespace TrueTrace {
                     ScreenSpaceInfoPrev.ReleaseSafe();
                     GradientsA.ReleaseSafe();
                     GradientsB.ReleaseSafe();
+                    CorrectedNormTexA.Release();
+                    CorrectedNormTexB.Release();
                     CorrectedDistanceTexA.Release();
                     CorrectedDistanceTexB.Release();
                     #if UseOIDN
@@ -1159,6 +1170,8 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref MVTexture, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfoPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref CorrectedNormTexA, SourceWidth, SourceHeight, CommonFunctions.RTFull1);
+                CommonFunctions.CreateRenderTexture(ref CorrectedNormTexB, SourceWidth, SourceHeight, CommonFunctions.RTFull1);
                 CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, SourceWidth, SourceHeight, CommonFunctions.RTHalf1);
                 CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, SourceWidth, SourceHeight, CommonFunctions.RTHalf1);
                 // Reset sampling
@@ -1213,8 +1226,8 @@ namespace TrueTrace {
             if(DoKernelProfiling) cmd.EndSample("TTMV");
                 if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
                     // AssetManager.Assets.SetMeshTraceBuffers(ASVGFCode.shader, 1);
-                    ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes, SourceWidth, SourceHeight, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 1)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, CorrectedDistanceTexA, CorrectedDistanceTexB, LightingBuffer);
+                    ASVGFCode.shader.SetTexture(2, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes, SourceWidth, SourceHeight, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 1)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, CorrectedDistanceTexA, CorrectedDistanceTexB, LightingBuffer, CorrectedNormTexA, CorrectedNormTexB);
                 if(DoKernelProfiling) cmd.EndSample("ASVGF Reproject Pass");
             }
 

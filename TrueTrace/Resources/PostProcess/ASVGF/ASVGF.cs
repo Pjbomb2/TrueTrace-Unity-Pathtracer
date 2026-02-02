@@ -75,6 +75,7 @@ namespace TrueTrace {
         private int Atrous;
         private int SpecCopy;
         private int CalcQuart;
+        private int INIT;
         private Vector3 PrevCamPos;
 
         public void ClearAll()
@@ -144,6 +145,7 @@ namespace TrueTrace {
             Atrous = shader.FindKernel("Atrous");
             SpecCopy = shader.FindKernel("TempCopyKernel");
             CalcQuart = shader.FindKernel("CalcPerc");
+            INIT = shader.FindKernel("INIT");
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
 
@@ -199,7 +201,7 @@ namespace TrueTrace {
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight, ComputeBuffer MeshesB, RenderTexture CorrectedDistanceTexA, RenderTexture CorrectedDistanceTexB, ComputeBuffer _ColorBuffer)
+        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight, ComputeBuffer MeshesB, RenderTexture CorrectedDistanceTexA, RenderTexture CorrectedDistanceTexB, ComputeBuffer _ColorBuffer, RenderTexture CorrectedNormTexA, RenderTexture CorrectedNormTexB)
         {
             // this.ScreenWidth = ScreenWidth;
             // this.ScreenHeight = ScreenHeight;
@@ -235,11 +237,48 @@ namespace TrueTrace {
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Gradients Kernel");
             cmd.SetComputeIntParam(shader, "CurFrame", CurFrame);
 
+
+            cmd.SetComputeTextureParam(shader, INIT, "ReflRefracA", (EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
+            cmd.SetComputeBufferParam(shader, INIT, "GlobalColorsRead", _ColorBuffer);
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            cmd.SetComputeTextureParam(shader, INIT, "NormA", (EvenFrame ? CorrectedNormTexA : CorrectedNormTexB));
+            cmd.SetComputeTextureParam(shader, INIT, "NormB", (!EvenFrame ? CorrectedNormTexA : CorrectedNormTexB));
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
+            cmd.SetComputeTextureParam(shader, INIT, "IMG_ASVGF_GRAD_SMPL_POS_A", (EvenFrame ? ASVGF_GRAD_SMPL_POS_A : ASVGF_GRAD_SMPL_POS_B));
+            cmd.SetComputeTextureParam(shader, INIT, "IMG_ASVGF_GRAD_HF_SPEC_PING", ASVGF_GRAD_HF_SPEC_PING);
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_PT_COLOR_HF", TEX_PT_COLOR_HF);
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_PT_COLOR_SPEC", TEX_PT_COLOR_SPEC);
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_ASVGF_GRAD_SMPL_POS_B", (!EvenFrame ? ASVGF_GRAD_SMPL_POS_A : ASVGF_GRAD_SMPL_POS_B));
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_ASVGF_GRAD_SMPL_POS_A", (EvenFrame ? ASVGF_GRAD_SMPL_POS_A : ASVGF_GRAD_SMPL_POS_B));
+            cmd.SetComputeTextureParam(shader, INIT, "TEX_PT_COLOR_LF_SHWrite", PT_LF1);
+            cmd.SetComputeTextureParam(shader, INIT, "IMG_ASVGF_GRAD_LF_PING", ASVGF_GRAD_LF_PING);
+            cmd.SetComputeTextureParam(shader, INIT, "RNGTexA", (EvenFrame) ? RNGTex : RNGTexB);
+            cmd.SetComputeTextureParam(shader, INIT, "RNGTexB", (!EvenFrame) ? RNGTex : RNGTexB);
+            cmd.SetComputeTextureParam(shader, INIT, "MetallicAWrite", (EvenFrame ? MetallicA : MetallicB));
+            cmd.SetComputeTextureParam(shader, INIT, "ReflRefracB", (!EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
+            cmd.SetComputeTextureParam(shader, INIT, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
+            cmd.SetComputeTextureParam(shader, INIT, "PrimaryTriData", PrimaryTriData);
+            cmd.SetComputeBufferParam(shader, INIT, "_MeshData", Meshes);
+            cmd.SetComputeBufferParam(shader, INIT, "_MeshDataB", Meshes);
+            cmd.SetComputeBufferParam(shader, INIT, "AggTrisA", Tris);
+            cmd.SetComputeBufferParam(shader, INIT, "MeshIndexes", MeshIndexes);
+            cmd.SetComputeBufferParam(shader, INIT, "GlobalRaysMini", GlobalRays);
+
+
+
+            cmd.DispatchCompute(shader, INIT, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
+
+
+
+
             shader.SetTextureFromGlobal(Reproject, "TEX_PT_MOTION", "TTMotionVectorTexture");
             cmd.SetComputeTextureParam(shader, Reproject, "ReflRefracA", (EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
             cmd.SetComputeBufferParam(shader, Reproject, "GlobalColorsRead", _ColorBuffer);
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            cmd.SetComputeTextureParam(shader, Reproject, "NormA", (EvenFrame ? CorrectedNormTexA : CorrectedNormTexB));
+            cmd.SetComputeTextureParam(shader, Reproject, "NormB", (!EvenFrame ? CorrectedNormTexA : CorrectedNormTexB));
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Reproject, "IMG_ASVGF_GRAD_SMPL_POS_A", (EvenFrame ? ASVGF_GRAD_SMPL_POS_A : ASVGF_GRAD_SMPL_POS_B));
             cmd.SetComputeTextureParam(shader, Reproject, "IMG_ASVGF_GRAD_HF_SPEC_PING", ASVGF_GRAD_HF_SPEC_PING);
