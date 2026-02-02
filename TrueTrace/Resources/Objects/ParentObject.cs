@@ -1068,7 +1068,8 @@ namespace TrueTrace {
             float Priority(ref AABB triBox, ref CudaTriangle triangle)
             {
                 Vector3 Sizes = triBox.BBMax - triBox.BBMin;
-                return (float)System.Math.Pow(LargestExtent(ref Sizes) * (HalfArea(ref Sizes) * 2.0f - Length(Vector3.Cross(triangle.posedge1, triangle.posedge2)) * 0.5f), 1f / 3f);
+                float Extent = LargestExtent(ref Sizes);
+                return (float)System.Math.Pow(Extent * Extent * (HalfArea(ref Sizes) * 2.0f - Length(Vector3.Cross(triangle.posedge1, triangle.posedge2)) * 0.5f), 1f / 3f);
             }
             public struct SplitData {
                 public AABB box;
