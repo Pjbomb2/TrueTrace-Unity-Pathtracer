@@ -1011,7 +1011,7 @@ namespace TrueTrace {
                 TargetWidth = OverridenWidth;
                 TargetHeight = OverridenHeight;
                 SourceWidth = (int)Mathf.Ceil((float)TargetWidth * LocalTTSettings.RenderScale);
-                SourceHeight = (int)Mathf.Ceil((float)TargetHeight * LocalTTSettings.RenderScale);
+                SourceHeight = TargetHeight;//(int)Mathf.Ceil((float)TargetHeight * LocalTTSettings.RenderScale);
                 if (Mathf.Abs(SourceWidth - TargetWidth) < 2)
                 {
                     SourceWidth = TargetWidth;

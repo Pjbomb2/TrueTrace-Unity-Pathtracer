@@ -2735,7 +2735,7 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 		    float trumax = 0;
 		    float trumin = 0;
 		    rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
-		    float4 A = PDMShadow(tri, PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
+		    float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
 		    if(A.w != -1) {
 		    	return true;
 		    }
@@ -2821,7 +2821,7 @@ inline void triangle_intersect_dist(const int tri_id, const SmallerRay ray, inou
             float trumax = 0;
             float trumin = 0;
             rayBoxIntersection2(ray.origin, ray.direction, Min, Max, 9999.0f, trumax, trumin);
-		    float4 A = PDMShadow(tri, PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
+		    float4 A = PDMShadow(PrismBuffer[prism_id], ray, 0.00f, max_distance, _IntersectionMaterials[MaterialIndex], AggTrisA[tri_id], trumax, trumin);
             if(A.w != -1) {
             	max_distance = A;
                 return;

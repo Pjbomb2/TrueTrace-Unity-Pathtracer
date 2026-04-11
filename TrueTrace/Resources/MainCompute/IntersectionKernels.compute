@@ -107,6 +107,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #endif
     RayHit bestHit;
     SmallerRay ray;
+        SmallerRay ray2;
     float3 throughput = 1;
     #ifndef HardwareRT
         int Reps = 0;
@@ -115,7 +116,6 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
         uint2 current_group;
         uint oct_inv4;
         int tlas_stack_size = -1;
-        SmallerRay ray2;
         int NodeOffset = 0;
         int TriOffset = 0;
         int MatOffset = 0;
@@ -147,6 +147,8 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             ray.direction = myRay.Direction;
             myRay.TMin = 0;
             myRay.TMax = bestHit.t;
+            ray2 = ray;
+            int MeshInd = 0;
             // bestHit.t = FarPlane;
             while(true) {
                q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
@@ -427,6 +429,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
         if(ray_index >= BufferSizes[CurBounce].shadow_rays) return;
     #endif
+        SmallerRay ray2;
     SmallerRay ray;
 
     #ifndef HardwareRT
@@ -438,7 +441,6 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
         int MatOffset;
         uint oct_inv4;
         int tlas_stack_size;
-        SmallerRay ray2;
         int Reps = 0;
     #endif
 
@@ -457,8 +459,10 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
             myRay.Direction = normalize(ShadowRaysBuffer[ray_index].EndPoint - myRay.Origin);
             ray.origin = myRay.Origin;
             ray.direction = myRay.Direction;
+            ray2 = ray;
             myRay.TMin = 0;
             myRay.TMax = ShadowRayT;
+            int MeshInd = 0;
             while(true) {
                 q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
                 while(q.Proceed()){
@@ -488,7 +492,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                                 if( A.w != -1) return;
                                 else continue;
                             } else {
-                                if(triangle_intersect_shadow(mesh_id, tri_id, ray, ShadowRayT, throughput, _MeshData[mesh_id].MaterialOffset)) return;
+                                if(triangle_intersect_shadow(tri_id, ray, ShadowRayT, throughput, _MeshData[mesh_id].MaterialOffset, mesh_id)) return;
                                 else continue;
                             }
                             ray = ray2;

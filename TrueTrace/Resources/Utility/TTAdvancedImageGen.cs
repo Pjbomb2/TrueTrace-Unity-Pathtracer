@@ -209,8 +209,10 @@ namespace TrueTrace {
                 Application.runInBackground = true;
                 CameraList = CamList;
                 foreach(var A in CameraList) {
-                    A.OptionalDirector.timeUpdateMode = UnityEngine.Playables.DirectorUpdateMode.Manual;
-                    A.OptionalDirector.playOnAwake = false;
+                    if(A.OptionalDirector != null) {
+                        A.OptionalDirector.timeUpdateMode = UnityEngine.Playables.DirectorUpdateMode.Manual;
+                        A.OptionalDirector.playOnAwake = false;
+                    }
                 }
                 CurrentFrame = CamSettings[0].StartFrame;
                 TTInterface.SetTTSettings(CameraList[0].CamSettings);
@@ -699,9 +701,11 @@ namespace TrueTrace {
                     StartCoroutine(TurnTableSettings.RecordFrame());
                 break;
                 case(ImageGenType.TimedScreenShot):
-                    if(((RayTracingMaster.SampleCount % SamplesBetweenShots) == SamplesBetweenShots - 1 && !ResetSampCountAfterShot) || (RayTracingMaster.SampleCount >= SamplesBetweenShots && ResetSampCountAfterShot)) {
+                    if(((RayTracingMaster.SampleCount % SamplesBetweenShots) == SamplesBetweenShots - 2 && !ResetSampCountAfterShot) || (RayTracingMaster.SampleCount == SamplesBetweenShots - 1 && ResetSampCountAfterShot)) {
                         IncrementRenderCounter();
                         ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
+                    }
+                    if(((RayTracingMaster.SampleCount % SamplesBetweenShots) == SamplesBetweenShots - 1 && !ResetSampCountAfterShot) || (RayTracingMaster.SampleCount >= SamplesBetweenShots && ResetSampCountAfterShot)) {
                         // UnityEditor.AssetDatabase.Refresh();
                         foreach(var Obj in TargetedAnims) {
                             AnimatorClipInfo[] TempClips = Obj.GetCurrentAnimatorClipInfo(0);
