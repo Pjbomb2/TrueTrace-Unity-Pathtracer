@@ -20,7 +20,7 @@ namespace TrueTrace {
     public class AssetManager : MonoBehaviour
     {//This handels all the data
 
-        private BindlessArray bindlessTextures;
+        private BindlessTexture[] bindlessTextures;
         public int BindlessTextureCount;
         public static AssetManager Assets;
         public int TotalParentObjectSize;
@@ -276,13 +276,14 @@ namespace TrueTrace {
         int TexCount = DictTex.Count;
         if(TexCount != 0) {
             for (int i = 0; i < TexCount; i++) {
-                if(BindlessTextureCount > 2046) {
-                    Debug.LogError("TOO MANY TEXTURES, REPORT BACK TO DEVELOPER");
-                    return;
-                } else BindlessTextureCount++;
+                // if(BindlessTextureCount > 2046) {
+                //     Debug.LogError("TOO MANY TEXTURES, REPORT BACK TO DEVELOPER");
+                //     return;
+                // } else 
                 TexObj SelectedTex = DictTex[Rects[i]];
                 int ListLength = SelectedTex.TexObjList.Count;
-                var bindlessIdx = bindlessTextures.AppendRaw(SelectedTex.Tex);
+                bindlessTextures[BindlessTextureCount] = BindlessTexture.FromTexture2D((Texture2D)SelectedTex.Tex);
+                BindlessTextureCount++;
 
                 for(int j = 0; j < ListLength; j++) {
                         Vector2Int VectoredTexIndex = new Vector2Int(BindlessTextureCount, SelectedTex.TexObjList[j].z);
@@ -603,8 +604,8 @@ namespace TrueTrace {
             List<PackingRectangle> HeightMapRect = new List<PackingRectangle>();
             List<PackingRectangle> AlphaMapRect = new List<PackingRectangle>();
             #if !DX11Only && !UseAtlas
-                if(bindlessTextures == null) bindlessTextures = new BindlessArray();
-                bindlessTextures.Clear();
+                if(bindlessTextures == null) bindlessTextures = new BindlessTexture[2048];
+                // bindlessTextures.Clear();
                 Dictionary<int, TexObj> BindlessDict = new Dictionary<int, TexObj>();
                 List<int> BindlessRect = new List<int>();
             #else
@@ -875,7 +876,7 @@ namespace TrueTrace {
         }
         public void Awake() {
             Assets = this;
-            bindlessTextures = new BindlessArray();
+            bindlessTextures = new BindlessTexture[2048];
         }
 
         public void Start() {
@@ -910,7 +911,7 @@ namespace TrueTrace {
 
         void OnDisable() {
             ClearAll();
-            bindlessTextures?.Dispose();
+            // bindlessTextures?.Dispose();
             bindlessTextures = null;
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
@@ -1662,7 +1663,7 @@ namespace TrueTrace {
             {//BINDLESS-TEST this spot is guarenteed to run once per frame, be very close to the begining of the commandbuffer, and is guarenteed to have the AlbedoArray filled
             #if !DX11Only && !UseAtlas
                 Shader.SetGlobalTexture("_BindlessTextures", Texture2D.whiteTexture);
-                if(bindlessTextures != null) bindlessTextures.UpdateDescriptors();
+                if(bindlessTextures != null) bindlessTextures.SetBindlessTextures(0);
             #endif
             }
 

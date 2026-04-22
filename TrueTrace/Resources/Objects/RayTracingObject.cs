@@ -13,6 +13,7 @@ namespace TrueTrace {
 		[SerializeField] public RayObjMat[] LocalMaterials;
 		[SerializeField] public float[] KelvinTemp;
 		[SerializeField] public bool[] UseKelvin;
+		[SerializeField] public bool[] LinkTexTransforms;
 
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
@@ -386,6 +387,7 @@ namespace TrueTrace {
 			InitializeArray<int>(ref LocalMaterialIndex, 0, Index, NeedsRedo);
 			InitializeArray<int>(ref MaterialIndex, 0, Index, NeedsRedo);
 			InitializeArray<bool>(ref UseKelvin, false, Index, NeedsRedo);
+			InitializeArray<bool>(ref LinkTexTransforms, true, Index, NeedsRedo);
 			InitializeArray<float>(ref KelvinTemp, 0, Index, NeedsRedo);
 			InitializeArray<RayObjMat>(ref LocalMaterials, CommonFunctions.ZeroConstructorMat(), Index, NeedsRedo);
 

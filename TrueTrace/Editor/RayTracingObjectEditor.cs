@@ -231,6 +231,8 @@ namespace TrueTrace {
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
 
+                    LinkTexTransforms = ThisOBJ.LinkTexTransforms[SaveIndex],
+
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
                     DiffTransGUID = DiffTransGUID,
@@ -421,6 +423,8 @@ namespace TrueTrace {
             t.LocalMaterials[Selected] = RayObj.MatData;
             t.UseKelvin[Selected] = RayObj.UseKelvin;
             t.KelvinTemp[Selected] = RayObj.KelvinTemp;
+            
+            t.LinkTexTransforms[Selected] = RayObj.LinkTexTransforms;
 
             if(LoadTextures) {
                 Material TempMat = t.SharedMaterials[Selected];
@@ -665,6 +669,8 @@ namespace TrueTrace {
 
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
+                    
+                    LinkTexTransforms = ThisOBJ.LinkTexTransforms[SaveIndex],
 
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
@@ -750,6 +756,31 @@ namespace TrueTrace {
 
             Handles.EndGUI();
         }
+
+        Vector4 CustomVec4(string RelativeProp, Vector4 Init) {
+
+            EditorGUI.BeginChangeCheck();
+            Vector4 Val = EditorGUILayout.Vector4Field("Scale/Offset: ", Init);
+            if(EditorGUI.EndChangeCheck()) {
+                if(serializedObject.FindProperty("LinkTexTransforms").GetArrayElementAtIndex(Selected).boolValue) {
+                    t.LocalMaterials[Selected].TextureModifiers.SecondaryTextureScaleOffset = Val;
+                    t.LocalMaterials[Selected].TextureModifiers.SecondaryNormalTexScaleOffset = Val;
+                    t.LocalMaterials[Selected].TextureModifiers.NormalTexScaleOffset = Val;
+                    t.LocalMaterials[Selected].TextureModifiers.SecondaryAlbedoTexScaleOffset = Val;
+                    t.LocalMaterials[Selected].TextureModifiers.MainTexScaleOffset = Val;
+
+                    serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryTextureScaleOffset").vector4Value = Val;
+                    serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryNormalTexScaleOffset").vector4Value = Val;
+                    serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("NormalTexScaleOffset").vector4Value = Val;
+                    serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryAlbedoTexScaleOffset").vector4Value = Val;
+                    serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("MainTexScaleOffset").vector4Value = Val;
+                }
+            }
+            
+            return Val;
+        }
+
+
 
         public override void OnInspectorGUI() {
             if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
@@ -924,8 +955,13 @@ namespace TrueTrace {
                         EditorGUILayout.Space(12.0f, false);
                         EditorGUILayout.BeginVertical();
                             EditorGUILayout.BeginVertical();
-                                GUILayout.Label("Primary Diffuse", LabelStyleBolded);
-                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("MainTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.MainTexScaleOffset);
+                                EditorGUILayout.BeginHorizontal();
+                                    GUILayout.Label("Primary Diffuse", LabelStyleBolded);
+                                    serializedObject.FindProperty("LinkTexTransforms").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Texture Scale/Offsets: ", t.LinkTexTransforms[Selected]);
+                                EditorGUILayout.EndHorizontal();
+
+
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("MainTexScaleOffset").vector4Value = CustomVec4("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.MainTexScaleOffset);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("Rotation").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.Rotation, 0, 360);
                             EditorGUILayout.EndVertical();
             
@@ -933,7 +969,8 @@ namespace TrueTrace {
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Secondary Diffuse", LabelStyleBolded);
-                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryAlbedoTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryAlbedoTexScaleOffset);
+
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryAlbedoTexScaleOffset").vector4Value = CustomVec4("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryAlbedoTexScaleOffset);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationSecondaryDiffuse").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationSecondaryDiffuse, 0, 360);
                                 Flag = CommonFunctions.SetFlagStretch(Flag, 1, 3, (int)((RayTracingObject.BlendModes)EditorGUILayout.EnumPopup("Blend Mode: ", (RayTracingObject.BlendModes)Flag.GetFlagStretch(1, 3))));
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("AlbedoBlendFactor").floatValue = EditorGUILayout.Slider("Blend Factor: ", t.LocalMaterials[Selected].AlbedoBlendFactor, 0, 1);
@@ -943,7 +980,8 @@ namespace TrueTrace {
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Normal Map", LabelStyleBolded);
-                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("NormalTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.NormalTexScaleOffset);
+
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("NormalTexScaleOffset").vector4Value = CustomVec4("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.NormalTexScaleOffset);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationNormal").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationNormal, 0, 360);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("NormalStrength").floatValue = EditorGUILayout.Slider("Strength: ", t.LocalMaterials[Selected].NormalStrength, 0, 20.0f);
                                 ConnectionSources.Add("NormalStrength", GUILayoutUtility.GetLastRect()); // Store position
@@ -954,7 +992,7 @@ namespace TrueTrace {
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Secondary Normal Map", LabelStyleBolded);
-                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryNormalTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryNormalTexScaleOffset);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryNormalTexScaleOffset").vector4Value = CustomVec4("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryNormalTexScaleOffset);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationSecondaryNormal").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationSecondaryNormal, 0, 360);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("DetailNormalStrength").floatValue = EditorGUILayout.Slider("Strength: ", t.LocalMaterials[Selected].DetailNormalStrength, 0, 20.0f);
                                 ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
@@ -966,7 +1004,7 @@ namespace TrueTrace {
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Misc Maps", LabelStyleBolded);
-                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryTextureScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryTextureScaleOffset);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryTextureScaleOffset").vector4Value = CustomVec4("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryTextureScaleOffset);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationSecondary").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationSecondary, 0, 360);
 
                                 EditorGUILayout.MinMaxSlider("DiffTrans Remap: ", ref t.LocalMaterials[Selected].DiffTransRemap.x, ref t.LocalMaterials[Selected].DiffTransRemap.y, 0, 1);
@@ -1207,6 +1245,7 @@ namespace TrueTrace {
                             t.LocalMaterials[i] = t.LocalMaterials[Selected];
                             t.UseKelvin[i] = t.UseKelvin[Selected];
                             t.KelvinTemp[i] = t.KelvinTemp[Selected];
+                            t.LinkTexTransforms[i] = t.LinkTexTransforms[Selected];
                             t.CallMaterialEdited(true);
                         }
                     }
@@ -1222,6 +1261,7 @@ namespace TrueTrace {
                                 if(i < t.UseKelvin.Length){
                                     Obj.UseKelvin[i] = t.UseKelvin[Selected];
                                     Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
+                                    Obj.LinkTexTransforms[i] = t.LinkTexTransforms[Selected];
                                 } 
                                 Obj.CallMaterialEdited(true);
                             }

@@ -1,15 +1,18 @@
 #if UNITY_EDITOR
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System;
 using UnityEngine;
 using UnityEditor;
 using System.Reflection;
+ using System.IO;
 
 namespace TrueTrace {
-    [System.Serializable]
+    [System.Serializable][ExecuteInEditMode]
     public class TTAdvancedImageGen : MonoBehaviour
     {
+
       public static void SaveTexture (RenderTexture RefTex, string Path) {
          Texture2D tex = new Texture2D(RefTex.width, RefTex.height, TextureFormat.RGBAFloat, false);
          RenderTexture.active = RefTex;
@@ -70,6 +73,71 @@ namespace TrueTrace {
          }
         #endif
       }
+
+         public void SetGlobalDefines(string DefineToSet, bool SetValue) {
+            string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
+
+            if(File.Exists(globalDefinesPath)) {
+               string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
+               int Index = -1;
+               for(int i = 0; i < GlobalDefines.Length; i++) {
+                  if(GlobalDefines[i].Equals("//END OF DEFINES")) break;
+                  string TempString = GlobalDefines[i].Replace("#define ", "");
+                  TempString = TempString.Replace("// ", "");
+                  if(TempString.Equals(DefineToSet)) {
+                     Index = i;
+                     break;
+                  }
+               }
+               if(Index == -1) {
+                  Debug.Log("Cant find define \"" + DefineToSet + "\"");
+                  return;
+               }
+               bool CachedValue = true;
+               if(GlobalDefines[Index].Contains("// ")) CachedValue = false;
+               if(CachedValue != SetValue) {
+                  GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
+                  if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
+
+                  System.IO.File.WriteAllLines(globalDefinesPath, GlobalDefines);
+                  AssetDatabase.Refresh();
+               }
+            } else {Debug.Log("No GlobalDefinesFile");}
+         }
+
+      List<string> definesList;
+       private void RemoveDefine(string define) {
+           definesList = GetDefines();
+           if (definesList.Contains(define))
+               definesList.Remove(define);
+            SetDefines();
+       }
+
+       private void AddDefine(string define) {
+           definesList = GetDefines();
+           if (!definesList.Contains(define))
+               definesList.Add(define);
+            SetDefines();
+       }
+    
+      private List<string> GetDefines() {
+         var target = EditorUserBuildSettings.activeBuildTarget;
+         var group = BuildPipeline.GetBuildTargetGroup(target);
+         var namedBuildTarget = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(group);
+         var defines = PlayerSettings.GetScriptingDefineSymbols(namedBuildTarget);
+         return defines.Split(';').ToList();
+      }
+    
+      private void SetDefines() {
+         var target = EditorUserBuildSettings.activeBuildTarget;
+         var group = BuildPipeline.GetBuildTargetGroup(target);
+         var namedBuildTarget = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(group);
+         var defines = string.Join(";", definesList.ToArray());
+         PlayerSettings.SetScriptingDefineSymbols(namedBuildTarget, defines);
+      }
+
+
+
         public enum ImageGenType {NULL, Panorama, LargeScreenShot, TurnTable, TimedScreenShot, TimelineShooter};
         [SerializeField] public ImageGenType SelectedFunctionality = ImageGenType.NULL;
         private int CurrentResIndex;
@@ -77,6 +145,9 @@ namespace TrueTrace {
         [SerializeField] public int SamplesBetweenShots = 1000;
         [SerializeField] public bool ResetSampCountAfterShot = false;
         [Serializable]
+
+
+
         public class CameraListData {
             public Camera TargCam;
             public TTSettings CamSettings;
@@ -588,7 +659,27 @@ namespace TrueTrace {
             // }
         }
 
+
+        void OnEnable() {
+            if(SelectedFunctionality == ImageGenType.Panorama) {
+                definesList = GetDefines();
+
+                if(!definesList.Contains("DisableRadianceCache")) {
+                    AddDefine("DisableRadianceCache");
+                }
+                SetGlobalDefines("RadCache", false);
+            }
+        }
+
         public void OnDisable() {
+            if(SelectedFunctionality == ImageGenType.Panorama) {
+                definesList = GetDefines();
+
+                if(definesList.Contains("DisableRadianceCache")) {
+                    RemoveDefine("DisableRadianceCache");
+                }
+                SetGlobalDefines("RadCache", true);
+            }
             switch(SelectedFunctionality) {
                 default:
                 break;

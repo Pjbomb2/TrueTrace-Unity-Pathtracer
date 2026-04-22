@@ -334,6 +334,7 @@ namespace CommonVars
 
         public bool UseKelvin;
         public float KelvinTemp;
+        public bool LinkTexTransforms;
 
         public string AlbedoGUID;
         public string MetallicGUID;

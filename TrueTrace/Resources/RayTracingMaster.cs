@@ -51,6 +51,7 @@ namespace TrueTrace {
                     MatName = NameIndex,
                     UseKelvin = OBJtoWrite.UseKelvin[Index],
                     KelvinTemp = OBJtoWrite.KelvinTemp[Index],
+                    LinkTexTransforms = OBJtoWrite.LinkTexTransforms[Index],
                     MatData = OBJtoWrite.LocalMaterials[Index]
                 };
                 if(WriteID == -1) {

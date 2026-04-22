@@ -115,68 +115,68 @@ namespace Meetem.Bindless
         }
     }
 
-    public static class BindlessPluginExt
+    public static class BindlessPlugin
     {
-        /*
-        public static void InitializeBindless(this CommandBuffer cmdBuf)
-        {
-        }
-        */
+        public const string libName = "GfxPluginMeetemBindless";
 
-        /*
-        // Not supported in demo.
+        [DllImport(libName)]
+        private static extern IntPtr MeetemBindless_GetRenderEventFuncWithData();
+
+        [DllImport(libName)]
+        private static extern int MeetemBindless_SetBindlessTextures(
+            int offset, 
+            uint numTextures, in BindlessTexture bindlessTextures);
+        
+        [DllImport(libName)]
+        private static extern int MeetemBindless_SetBindlessTextures(
+            int offset, 
+            uint numTextures, IntPtr textures);
+
         public static void SetBindlessGlobalOffset(this CommandBuffer cmdBuf, int offset)
         {
             if (cmdBuf == null)
                 return;
             
-            cmdBuf.IssuePluginEventAndData(BindlessPlugin.MeetemBindless_GetRenderEventFuncWithData(), 2147473649, new IntPtr(offset));
+            cmdBuf.IssuePluginEventAndData(MeetemBindless_GetRenderEventFuncWithData(), 2147473649, new IntPtr(offset));
         }
-        */
 
-        public static void Upload(this BindlessTexture[] array, int arrayOffset = 0, int count = 0)
+        /// <summary>
+        /// Actually sets the textures into descriptor slots.
+        /// You probably would want to double-buffer it with shaderOffset or SetBindlessGlobalOffset
+        /// </summary>
+        /// <param name="array">Must be pinned.</param>
+        /// <param name="shaderOffset">Offset into the descriptor start</param>
+        /// <param name="arrayOffset">Offset for the array</param>
+        /// <param name="count">Number of descriptors to set</param>
+        public static void SetBindlessTextures(this BindlessTexture[] array, int shaderOffset, int arrayOffset = 0, int count = 0)
         {
-            BindlessPlugin.SetBindlessTextures(array, arrayOffset, count);
+            SetBindlessTextures(shaderOffset, array, arrayOffset, count);
         }
-    }
-    
-    public static class BindlessPlugin
-    {
-        public const string libName = "GfxPluginMeetemBindless";
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RenderCustomData
-        {
-            public IntPtr D3DBufferDrawArgs;
-            public IntPtr D3DBufferCountBuffer;
-            public int argsOffset;
-            public int countOffset;
-            public int maxCommands;
-        }
-
-        [DllImport(libName)]
-        public static extern IntPtr MeetemBindless_GetRenderEventFuncWithData();
-
-        [DllImport(libName)]
-        public static extern int MeetemBindless_SetBindlessTextures(uint numTextures, in BindlessTexture bindlessTextures);
         
-        [DllImport(libName)]
-        public static extern int MeetemBindless_SetBindlessTextures(uint numTextures, IntPtr textures);
-
-        public static bool SetBindlessTextures(BindlessTexture[] pinnedData, int arrayOffset = 0, int arrayCount = 0)
+        public static bool SetBindlessTextures(int offset, BindlessTexture[] data, int arrayOffset = 0, int arrayCount = 0)
         {
-            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(pinnedData, arrayOffset);
+            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(data, arrayOffset);
             if (arrayCount <= 0)
-                arrayCount = pinnedData.Length - arrayOffset;
+                arrayCount = data.Length - arrayOffset;
             
-            return MeetemBindless_SetBindlessTextures((uint)arrayCount, ptr) != 0;
+            return MeetemBindless_SetBindlessTextures(
+                offset, 
+                (uint)arrayCount, ptr
+            ) != 0;
         }
         
-        public static bool SetBindlessTextures(ReadOnlySpan<BindlessTexture> data)
+        public static bool SetBindlessTextures(int offset, ReadOnlySpan<BindlessTexture> data)
         {
-            return MeetemBindless_SetBindlessTextures((uint)data.Length, in data.GetPinnableReference()) != 0;
+            return MeetemBindless_SetBindlessTextures(
+                offset, 
+                (uint)data.Length, in data.GetPinnableReference()) != 0;
         }
         
-
+        // public static bool SetBindlessTextures(int offset, NativeArray<BindlessTexture> data, int arrayOffset = 0, int arrayLength = 0)
+        // {
+        //     var span = data.AsReadOnlySpan();
+        //     span = span.Slice(arrayOffset, arrayLength);
+        //     return SetBindlessTextures(offset, span);
+        // }
     }
 }

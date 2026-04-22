@@ -3613,6 +3613,7 @@ Slider AperatureSlider;
                                        EditorUtility.SetDirty(TempRTO);
                                        TempRTO.LocalMaterials[NameIndex] = Ray.MatData;
                                        TempRTO.UseKelvin[NameIndex] = Ray.UseKelvin;
+                                       TempRTO.LinkTexTransforms[NameIndex] = Ray.LinkTexTransforms;
                                        TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
                                        TempRTO.CallMaterialEdited();
                                     }
