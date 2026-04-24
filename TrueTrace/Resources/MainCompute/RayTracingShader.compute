@@ -789,7 +789,7 @@ float PrimaryBackgroundContrast;
 [numthreads(64, 1, 1)]
 void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
-    if (CurBounce != 0 && (id.x >= BufferSizes[CurBounce - 1].tracerays)) return;
+    if ((id.x >= BufferSizes[CurBounce].tracerays)) return;
     [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
     const RayData GlobRay = GlobalRays[id.x];
     uint pixel_index = GlobRay.PixelIndex;
@@ -1393,7 +1393,6 @@ int Type;
 void TransferKernel(uint3 id : SV_DispatchThreadID) {
     if(Type == 0) {
         BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 64.0f), 1, 1);
-        if(CurBounce != 0) BufferSizes[CurBounce - 1].tracerays = BufferSizes[CurBounce].tracerays;
     } else {
         BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 64.0f), 1, 1);
     }
