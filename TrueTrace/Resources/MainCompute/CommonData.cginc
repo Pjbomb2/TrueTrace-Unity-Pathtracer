@@ -2570,7 +2570,7 @@ float3 triangleBarycentric (float3 s, float3 c0, float3 c1, float3 c2) {
 	return b;
 }
 
-#define PDMNormEpsilon 1.0e-5f
+#define PDMNormEpsilon 1.0e-2f
 inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, const CudaTriangleA Tri, int2 TempUv) {
 	const float2 HalfTEX0 = TOHALF(Tri.tex0);
 	const float2 HalfTEX1 = TOHALF(Tri.texedge1);
@@ -2591,10 +2591,11 @@ inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, c
 	float3 sa = pa + N * SampleTexture(uva, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
 	float3 sb = pb + N * SampleTexture(uvb, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
 	float3 sc = pc + N * SampleTexture(uvc, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
-	float3 Ns = cross(sc - sa, sb - sa);// / (PDMNormEpsilon * PDMNormEpsilon);
-	float3 geometric_normal = -(cross(Tri.posedge1, -Tri.posedge2));
+	float3 Ns = cross((sc - sa) / PDMNormEpsilon, (sb - sa) / PDMNormEpsilon) / PDMNormEpsilon;// / (PDMNormEpsilon * PDMNormEpsilon);
+	float3 geometric_normal = (cross(Tri.posedge1, Tri.posedge2));
 
 	return normalize((Ns) - geometric_normal + N);
+	// return normalize(Ns);
 }
 
 

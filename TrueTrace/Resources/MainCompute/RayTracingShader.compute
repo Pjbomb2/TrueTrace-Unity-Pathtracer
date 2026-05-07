@@ -149,7 +149,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
             Geomnorm = GetDisplacementNormal(PrismBuffer[hit.triangle_id - _MeshData[hit.mesh_id].TriOffset + _MeshData[hit.mesh_id].DisplacementOffset], float2(hit.u, hit.v), TTMat, AggTrisA[hit.triangle_id], id.xy);
             Geomnorm = mul(Inverse, float4(Geomnorm,0));
             USGNorm = Geomnorm;   
-            pos += Geomnorm * 0.01f;
+            pos += Geomnorm * PDMNormEpsilon;
         } else
     #endif
         Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
