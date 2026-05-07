@@ -216,6 +216,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -341,6 +342,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -466,6 +468,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -591,6 +594,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -716,6 +720,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -853,6 +858,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -990,6 +996,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -1135,6 +1142,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -1260,6 +1268,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -1436,6 +1445,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -1563,6 +1573,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -1694,6 +1705,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -1831,6 +1843,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -1982,6 +1995,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -2139,6 +2153,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -2278,6 +2293,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -2429,6 +2445,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -2554,6 +2571,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -2703,6 +2721,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -2842,6 +2861,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -3039,6 +3059,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -3196,6 +3217,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -3321,6 +3343,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -3466,6 +3489,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -3611,6 +3635,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -3736,6 +3761,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -3875,6 +3901,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -4065,6 +4092,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -4224,6 +4252,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -4373,6 +4402,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -4498,6 +4528,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -4629,6 +4660,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -4766,6 +4798,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -4909,6 +4942,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -5046,6 +5080,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -5221,6 +5256,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -5406,6 +5442,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -5557,6 +5594,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -5688,6 +5726,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -5819,6 +5858,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -5958,6 +5998,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -6103,6 +6144,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -6246,6 +6288,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -6377,6 +6420,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -6502,6 +6546,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -6679,6 +6724,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -6804,6 +6850,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -6929,6 +6976,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -7060,6 +7108,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -7191,6 +7240,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -7316,6 +7366,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -7493,6 +7544,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -7618,6 +7670,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -7769,6 +7822,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -7900,6 +7954,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8025,6 +8080,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8162,6 +8218,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8293,6 +8350,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8418,6 +8476,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8549,6 +8608,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8718,6 +8778,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8849,6 +8910,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -8992,6 +9054,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -9157,6 +9220,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -9282,6 +9346,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -9431,6 +9496,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -9584,6 +9650,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -9743,6 +9810,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -9904,6 +9972,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -10035,6 +10104,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -10160,6 +10230,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -10285,6 +10356,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -10444,6 +10516,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -10569,6 +10642,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -10694,6 +10768,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -10869,6 +10944,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -11020,6 +11096,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -11157,6 +11234,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -11288,6 +11366,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -11433,6 +11512,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -11586,6 +11666,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -11731,6 +11812,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -11884,6 +11966,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -12009,6 +12092,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -12244,6 +12328,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -12393,6 +12478,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -12518,6 +12604,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -12693,6 +12780,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -12818,6 +12906,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -13177,6 +13266,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -13366,6 +13456,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -13491,6 +13582,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -13628,6 +13720,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -13773,6 +13866,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -13912,6 +14006,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -14037,6 +14132,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -14176,6 +14272,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -14437,6 +14534,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -14608,8 +14706,8 @@ MonoBehaviour:
   InstanceMeshIndex: 0
   LightEndIndex: 0
   aabb_untransformed:
-    BBMax: {x: 0.637526, y: 0.63764083, z: 0.63749546}
-    BBMin: {x: -0.63750374, y: -0.63784146, z: -0.6375423}
+    BBMax: {x: 0.7517939, y: 0.75200427, z: 0.7517381}
+    BBMin: {x: -0.7517532, y: -0.75237155, z: -0.7518238}
   aabb:
     BBMax: {x: 0, y: 0, z: 0}
     BBMin: {x: 0, y: 0, z: 0}
@@ -14713,8 +14811,8 @@ MonoBehaviour:
   - {fileID: 555872568}
   TotalCounter: 0
   WorkingSetCWBVH: []
-  center: {x: 0.000011116266, y: -0.00010031462, z: -0.000023424625}
-  extent: {x: 0.6375148, y: 0.63774115, z: 0.6375189}
+  center: {x: 0.000020354986, y: -0.00018364191, z: -0.00004285574}
+  extent: {x: 0.7517736, y: 0.7521879, z: 0.7517809}
   HasTransformChanged: 0
   BotherToUpdate: 1
 --- !u!114 &555872564
@@ -14762,7 +14860,7 @@ MonoBehaviour:
     DiffTrans: 0
     SpecTrans: 0
     Specular: 0
-    ScatterDist: 1
+    ScatterDist: 0
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
     AlphaCutoff: 0.1
@@ -14780,10 +14878,11 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 1, y: 1, z: 1}
     CausticStrength: 1
-    DisplacementFactor: 0.121
+    DisplacementFactor: 0.234
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -15013,6 +15112,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -15176,6 +15276,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -15307,6 +15408,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -15500,6 +15602,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -15625,6 +15728,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -15750,6 +15854,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -15903,6 +16008,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -16114,6 +16220,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -16273,6 +16380,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -16418,6 +16526,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -16555,6 +16664,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -16680,6 +16790,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -16823,6 +16934,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -16948,6 +17060,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -17073,6 +17186,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -17198,6 +17312,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -17335,6 +17450,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -17518,6 +17634,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -17701,6 +17818,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -17877,6 +17995,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18010,6 +18129,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18135,6 +18255,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18260,6 +18381,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18405,6 +18527,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18582,6 +18705,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18707,6 +18831,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18846,6 +18971,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -18997,6 +19123,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -19136,6 +19263,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -19275,6 +19403,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -19400,6 +19529,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -19525,6 +19655,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -19656,6 +19787,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -19793,6 +19925,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -19924,6 +20057,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -20055,6 +20189,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -20180,6 +20315,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -20305,6 +20441,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -20430,6 +20567,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -20555,6 +20693,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -20755,6 +20894,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -20888,6 +21028,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -21025,6 +21166,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -21168,6 +21310,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -21313,6 +21456,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -21502,6 +21646,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -21653,6 +21798,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -21804,6 +21950,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -21935,6 +22082,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -22078,6 +22226,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -22247,6 +22396,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -22372,6 +22522,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -22497,6 +22648,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -22636,6 +22788,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -22767,6 +22920,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -22898,6 +23052,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -23029,6 +23184,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -23166,6 +23322,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -23311,6 +23468,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -23448,6 +23606,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -23573,6 +23732,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -23704,6 +23864,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -23847,6 +24008,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -24034,6 +24196,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -24159,6 +24322,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -24340,6 +24504,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -24541,6 +24706,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -24666,6 +24832,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -24811,6 +24978,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -24956,6 +25124,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -25087,6 +25256,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -25212,6 +25382,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -25337,6 +25508,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -25488,6 +25660,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -25631,6 +25804,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -25756,6 +25930,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -25907,6 +26082,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26032,6 +26208,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26157,6 +26334,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26282,6 +26460,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26413,6 +26592,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26538,6 +26718,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26663,6 +26844,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26788,6 +26970,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -26913,6 +27096,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -27044,6 +27228,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -27221,6 +27406,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -27366,6 +27552,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -27523,6 +27710,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -27674,6 +27862,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -27871,6 +28060,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -28036,6 +28226,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -28167,6 +28358,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -28292,6 +28484,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -28423,6 +28616,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -28620,6 +28814,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -28759,6 +28954,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -28904,6 +29100,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -29029,6 +29226,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -29154,6 +29352,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -29442,6 +29641,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -29585,6 +29785,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -29736,6 +29937,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -29867,6 +30069,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -29992,6 +30195,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -30151,6 +30355,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -30294,6 +30499,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -30419,6 +30625,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -30556,6 +30763,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -30681,6 +30889,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -30812,6 +31021,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -30943,6 +31153,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -31068,6 +31279,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -31250,6 +31462,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -31389,6 +31602,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -31514,6 +31728,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -31645,6 +31860,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -31770,6 +31986,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -31945,6 +32162,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -32096,6 +32314,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -32233,6 +32452,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -32386,6 +32606,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -32517,6 +32738,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -32692,6 +32914,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -32817,6 +33040,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -32954,6 +33178,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -33085,6 +33310,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -33210,6 +33436,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -33427,6 +33654,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -33609,6 +33837,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -33780,6 +34009,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -33945,6 +34175,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -34070,6 +34301,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -34227,6 +34459,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -34352,6 +34585,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -34497,6 +34731,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -34622,6 +34857,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -34797,6 +35033,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -34973,6 +35210,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -35100,6 +35338,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -35225,6 +35464,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -35370,6 +35610,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -35495,6 +35736,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -35652,6 +35894,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -35777,6 +36020,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -35902,6 +36146,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36027,6 +36272,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36178,6 +36424,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36303,6 +36550,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36452,6 +36700,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36597,6 +36846,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36728,6 +36978,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36853,6 +37104,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -36984,6 +37236,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -37121,6 +37374,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -37246,6 +37500,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -37389,6 +37644,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -37514,6 +37770,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -37639,6 +37896,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -37764,6 +38022,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -37901,6 +38160,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -38064,6 +38324,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -38195,6 +38456,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -38326,6 +38588,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -38451,6 +38714,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -38588,6 +38852,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -38713,6 +38978,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -39073,6 +39339,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -39210,6 +39477,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -39367,6 +39635,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -39530,6 +39799,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -39679,6 +39949,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -39804,6 +40075,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -39935,6 +40207,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -40104,6 +40377,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -40235,6 +40509,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -40360,6 +40635,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -40598,6 +40874,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -40725,6 +41002,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -40850,6 +41128,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -40995,6 +41274,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -41120,6 +41400,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -41259,6 +41540,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -41384,6 +41666,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -41541,6 +41824,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -41684,6 +41968,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -41815,6 +42100,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -41960,6 +42246,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -42141,6 +42428,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -42278,6 +42566,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -42403,6 +42692,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -42548,6 +42838,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -42711,6 +43002,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -42836,6 +43128,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -42975,6 +43268,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -43106,6 +43400,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -43245,6 +43540,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -43398,6 +43694,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -43553,6 +43850,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -43684,6 +43982,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -43843,6 +44142,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -43974,6 +44274,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -44105,6 +44406,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -44230,6 +44532,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -44375,6 +44678,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -44500,6 +44804,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -44625,6 +44930,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -44750,6 +45056,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -44889,6 +45196,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -47963,6 +48271,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -48088,6 +48397,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -48264,6 +48574,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -56671,6 +56982,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -56848,6 +57160,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -56999,6 +57312,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -57176,6 +57490,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -57347,6 +57662,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -57552,6 +57868,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -57703,6 +58020,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -57900,6 +58218,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -58117,6 +58436,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -58268,6 +58588,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -58505,6 +58826,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -58728,6 +59050,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -59023,6 +59346,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -59252,6 +59576,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -59403,6 +59728,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -59580,6 +59906,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -59745,6 +60072,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -59942,6 +60270,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -60093,6 +60422,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -60394,6 +60724,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -60565,6 +60896,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -60716,6 +61048,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -60867,6 +61200,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -61018,6 +61352,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -61183,6 +61518,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -61366,6 +61702,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -61537,6 +61874,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -61794,6 +62132,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -61945,6 +62284,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -62116,6 +62456,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -62433,6 +62774,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -62818,6 +63160,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -63006,6 +63349,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -63255,6 +63599,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -63458,6 +63803,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -63609,6 +63955,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -63794,6 +64141,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -63991,6 +64339,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -64156,6 +64505,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -64683,6 +65033,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -64834,6 +65185,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -64991,6 +65343,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -65162,6 +65515,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -65333,6 +65687,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -65524,6 +65879,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -65675,6 +66031,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -65826,6 +66183,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -65977,6 +66335,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -66180,6 +66539,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -66365,6 +66725,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -66516,6 +66877,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -66719,6 +67081,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -66930,6 +67293,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -67081,6 +67445,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -67402,6 +67767,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -67553,6 +67919,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -67718,6 +68085,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -67920,6 +68288,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -68265,6 +68634,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -68416,6 +68786,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -68567,6 +68938,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -68758,6 +69130,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -68909,6 +69282,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -69060,6 +69434,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -69211,6 +69586,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -69439,6 +69815,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -69718,6 +70095,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -69941,6 +70319,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -70204,6 +70583,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -70395,6 +70775,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -70598,6 +70979,7 @@ MonoBehaviour:
   KelvinTemp:
   - 0
   UseKelvin: 00
+  LinkTexTransforms: 01
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
@@ -70800,6 +71182,7 @@ MonoBehaviour:
   - 0
   - 0
   UseKelvin: 0000
+  LinkTexTransforms: 0101
   TransmissionColor: []
   BaseColor: []
   MetallicRemap: []
