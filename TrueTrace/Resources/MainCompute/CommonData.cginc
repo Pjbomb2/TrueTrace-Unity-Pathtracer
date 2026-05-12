@@ -1460,6 +1460,7 @@ inline float3 stars(float3 ro, float3 rd, float2 sp, float hh) {
 
 StructuredBuffer<float> TotSum;
 float2 HDRIParams;
+bool PhysSkyInfluencesHDRI;
 
 inline float3 equirectUvToDirection(float2 uv) {
     uv.x -= 0.5f;
@@ -2597,7 +2598,7 @@ inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, c
     geometric_normal = -mul(wldScale, geometric_normal);
     wldScale = rsqrt(dot(Ns, Ns));
     Ns = mul(wldScale, Ns);
-	return normalize((Ns) - geometric_normal + N);
+	return normalize(Ns - geometric_normal + N);
 	// return normalize(Ns);
 }
 

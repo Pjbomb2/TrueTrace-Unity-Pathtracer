@@ -106,6 +106,7 @@ namespace TrueTrace {
          [SerializeField] public Vector2 HDRILongLat = Vector2.zero;
          [SerializeField] public Vector2 HDRIScale = Vector2.one;
          [SerializeField] public bool UseTransmittanceInNEE = true;
+         [SerializeField] public bool PhysSkyInfluencesHDRI = false;
          [SerializeField] public bool MatChangeResetsAccum = false;
          [SerializeField] public float OIDNBlendRatio = 1.0f;
          [SerializeField] public float FogDensity = 0.0002f;
@@ -850,7 +851,7 @@ Toolbar toolbar;
 
       VisualElement HDRILongElement = new VisualElement();
          HDRILongElement.style.flexDirection = FlexDirection.Row;
-         Slider HDRILongSlider = new Slider() {label = "HDRI Horizontal Offset: ", value = HDRILongLat.x, highValue = 360.0f, lowValue = 0.0f};
+         Slider HDRILongSlider = new Slider() {label = "HDRI Vertical Rotation: ", value = HDRILongLat.x, highValue = 360.0f, lowValue = 0.0f};
          HDRILongSlider.value = HDRILongLat.x;
          HDRILongSlider.style.minWidth = 345;
          HDRILongSlider.style.maxWidth = 345;
@@ -860,13 +861,15 @@ Toolbar toolbar;
          HDRILongElement.Add(HDRILongField);
       HDRILongSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongField.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
       HDRILongField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongSlider.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      
+
       #if TTAdvancedSettings
          SceneSettingsMenu.Add(HDRILongElement);
       #endif
 
       VisualElement HDRILatElement = new VisualElement();
          HDRILatElement.style.flexDirection = FlexDirection.Row;
-         Slider HDRILatSlider = new Slider() {label = "HDRI Vertical Offset: ", value = HDRILongLat.y, highValue = 360.0f, lowValue = 0.0f};
+         Slider HDRILatSlider = new Slider() {label = "HDRI Horizontal Rotation: ", value = HDRILongLat.y, highValue = 360.0f, lowValue = 0.0f};
          HDRILatSlider.value = HDRILongLat.y;
          HDRILatSlider.style.minWidth = 345;
          HDRILatSlider.style.maxWidth = 345;
@@ -876,9 +879,17 @@ Toolbar toolbar;
          HDRILatElement.Add(HDRILatField);
       HDRILatSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatField.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
       HDRILatField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatSlider.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+
       #if TTAdvancedSettings
          SceneSettingsMenu.Add(HDRILatElement);
       #endif
+      Toggle PhysSkyInfluencesHDRIToggle = new Toggle() {value = RayMaster.LocalTTSettings.PhysSkyInfluencesHDRI, text = "Overlay Physical Sky and HDRI(Requires background set to HDRI)"};
+         PhysSkyInfluencesHDRIToggle.tooltip = "Allows a combination of HDRI and Physical Sky, great for starry sky HDRI's!";
+      PhysSkyInfluencesHDRIToggle.RegisterValueChangedCallback(evt => {PhysSkyInfluencesHDRI = evt.newValue; RayMaster.LocalTTSettings.PhysSkyInfluencesHDRI = PhysSkyInfluencesHDRI;});
+      #if TTAdvancedSettings
+         SceneSettingsMenu.Add(PhysSkyInfluencesHDRIToggle);
+      #endif
+
      VisualElement HDRIScaleElement = new VisualElement();
          HDRIScaleElement.style.flexDirection = FlexDirection.Row;
          FloatField HDRIXScale = new FloatField() {label = "HDRI Scaling X: ", value = HDRIScale.x};
@@ -3013,6 +3024,7 @@ Slider AperatureSlider;
            RayTracingMaster.DoSaving = DoSaving;
            MatChangeResetsAccum = RayMaster.LocalTTSettings.MatChangeResetsAccum;
            UseTransmittanceInNEE = RayMaster.LocalTTSettings.UseTransmittanceInNEE;
+           PhysSkyInfluencesHDRI = RayMaster.LocalTTSettings.PhysSkyInfluencesHDRI;
            BounceCount = RayMaster.LocalTTSettings.bouncecount;
            RenderRes = RayMaster.LocalTTSettings.RenderScale;
            RR = RayMaster.LocalTTSettings.UseRussianRoulette;

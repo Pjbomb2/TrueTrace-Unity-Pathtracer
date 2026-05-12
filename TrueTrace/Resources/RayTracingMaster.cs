@@ -768,6 +768,7 @@ namespace TrueTrace {
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("DoExposure", LocalTTSettings.PPExposure);
             ShadingShader.SetBuffer(ShadeKernel, "Exposure", TTPostProc.ExposureBuffer);
+            SetBool("PhysSkyInfluencesHDRI", LocalTTSettings.PhysSkyInfluencesHDRI);
 
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 

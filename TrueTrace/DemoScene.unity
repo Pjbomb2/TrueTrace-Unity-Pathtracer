@@ -212,7 +212,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -338,7 +337,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -464,7 +462,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -590,7 +587,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -716,7 +712,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -854,7 +849,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -992,7 +986,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1138,7 +1131,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1264,7 +1256,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1390,7 +1381,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -1440,7 +1430,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -1569,7 +1558,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1701,7 +1689,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1839,7 +1826,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1991,7 +1977,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2149,7 +2134,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2289,7 +2273,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2441,7 +2424,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2567,7 +2549,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2717,7 +2698,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2857,7 +2837,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3055,7 +3034,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3213,7 +3191,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3339,7 +3316,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3485,7 +3461,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3631,7 +3606,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3757,7 +3731,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3897,7 +3870,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4037,7 +4009,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -4087,7 +4058,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -4248,7 +4218,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4398,7 +4367,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4524,7 +4492,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4656,7 +4623,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4794,7 +4760,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4938,7 +4903,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5076,7 +5040,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5252,7 +5215,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5438,7 +5400,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5590,7 +5551,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5722,7 +5682,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5854,7 +5813,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5994,7 +5952,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6140,7 +6097,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6284,7 +6240,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6416,7 +6371,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6542,7 +6496,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6720,7 +6673,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6846,7 +6798,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6972,7 +6923,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7104,7 +7054,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7236,7 +7185,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7362,7 +7310,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7540,7 +7487,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7666,7 +7612,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7818,7 +7763,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7950,7 +7894,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8076,7 +8019,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8214,7 +8156,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8346,7 +8287,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8472,7 +8412,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8604,7 +8543,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8774,7 +8712,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8906,7 +8843,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9050,7 +8986,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9216,7 +9151,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9342,7 +9276,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9492,7 +9425,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9646,7 +9578,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9806,7 +9737,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9968,7 +9898,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10100,7 +10029,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10226,7 +10154,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10352,7 +10279,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10512,7 +10438,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10638,7 +10563,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10764,7 +10688,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10940,7 +10863,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11092,7 +11014,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11230,7 +11151,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11362,7 +11282,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11508,7 +11427,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11662,7 +11580,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11808,7 +11725,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11962,7 +11878,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12088,7 +12003,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12324,7 +12238,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12474,7 +12387,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12600,7 +12512,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12776,7 +12687,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12902,7 +12812,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13014,10 +12923,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   InstanceDatas: []
-  TriPrisms: []
-  HasDisplacement: 0
-  GlobalDispOffset: -1
-  LocalDisplacementCount: 0
   LBVH:
     ParentBound:
       aabb:
@@ -13061,6 +12966,7 @@ MonoBehaviour:
   QueInProgress: 1
   RenderImposters: 0
   IsDeformable: 0
+  DisplacementDebug: 0
   Name: Plane
   ChildObjects:
   - {fileID: 499686672}
@@ -13189,8 +13095,6 @@ MonoBehaviour:
   SecondaryAlbedoTexMasks: []
   SecondaryAlbedoTexMaskChannelIndex: 
   SecondaryAlbedoTexs: []
-  DisplacementTexs: []
-  DisplacementTexChannelIndex: 
   ChildObjectTransforms:
   - {fileID: 499686670}
   TotalCounter: 0
@@ -13262,7 +13166,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13452,7 +13355,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13578,7 +13480,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13716,7 +13617,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13862,7 +13762,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14002,7 +13901,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14128,7 +14026,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14268,7 +14165,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14530,7 +14426,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14593,432 +14488,6 @@ MonoBehaviour:
   JustCreated: 0
   TilingChanged: 0
   MatOffset: 0
---- !u!1 &555872562
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 555872568}
-  - component: {fileID: 555872567}
-  - component: {fileID: 555872566}
-  - component: {fileID: 555872565}
-  - component: {fileID: 555872564}
-  - component: {fileID: 555872563}
-  m_Layer: 0
-  m_Name: Sphere
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &555872563
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 555872562}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  InstanceDatas: []
-  TriPrisms: []
-  HasDisplacement: 1
-  GlobalDispOffset: -1
-  LocalDisplacementCount: 0
-  LBVH:
-    ParentBound:
-      aabb:
-        b:
-          BBMax: {x: 0, y: 0, z: 0}
-          BBMin: {x: 0, y: 0, z: 0}
-        w: {x: 0, y: 0, z: 0}
-        phi: 0
-        Theta_o: 0
-        Theta_e: 0
-        LightCount: 0
-        Pad1: 0
-      left: 0
-      isLeaf: 0
-    NodeCount: 0
-    SGTree: []
-    PrimCount: 0
-    MaxDepth: 0
-    ParentList: []
-    ZeroBound:
-      aabb:
-        b:
-          BBMax: {x: 0, y: 0, z: 0}
-          BBMin: {x: 0, y: 0, z: 0}
-        w: {x: 0, y: 0, z: 0}
-        phi: 0
-        Theta_o: 0
-        Theta_e: 0
-        LightCount: 0
-        Pad1: 0
-      left: 0
-      isLeaf: 0
-    ZeroBound2:
-      BBMax: {x: 0, y: 0, z: 0}
-      BBMin: {x: 0, y: 0, z: 0}
-      w: 0
-      phi: 0
-      cosTheta_oe: 0
-      left: 0
-  ExistsInQue: 1
-  QueInProgress: 1
-  RenderImposters: 0
-  IsDeformable: 0
-  Name: Sphere
-  ChildObjects:
-  - {fileID: 555872564}
-  AggTriangles: []
-  ParentScale: {x: 0.001, y: 0.001, z: 0.001}
-  LightTriangles: []
-  BVH:
-    cwbvh_indices: 
-    cwbvhindex_count: 0
-    cwbvhnode_count: 0
-    ZeroedData:
-      e: 000000000000000000000000
-      imask: 0
-      base_index_child: 0
-      base_index_triangle: 0
-      meta: 0000000000000000
-      quantized_min_x: 0000000000000000
-      quantized_max_x: 0000000000000000
-      quantized_min_y: 0000000000000000
-      quantized_max_y: 0000000000000000
-      quantized_min_z: 0000000000000000
-      quantized_max_z: 0000000000000000
-      p: {x: 0, y: 0, z: 0}
-  SkinnedMeshes: []
-  DeformableMeshes: []
-  IndexCounts: 
-  MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
-  HasStarted: 0
-  AggNodes: []
-  InstanceMeshIndex: 0
-  LightEndIndex: 0
-  aabb_untransformed:
-    BBMax: {x: 0.7517939, y: 0.75200427, z: 0.7517381}
-    BBMin: {x: -0.7517532, y: -0.75237155, z: -0.7518238}
-  aabb:
-    BBMax: {x: 0, y: 0, z: 0}
-    BBMin: {x: 0, y: 0, z: 0}
-  AllFull: 0
-  AggIndexCount: 0
-  AggBVHNodeCount: 0
-  _Materials: []
-  MatOffset: 1
-  CachedTransforms:
-  - WTL:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: -0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: -3.66
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: -0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    Position: {x: 0, y: 3.66, z: 0}
-  - WTL:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: -0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: -3.66
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: -0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    Position: {x: 0, y: 3.66, z: 0}
-  TotalObjects: 1
-  TransformIndexes: []
-  HasCompleted: 0
-  ThisTransform: {fileID: 555872568}
-  ConstructKernel: 0
-  RefitLayerKernel: 1
-  UpdateGlobalBufferAABBKernel: 3
-  LightBLASRefitKernel: 5
-  LightBLASCopyKernel: 6
-  CompactedMeshData: 0
-  InstanceReferences: 0
-  NeedsToUpdate: 0
-  FailureCount: 0
-  UnsafeToBuild: 0
-  TotalTriangles: 0
-  IsSkinnedGroup: 0
-  HasLightTriangles: 0
-  MaxRecur: 0
-  tempAABB:
-    BBMax: {x: 0, y: 0, z: 0}
-    BBMin: {x: 0, y: 0, z: 0}
-  GlobalNodeOffset: -1
-  GlobalTriOffset: -1
-  GlobalSkinnedOffset: 0
-  GlobalLightTriOffset: -1
-  GlobalLightNodeOffset: -1
-  GlobalLightNodeSkinnedOffset: -1
-  LocalTriCount: 0
-  LocalNodeCount: 0
-  LocalLightTriCount: 0
-  LocalLightNodeCount: 0
-  AlbedoTexs:
-  - {fileID: 2800000, guid: f131d3b9d78b9d7428be290fb5ee7b4c, type: 3}
-  NormalTexs: []
-  SecondaryNormalTexs: []
-  MetallicTexs: []
-  MetallicTexChannelIndex: 
-  RoughnessTexs: []
-  RoughnessTexChannelIndex: 
-  EmissionTexs: []
-  DiffTransTexs: []
-  DiffTransTexChannelIndex: 
-  AlphaTexs:
-  - {fileID: 2800000, guid: f131d3b9d78b9d7428be290fb5ee7b4c, type: 3}
-  AlphaTexChannelIndex: 03000000
-  MatCapMasks: []
-  MatCapMaskChannelIndex: 
-  MatCapTexs: []
-  SecondaryAlbedoTexMasks: []
-  SecondaryAlbedoTexMaskChannelIndex: 
-  SecondaryAlbedoTexs: []
-  DisplacementTexs:
-  - {fileID: 2800000, guid: f131d3b9d78b9d7428be290fb5ee7b4c, type: 3}
-  DisplacementTexChannelIndex: 00000000
-  ChildObjectTransforms:
-  - {fileID: 555872568}
-  TotalCounter: 0
-  WorkingSetCWBVH: []
-  center: {x: 0.000020354986, y: -0.00018364191, z: -0.00004285574}
-  extent: {x: 0.7517736, y: 0.7521879, z: 0.7517809}
-  HasTransformChanged: 0
-  BotherToUpdate: 1
---- !u!114 &555872564
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 555872562}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c103227aee5e4584a96e35173641b818, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  MaterialOptions: 
-  LocalMaterials:
-  - TextureModifiers:
-      MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
-      SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
-      NormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
-      SecondaryAlbedoTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
-      SecondaryNormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
-      Rotation: 0
-      RotationNormal: 0
-      RotationSecondary: 0
-      RotationSecondaryDiffuse: 0
-      RotationSecondaryNormal: 0
-    BaseColor: {x: 1, y: 1, z: 1}
-    emission: 0
-    EmissionColor: {x: 1, y: 1, z: 1}
-    Tag: 0
-    Roughness: 0
-    MatType: 0
-    TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1
-    Metallic: 0
-    Sheen: 0
-    SheenTint: 0
-    SpecularTint: 0
-    Clearcoat: 0
-    ClearcoatGloss: 0
-    Anisotropic: 0
-    AnisotropicRotation: 0
-    Flatness: 0
-    DiffTrans: 0
-    SpecTrans: 0
-    Specular: 0
-    ScatterDist: 0
-    MetallicRemap: {x: 0, y: 1}
-    RoughnessRemap: {x: 0, y: 1}
-    AlphaCutoff: 0.1
-    NormalStrength: 1
-    Hue: 0
-    Saturation: 1
-    Contrast: 1
-    Brightness: 1
-    BlendColor: {x: 1, y: 1, z: 1}
-    BlendFactor: 0
-    ColorBleed: 1
-    AlbedoBlendFactor: 0
-    SecondaryNormalTexBlend: 0
-    DetailNormalStrength: 1
-    DiffTransRemap: {x: 0, y: 1}
-    MatCapColor: {x: 1, y: 1, z: 1}
-    CausticStrength: 1
-    DisplacementFactor: 0.234
-  KelvinTemp:
-  - 0
-  UseKelvin: 00
-  LinkTexTransforms: 01
-  TransmissionColor: []
-  BaseColor: []
-  MetallicRemap: []
-  RoughnessRemap: []
-  emission: []
-  EmissionColor: []
-  Roughness: []
-  IOR: []
-  Metallic: []
-  SpecularTint: []
-  Sheen: []
-  SheenTint: []
-  ClearCoat: []
-  ClearCoatGloss: []
-  Anisotropic: []
-  Flatness: []
-  DiffTrans: []
-  SpecTrans: []
-  ScatterDist: []
-  Specular: []
-  AlphaCutoff: []
-  NormalStrength: []
-  Hue: []
-  Saturation: []
-  Brightness: []
-  Contrast: []
-  BlendColor: []
-  BlendFactor: []
-  MainTexScaleOffset: []
-  SecondaryAlbedoTexScaleOffset: []
-  SecondaryTextureScaleOffset: []
-  NormalTexScaleOffset: []
-  RotationNormal: []
-  RotationSecondary: []
-  RotationSecondaryDiffuse: []
-  RotationSecondaryNormal: []
-  Rotation: []
-  Flags: 
-  ColorBleed: []
-  AlbedoBlendFactor: []
-  SecondaryNormalTexBlend: []
-  DetailNormalStrength: []
-  SecondaryNormalTexScaleOffset: []
-  DeleteObject: 0
-  Indexes: 00000000
-  NeedsToUpdate: 0
-  IsReady: 1
-  InvisibleOverride: 0
-  FollowMaterial: 00
-  SharedMaterials:
-  - {fileID: 2100000, guid: 2d1e3482f79950242bbc87f096ed6f8b, type: 2}
-  Names:
-  - New Material 17
-  MaterialIndex: 00000000
-  LocalMaterialIndex: 00000000
-  JustCreated: 0
-  TilingChanged: 0
-  MatOffset: 0
---- !u!135 &555872565
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 555872562}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &555872566
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 555872562}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 2d1e3482f79950242bbc87f096ed6f8b, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &555872567
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 555872562}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &555872568
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 555872562}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.66, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 5
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!64 &556481809
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -15108,7 +14577,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15272,7 +14740,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15404,7 +14871,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15598,7 +15064,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15724,7 +15189,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15850,7 +15314,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16004,7 +15467,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16216,7 +15678,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16376,7 +15837,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16522,7 +15982,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16660,7 +16119,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16786,7 +16244,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16930,7 +16387,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17056,7 +16512,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17182,7 +16637,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17308,7 +16762,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17446,7 +16899,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17630,7 +17082,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17814,7 +17265,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17940,7 +17390,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -17990,7 +17439,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -18125,7 +17573,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18251,7 +17698,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18377,7 +17823,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18523,7 +17968,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18701,7 +18145,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18827,7 +18270,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18967,7 +18409,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19119,7 +18560,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19259,7 +18699,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19399,7 +18838,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19525,7 +18963,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19651,7 +19088,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19783,7 +19219,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19921,7 +19356,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20053,7 +19487,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20185,7 +19618,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20311,7 +19743,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20437,7 +19868,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20563,7 +19993,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20689,7 +20118,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20839,7 +20267,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -20889,7 +20316,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -21024,7 +20450,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21162,7 +20587,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21306,7 +20730,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21452,7 +20875,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21642,7 +21064,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21794,7 +21215,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21946,7 +21366,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22078,7 +21497,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22222,7 +21640,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22392,7 +21809,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22518,7 +21934,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22644,7 +22059,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22784,7 +22198,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22916,7 +22329,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23048,7 +22460,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23180,7 +22591,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23318,7 +22728,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23464,7 +22873,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23602,7 +23010,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23728,7 +23135,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23860,7 +23266,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24004,7 +23409,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24192,7 +23596,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24318,7 +23721,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24500,7 +23902,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24702,7 +24103,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24828,7 +24228,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24974,7 +24373,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25120,7 +24518,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25252,7 +24649,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25378,7 +24774,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25504,7 +24899,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25656,7 +25050,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25800,7 +25193,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25926,7 +25318,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26078,7 +25469,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26204,7 +25594,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26330,7 +25719,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26456,7 +25844,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26588,7 +25975,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26714,7 +26100,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26840,7 +26225,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26966,7 +26350,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27092,7 +26475,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27224,7 +26606,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27402,7 +26783,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27548,7 +26928,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27706,7 +27085,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27858,7 +27236,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28056,7 +27433,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28222,7 +27598,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28354,7 +27729,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28480,7 +27854,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28612,7 +27985,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28810,7 +28182,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28950,7 +28321,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29096,7 +28466,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29222,7 +28591,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29348,7 +28716,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29637,7 +29004,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29781,7 +29147,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29933,7 +29298,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30065,7 +29429,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30191,7 +29554,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30351,7 +29713,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30495,7 +29856,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30621,7 +29981,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30759,7 +30118,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30885,7 +30243,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31017,7 +30374,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31149,7 +30505,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31275,7 +30630,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31407,7 +30761,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -31457,7 +30810,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -31598,7 +30950,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31724,7 +31075,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31856,7 +31206,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31982,7 +31331,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32158,7 +31506,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32310,7 +31657,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32448,7 +31794,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32602,7 +31947,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32734,7 +32078,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32910,7 +32253,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33036,7 +32378,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33174,7 +32515,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33306,7 +32646,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33432,7 +32771,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33650,7 +32988,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33782,7 +33119,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -33832,7 +33168,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -34005,7 +33340,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34171,7 +33505,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34297,7 +33630,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34455,7 +33787,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34581,7 +33912,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34727,7 +34057,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34853,7 +34182,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35029,7 +34357,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35155,7 +34482,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -35205,7 +34531,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -35334,7 +34659,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35460,7 +34784,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35606,7 +34929,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35732,7 +35054,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35890,7 +35211,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36016,7 +35336,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36142,7 +35461,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36268,7 +35586,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36420,7 +35737,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36546,7 +35862,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36696,7 +36011,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36842,7 +36156,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36974,7 +36287,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37100,7 +36412,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37232,7 +36543,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37370,7 +36680,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37496,7 +36805,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37640,7 +36948,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37766,7 +37073,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37892,7 +37198,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38018,7 +37323,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38156,7 +37460,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38320,7 +37623,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38452,7 +37754,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38584,7 +37885,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38710,7 +38010,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38848,7 +38147,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38974,7 +38272,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39335,7 +38632,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39473,7 +38769,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39631,7 +38926,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39795,7 +39089,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39945,7 +39238,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40071,7 +39363,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40203,7 +39494,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40373,7 +39663,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40505,7 +39794,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40631,7 +39919,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40819,7 +40106,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -40869,7 +40155,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -40998,7 +40283,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41124,7 +40408,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41270,7 +40553,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41396,7 +40678,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41536,7 +40817,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41662,7 +40942,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41820,7 +41099,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41964,7 +41242,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42096,7 +41373,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42242,7 +41518,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42424,7 +41699,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42562,7 +41836,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42688,7 +41961,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42834,7 +42106,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42998,7 +42269,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43124,7 +42394,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43264,7 +42533,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43396,7 +42664,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43536,7 +42803,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43690,7 +42956,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43846,7 +43111,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43978,7 +43242,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -44138,7 +43401,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -44270,7 +43532,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -44402,7 +43663,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -44528,7 +43788,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -44674,7 +43933,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -44800,7 +44058,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -44926,7 +44183,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -45052,7 +44308,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -45192,7 +44447,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -48267,7 +47521,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -48393,7 +47646,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -48519,7 +47771,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -48569,7 +47820,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -48648,10 +47898,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   InstanceDatas: []
-  TriPrisms: []
-  HasDisplacement: 0
-  GlobalDispOffset: -1
-  LocalDisplacementCount: 0
   LBVH:
     ParentBound:
       aabb:
@@ -48695,6 +47941,7 @@ MonoBehaviour:
   QueInProgress: 1
   RenderImposters: 0
   IsDeformable: 0
+  DisplacementDebug: 0
   Name: sponza
   ChildObjects:
   - {fileID: 1770588098}
@@ -56453,8 +55700,6 @@ MonoBehaviour:
   SecondaryAlbedoTexMasks: []
   SecondaryAlbedoTexMaskChannelIndex: 
   SecondaryAlbedoTexs: []
-  DisplacementTexs: []
-  DisplacementTexChannelIndex: 
   ChildObjectTransforms:
   - {fileID: 1770587713}
   - {fileID: 1770588113}
@@ -56978,7 +56223,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57156,7 +56400,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57308,7 +56551,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57486,7 +56728,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57658,7 +56899,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57864,7 +57104,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58016,7 +57255,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58214,7 +57452,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58432,7 +57669,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58584,7 +57820,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58822,7 +58057,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59046,7 +58280,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59342,7 +58575,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59572,7 +58804,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59724,7 +58955,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59902,7 +59132,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60068,7 +59297,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60266,7 +59494,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60418,7 +59645,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60720,7 +59946,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60892,7 +60117,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61044,7 +60268,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61196,7 +60419,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61348,7 +60570,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61514,7 +60735,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61698,7 +60918,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61870,7 +61089,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62128,7 +61346,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62280,7 +61497,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62452,7 +61668,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62770,7 +61985,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62908,10 +62122,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   InstanceDatas: []
-  TriPrisms: []
-  HasDisplacement: 0
-  GlobalDispOffset: -1
-  LocalDisplacementCount: 0
   LBVH:
     ParentBound:
       aabb:
@@ -62955,6 +62165,7 @@ MonoBehaviour:
   QueInProgress: 1
   RenderImposters: 0
   IsDeformable: 0
+  DisplacementDebug: 0
   Name: Cube
   ChildObjects:
   - {fileID: 1931085301}
@@ -63083,8 +62294,6 @@ MonoBehaviour:
   SecondaryAlbedoTexMasks: []
   SecondaryAlbedoTexMaskChannelIndex: 
   SecondaryAlbedoTexs: []
-  DisplacementTexs: []
-  DisplacementTexChannelIndex: 
   ChildObjectTransforms:
   - {fileID: 1931085298}
   TotalCounter: 0
@@ -63156,7 +62365,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63345,7 +62553,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63595,7 +62802,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63799,7 +63005,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63951,7 +63156,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64137,7 +63341,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64335,7 +63538,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64501,7 +63703,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65029,7 +64230,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65181,7 +64381,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65339,7 +64538,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65511,7 +64709,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65683,7 +64880,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65875,7 +65071,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66027,7 +65222,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66179,7 +65373,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66331,7 +65524,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66535,7 +65727,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66721,7 +65912,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66873,7 +66063,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67077,7 +66266,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67289,7 +66477,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67441,7 +66628,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67763,7 +66949,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67915,7 +67100,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68081,7 +67265,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68233,7 +67416,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -68283,7 +67465,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -68630,7 +67811,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68782,7 +67962,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68934,7 +68113,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -69126,7 +68304,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -69278,7 +68455,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -69430,7 +68606,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -69582,7 +68757,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -69760,7 +68934,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -69810,7 +68983,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0
@@ -70091,7 +69263,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -70315,7 +69486,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -70579,7 +69749,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -70771,7 +69940,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -70975,7 +70143,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -71127,7 +70294,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -71177,7 +70343,6 @@ MonoBehaviour:
     DiffTransRemap: {x: 0, y: 1}
     MatCapColor: {x: 0, y: 0, z: 0}
     CausticStrength: 1
-    DisplacementFactor: 0
   KelvinTemp:
   - 0
   - 0

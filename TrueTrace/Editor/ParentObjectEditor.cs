@@ -24,6 +24,11 @@ namespace TrueTrace {
             // ToFileButton.text = "To File";
             Root.Add(DeformableToggle);
             Root.Add(ImposterToggle);
+            #if TTDisplacement
+                Toggle DisplacementDebugToggle = new Toggle() {value = t.DisplacementDebug, text = "Displacement Debug/Gizmo"};
+                DisplacementDebugToggle.RegisterValueChangedCallback(evt => {t.DisplacementDebug = evt.newValue;});
+                Root.Add(DisplacementDebugToggle);
+            #endif
             // Root.Add(ToFileButton);
             return Root;
         }

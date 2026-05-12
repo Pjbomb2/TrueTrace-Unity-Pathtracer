@@ -106,6 +106,7 @@ namespace TrueTrace {
         [SerializeField] public int PhotonGuidingPerLightGuidingResolution = 128;
         [SerializeField] public int PhotonGuidingTotalPhotonsPerFrame = 2000000;
         [SerializeField] public bool RadCacheToggle = true;
+        [SerializeField] public bool PhysSkyInfluencesHDRI = false;
 
     }
 

@@ -76,6 +76,7 @@ namespace TrueTrace {
         public int QueInProgress = -1;
         public bool RenderImposters = false;
         public bool IsDeformable = false;
+        public bool DisplacementDebug = false;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer LightTreeBuffer;
         [HideInInspector] public ComputeBuffer TriBuffer;
@@ -1114,6 +1115,7 @@ namespace TrueTrace {
                 PrioritiesArray.Dispose();
 
                 Splits = referenceCount - Coun;
+                if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
                 TrianglesArray = new NativeArray<AABB>(referenceCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
                 Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
 
@@ -2018,33 +2020,35 @@ namespace TrueTrace {
         // }
 #if TTDisplacement
         public void OnDrawGizmos() {
-            if(TriPrisms != null && DisplacementTexs != null && DisplacementTexs.Count != 0) {
-                Matrix4x4 Mat = transform.localToWorldMatrix;
-                int Len = TriPrisms.Length;
-                for(int i = 0; i < Len; i++) {
-                    if(_Materials[(int)AggTriangles[i].MatDat].MatData.DisplacementFactor == 0) continue;
-                    TriPrism T = TriPrisms[i];
-                    CudaTriangle T2 = AggTriangles[i];
-                    // for(int i2 = 0; i2 < 3; i2++) {
-                        T2.posedge1 = CommonFunctions.transform_position(Mat, T2.pos0 + T2.posedge1);
-                        T2.posedge2 = CommonFunctions.transform_position(Mat, T2.pos0 + T2.posedge2);
-                        T2.pos0 = CommonFunctions.transform_position(Mat, T2.pos0);
-                        T.Ea = CommonFunctions.transform_position(Mat, T.Ea);
-                        T.Eb = CommonFunctions.transform_position(Mat, T.Eb);
-                        T.Ec = CommonFunctions.transform_position(Mat, T.Ec);
-                    // }
-                    Gizmos.color = Color.white;
-                    Gizmos.DrawLine(T2.pos0, T.Ea);
-                    Gizmos.DrawLine(T2.posedge1, T.Eb);
-                    Gizmos.DrawLine(T2.posedge2, T.Ec);
-                    Gizmos.color = Color.blue;
-                    Gizmos.DrawLine(T2.pos0, T2.posedge1);
-                    Gizmos.DrawLine(T2.pos0, T2.posedge2);
-                    Gizmos.DrawLine(T2.posedge1, T2.posedge2);
-                    Gizmos.color = Color.green;
-                    Gizmos.DrawLine(T.Ea, T.Eb);
-                    Gizmos.DrawLine(T.Ea, T.Ec);
-                    Gizmos.DrawLine(T.Eb, T.Ec);
+            if(DisplacementDebug) {
+                if(TriPrisms != null && DisplacementTexs != null && DisplacementTexs.Count != 0) {
+                    Matrix4x4 Mat = transform.localToWorldMatrix;
+                    int Len = TriPrisms.Length;
+                    for(int i = 0; i < Len; i++) {
+                        if(_Materials[(int)AggTriangles[i].MatDat].MatData.DisplacementFactor == 0) continue;
+                        TriPrism T = TriPrisms[i];
+                        CudaTriangle T2 = AggTriangles[i];
+                        // for(int i2 = 0; i2 < 3; i2++) {
+                            T2.posedge1 = CommonFunctions.transform_position(Mat, T2.pos0 + T2.posedge1);
+                            T2.posedge2 = CommonFunctions.transform_position(Mat, T2.pos0 + T2.posedge2);
+                            T2.pos0 = CommonFunctions.transform_position(Mat, T2.pos0);
+                            T.Ea = CommonFunctions.transform_position(Mat, T.Ea);
+                            T.Eb = CommonFunctions.transform_position(Mat, T.Eb);
+                            T.Ec = CommonFunctions.transform_position(Mat, T.Ec);
+                        // }
+                        Gizmos.color = Color.white;
+                        Gizmos.DrawLine(T2.pos0, T.Ea);
+                        Gizmos.DrawLine(T2.posedge1, T.Eb);
+                        Gizmos.DrawLine(T2.posedge2, T.Ec);
+                        Gizmos.color = Color.blue;
+                        Gizmos.DrawLine(T2.pos0, T2.posedge1);
+                        Gizmos.DrawLine(T2.pos0, T2.posedge2);
+                        Gizmos.DrawLine(T2.posedge1, T2.posedge2);
+                        Gizmos.color = Color.green;
+                        Gizmos.DrawLine(T.Ea, T.Eb);
+                        Gizmos.DrawLine(T.Ea, T.Ec);
+                        Gizmos.DrawLine(T.Eb, T.Ec);
+                    }
                 }
             }
         }

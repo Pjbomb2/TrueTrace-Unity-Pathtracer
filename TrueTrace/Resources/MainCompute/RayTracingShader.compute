@@ -1080,6 +1080,10 @@ int MaterialIndex;
 
         }
     #endif
+    float3x3 Rx;
+    float3x3 Ry;
+    float RotX;
+    float RotY;
         [branch]switch(DoSecondary ? BackgroundType : SecondaryBackgroundType) {
             case 0:
                 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
@@ -1111,11 +1115,37 @@ int MaterialIndex;
                 }
             break;
             case 1:
+                if(PhysSkyInfluencesHDRI) {
+                    Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
+                    Radiance += debug;
+                    Radiance = pow(1.0f - exp(-Radiance / 1.0f * 10.0f), 1.0f);
+                    if (dot(ray.direction, SunDir) > cos(0.0235f / 2.0f)) {
+                        Sun = clamp((Radiance + transmittance * (1.5f / (PI * (0.0235f / 2.0f) * (0.0235f / 2.0f)))) / (CurBounce == 0 ? 10.0f : 100.0f), 0, CurBounce == 0 ? 1000.0f : 10.0f);
+                    }
+                    Radiance += Sun;
+                }
+                RotX = HDRILongLat.x / 180.0f * PI;
+                RotY = HDRILongLat.y / 180.0f * PI;
+                Rx = float3x3(
+                    1,0,0,
+                    0,cos(RotX), -sin(RotX),
+                    0,sin(RotX), cos(RotX)
+                    );
+                Ry = float3x3(
+                    cos(RotY), 0, sin(RotY),
+                    0,1,0,
+                    -sin(RotY),0,cos(RotY)
+                    );
+                ray.direction = mul(Rx, mul(Ry, ray.direction));
                 uv = equirectDirectionToUv(ray.direction);
-                uv = fmod(uv * HDRIScale + HDRILongLat / 360.0f, 1.0f);
+                uv = fmod(uv * HDRIScale, 1.0f);
                 if(UseNEE && CurBounce > 0)
                     mis = power_heuristic(GlobRay.last_pdf, HDRIParams.x * HDRIParams.y * equirectDirectionPdf(ray.direction) * (luminance(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz) / TotSum[0]));
-                Radiance = DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat);
+                if(PhysSkyInfluencesHDRI)
+                    Radiance += DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat) * transmittance;
+                else
+                    Radiance = DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat);
+
                 if(DoSecondary) {
                     Unity_Contrast_float(Radiance, PrimaryBackgroundContrast);
                     Radiance = lerp(Radiance, PrimaryBackgroundTintColor, PrimaryBackgroundTint);

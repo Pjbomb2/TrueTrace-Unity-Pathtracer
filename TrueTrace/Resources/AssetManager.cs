@@ -1385,7 +1385,7 @@ namespace TrueTrace {
                     ResizedBVHArray = true;
                     #if TTDisplacement
                         ResizedDispArray = true;
-                        CommonFunctions.CreateDynamicBuffer(ref AggPrismBuffer, AggDispCount, CommonFunctions.GetStride<TriPrism>());
+                        CommonFunctions.CreateDynamicBuffer(ref AggPrismBuffer, (int)Mathf.Max(AggDispCount,1), CommonFunctions.GetStride<TriPrism>());
                     #endif
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
@@ -1409,7 +1409,7 @@ namespace TrueTrace {
                     if(LightTreeBufferA == null || !LightTreeBufferA.IsValid() || AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount > LightTreeBufferA.count) {CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount + AggSGTreeSKINNEDNodeCount, CommonFunctions.GetStride<CompactLightBVHData>()); ResizedLightBVHArray = true;}
     #endif
     #if TTDisplacement
-                    if(AggPrismBuffer == null || !AggPrismBuffer.IsValid() || AggDispCount > AggPrismBuffer.count) {CommonFunctions.CreateDynamicBuffer(ref AggPrismBuffer, AggDispCount, CommonFunctions.GetStride<TriPrism>()); ResizedDispArray = true;}
+                    if(AggPrismBuffer == null || !AggPrismBuffer.IsValid() || AggDispCount > (int)Mathf.Max(AggPrismBuffer.count,1)) {CommonFunctions.CreateDynamicBuffer(ref AggPrismBuffer, (int)Mathf.Max(AggDispCount,1), CommonFunctions.GetStride<TriPrism>()); ResizedDispArray = true;}
     #endif
 #endif
                     #if TTDisplacement
