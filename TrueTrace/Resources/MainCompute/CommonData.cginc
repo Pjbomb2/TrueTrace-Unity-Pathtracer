@@ -2591,9 +2591,12 @@ inline float3 GetDisplacementNormal(Prism TP, float2 UV, MaterialData TempMat, c
 	float3 sa = pa + N * SampleTexture(uva, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
 	float3 sb = pb + N * SampleTexture(uvb, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
 	float3 sc = pc + N * SampleTexture(uvc, SampleDisplacement, TempMat) * TempMat.DisplacementFactor + 0.01f;
-	float3 Ns = cross((sc - sa) / PDMNormEpsilon, (sb - sa) / PDMNormEpsilon) / PDMNormEpsilon;// / (PDMNormEpsilon * PDMNormEpsilon);
-	float3 geometric_normal = (cross(Tri.posedge1, Tri.posedge2));
-
+	float3 Ns = cross(normalize(sc - sa), normalize(sb - sa));// / (PDMNormEpsilon * PDMNormEpsilon);
+	float3 geometric_normal = (cross(normalize(Tri.posedge1), normalize(Tri.posedge2)));
+    float wldScale = rsqrt(dot(geometric_normal, geometric_normal));
+    geometric_normal = -mul(wldScale, geometric_normal);
+    wldScale = rsqrt(dot(Ns, Ns));
+    Ns = mul(wldScale, Ns);
 	return normalize((Ns) - geometric_normal + N);
 	// return normalize(Ns);
 }

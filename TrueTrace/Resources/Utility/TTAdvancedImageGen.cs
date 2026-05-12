@@ -9,7 +9,7 @@ using System.Reflection;
  using System.IO;
 
 namespace TrueTrace {
-    [System.Serializable][ExecuteInEditMode]
+    [System.Serializable]
     public class TTAdvancedImageGen : MonoBehaviour
     {
 
@@ -661,25 +661,25 @@ namespace TrueTrace {
 
 
         void OnEnable() {
-            if(SelectedFunctionality == ImageGenType.Panorama) {
-                definesList = GetDefines();
+            // if(SelectedFunctionality == ImageGenType.Panorama) {
+            //     definesList = GetDefines();
 
-                if(!definesList.Contains("DisableRadianceCache")) {
-                    AddDefine("DisableRadianceCache");
-                }
-                SetGlobalDefines("RadCache", false);
-            }
+            //     if(!definesList.Contains("DisableRadianceCache")) {
+            //         AddDefine("DisableRadianceCache");
+            //     }
+            //     SetGlobalDefines("RadCache", false);
+            // }
         }
 
         public void OnDisable() {
-            if(SelectedFunctionality == ImageGenType.Panorama) {
-                definesList = GetDefines();
+            // if(SelectedFunctionality == ImageGenType.Panorama) {
+            //     definesList = GetDefines();
 
-                if(definesList.Contains("DisableRadianceCache")) {
-                    RemoveDefine("DisableRadianceCache");
-                }
-                SetGlobalDefines("RadCache", true);
-            }
+            //     if(definesList.Contains("DisableRadianceCache")) {
+            //         RemoveDefine("DisableRadianceCache");
+            //     }
+            //     SetGlobalDefines("RadCache", true);
+            // }
             switch(SelectedFunctionality) {
                 default:
                 break;
