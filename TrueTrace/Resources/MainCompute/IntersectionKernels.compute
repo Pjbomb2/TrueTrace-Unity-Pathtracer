@@ -265,7 +265,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                 GlobalColors[PixIndex].Flags = packRGBE(throughput);
 #endif
             } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
-                _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(asuint(ray.direction * bestHit.t + ray.origin), 99993)));
+                _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(asuint(ray.direction * bestHit.t + ray.origin), 1)));
             }
 
             if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
@@ -394,7 +394,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                                 _DebugTex[TempUv] = float4(waveLengthToRGB(heatmap_value), 1);
                             #endif
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
-                            _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray2.direction), 99993) : uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 99993)));
+                            _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray2.direction), 99993) : uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 1)));
                         }
                         if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
                         set(rayidx, bestHit);
@@ -510,7 +510,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                     float v = q.CommittedTriangleBarycentrics().x;
                     int2 Indexes = int2(q.CommittedInstanceID(), q.CommittedGeometryIndex());
                     int triangle_id = q.CommittedPrimitiveIndex();
-                    #if defined(IgnoreBackfacing) || defined(AdvancedAlphaMapped) || defined(IgnoreGlassShadow) || defined(AdvancedBackground)
+                    #if defined(IgnoreBackfacing) || defined(AdvancedAlphaMapped) || defined(IgnoreGlassShadow) || defined(SkyboxMeshPortals)
                         int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                         triangle_id += triangleOffset;
                         mesh_id = MeshOffsets[Indexes.x].y;
@@ -549,22 +549,49 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                     if(!TerrainExists) {
                         uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
                         bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
-                        if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * ShadowRayT,asfloat(ShadowRay.FIELD));
+                        if(UseReSTIRGI && CurBounce == 0) {
+                            if(ShadowRay.FIELD == -1)  
+                                NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4(ShadowRay.MeshID, ShadowRay.TriID, asuint(ShadowRay.U), asuint(ShadowRay.V));
+                            else
+                                NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4(asuint(ray2.origin + ray2.direction * ShadowRayT), 1);
+                        }
                         #ifdef RadCache
+                            #ifdef YanusMode
+                            if(REALLYRadCache) {
+                            #endif    
                             CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                             AddHitToCachePartial(CacheBuffer[PixelIndex], ray.origin);
+                            #ifdef YanusMode
+                            }
+                            #endif
                         #endif
                         if (IsNotPrimaryNEERay) {
 
                             if (CurBounce == 0) {
                                 #ifdef RadCache
+                                    #ifdef YanusMode
+                                    if(REALLYRadCache) {
+                                    #endif
                                     GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
+                                    #ifdef YanusMode
+                                    } else {
+                                        GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
+                                    }
+                                    #endif
                                 #else
                                     GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
                                 #endif
                             } else {
                                 #ifdef RadCache
+                                    #ifdef YanusMode
+                                    if(REALLYRadCache) {
+                                    #endif
                                     if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    #ifdef YanusMode
+                                    } else {
+                                        GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    }
+                                    #endif
                                 #else
                                     GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                                 #endif
@@ -680,21 +707,55 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                         if(!TerrainExists) {
                             uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
                             bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30) != 0;
-                            if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
+                            if(UseReSTIRGI && CurBounce == 0) {
+                                if(ShadowRay.FIELD == -1)  
+                                    NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4((ShadowRay.MeshID & 0xFFFFFFF), ShadowRay.TriID, asuint(ShadowRay.U), asuint(ShadowRay.V));
+                                else
+                                #ifdef ReSTIRAdaptiveUnityLights
+                                    if((ShadowRay.MeshID & ~0xFFFFFFF) != 0)  
+                                        NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4(asuint(ray2.origin + ray2.direction * max_distance), 1);
+                                    else
+                                        NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4((((uint)ShadowRay.FIELD) & 0xFFFFFFF) | (1 << 30), asuint(-ray2.direction));
+                                #else
+                                    NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4(asuint(ray2.origin + ray2.direction * max_distance), 1);
+                                #endif
+                            }
                             #ifdef RadCache
+                                #ifdef YanusMode
+                                if(REALLYRadCache) {
+                                #endif
                                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                                 AddHitToCachePartial(CacheBuffer[PixelIndex], ray2.origin);
+                                #ifdef YanusMode
+                                }
+                                #endif
                             #endif
                             if (IsNotPrimaryNEERay) {
                                 if (CurBounce == 0) {
                                     #ifdef RadCache
+                                        #ifdef YanusMode
+                                        if(REALLYRadCache) {
+                                        #endif
                                         GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
+                                        #ifdef YanusMode
+                                        } else {
+                                        GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
+                                        }
+                                        #endif
                                     #else
                                         GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
                                     #endif
                                 } else {
                                     #ifdef RadCache
+                                        #ifdef YanusMode
+                                        if(REALLYRadCache) {
+                                        #endif
                                         if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                        #ifdef YanusMode
+                                        } else {
+                                            GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                        }
+                                        #endif
                                     #else
                                         GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                                     #endif
@@ -811,21 +872,55 @@ void IntersectShadowHeightmap(int ray_index) {
         if(!HitHeightmap) {
             uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex & 0xFFFFFFF;
             bool IsNotPrimaryNEERay = (ShadowRaysBuffer[ray_index].PixelIndex >> 30);
-            if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ShadowRaysBuffer[ray_index].EndPoint, 0);
+            if(UseReSTIRGI && CurBounce == 0) {
+                if(ShadowRaysBuffer[ray_index].FIELD == -1)  
+                    NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4(ShadowRaysBuffer[ray_index].MeshID, ShadowRaysBuffer[ray_index].TriID, asuint(ShadowRaysBuffer[ray_index].U), asuint(ShadowRaysBuffer[ray_index].V));
+                else
+                #ifdef ReSTIRAdaptiveUnityLights
+                    if((ShadowRaysBuffer[ray_index].MeshID & ~0xFFFFFFF) != 0)  
+                        NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4(asuint(ShadowRaysBuffer[ray_index].EndPoint), 1);
+                    else
+                        NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4((((uint)ShadowRaysBuffer[ray_index].FIELD) & 0xFFFFFFF) | (1 << 30), asuint(-ray.direction));
+                #else
+                    NEEDestinationWorldPos[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = uint4(asuint(ShadowRaysBuffer[ray_index].EndPoint), 1);
+                #endif
+            }
             #ifdef RadCache
+                #ifdef YanusMode
+                if(REALLYRadCache) {
+                #endif
                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance) + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                 AddHitToCachePartial(CacheBuffer[PixelIndex], ShadowRaysBuffer[ray_index].origin);
+                #ifdef YanusMode
+                }
+                #endif
             #endif
             if (IsNotPrimaryNEERay) {
                 if (CurBounce == 0) {
                     #ifdef RadCache
+                        #ifdef YanusMode
+                        if(REALLYRadCache) {
+                        #endif
                         GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
+                        #ifdef YanusMode
+                        } else {
+                            GlobalColors[PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+                        }
+                        #endif
                     #else
                         GlobalColors[PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
                     #endif
                 } else {
                     #ifdef RadCache
+                        #ifdef YanusMode
+                        if(REALLYRadCache) {
+                        #endif
                         if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                        #ifdef YanusMode
+                        } else {
+                            GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                        }
+                        #endif
                     #else
                         GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
                     #endif
@@ -1220,6 +1315,7 @@ void IntersectHeightMap(int ray_index) {
                         _PrimaryTriangleInfo[TempUv] = uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 1);
                     } else if(CurBounce == 1) {
                         _PrimaryTriangleInfo[TempUv] = uint4(((!UseReSTIRGI) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), 1);
+
                     }
                     set(ray_index, bestHit);
                     break;

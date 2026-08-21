@@ -25,7 +25,7 @@ namespace TrueTrace
 
             if (RayMaster == null) {
                 RayMaster = GameObject.Find("Scene")?.GetComponent<RayTracingMaster>();
-                if (RayMaster == null) {
+                if (RayMaster == null || !RayMaster.RunTrueTrace) {
                     return;
                 }
             }

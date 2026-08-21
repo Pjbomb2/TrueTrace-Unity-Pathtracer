@@ -7,6 +7,10 @@
 
 bool OIDNGuideWrite;
 
+#ifdef YanusMode
+bool REALLYRadCache;
+#endif
+
 float4x4 CamToWorld;
 float4x4 CamInvProj;
 float4x4 CamToWorldPrev;
@@ -137,16 +141,21 @@ bool DoExposure;
 StructuredBuffer<float> Exposure;
 
 
-RWTexture2DArray<uint4> ReservoirA;
-Texture2DArray<uint4> ReservoirB;
+RWTexture2D<uint2> ReservoirA;
+Texture2D<uint2> ReservoirB;
 
-RWTexture2D<uint4> WorldPosA;
-Texture2D<uint4> WorldPosB;
-RWTexture2D<uint4> WorldPosC;
 
-RWTexture2D<half4> NEEPosA;
-Texture2D<half4> NEEPosB;
+RWTexture2D<float4> NEEPosA;
+Texture2D<float4> NEEPosB;
 
+
+
+RWTexture2D<uint4> ReSTIRSecondaryDestinationWorldPos;
+RWTexture2D<uint4> NEEDestinationWorldPos;
+Texture2D<uint4> NEEDestinationWorldPosRead;
+RWTexture2D<uint4> ReservoirUnifiedDestinationWorldPosTemporalCurrent;
+Texture2D<uint4> ReservoirUnifiedDestinationWorldPosTemporalPrevious;
+Texture2D<uint4> ReservoirUnifiedDestinationWorldPosSpatialA;
 
 Texture2D<float4> RandomNums;
 
@@ -477,6 +486,12 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 	return float2(x, y);
 }
 
+inline float randomNEESingle(uint samdim, uint pixel_index) {
+	uint hash = pcg_hash((pixel_index * (uint)526 + samdim));
+
+	return hash_with(frames_accumulated, hash) * asfloat(0x2f7fffff);
+}
+
 float2 random(uint samdim, uint pixel_index) {
 #ifdef PhotonMappingUsed
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
@@ -642,21 +657,22 @@ static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
 
 
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
-    return
-        (ray_direction.x < 0.0f ? 0 : 0x04040404) |
+    // return (((ray_direction.x < 0 ? 4 : 0) | (ray_direction.y < 0 ? 2 : 0) | (ray_direction.z < 0 ? 1 : 0))) * 0x1010101;
+        return (ray_direction.x < 0.0f ? 0 : 0x04040404) |
         (ray_direction.y < 0.0f ? 0 : 0x02020202) |
         (ray_direction.z < 0.0f ? 0 : 0x01010101);
 }
 
-inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_distance, const BVHNode8Data TempNode) {
+
+inline uint cwbvh_node_intersect(const SmallerRay ray, const int oct_inv4, const float max_distance, const BVHNode8Data TempNode) {
     uint e_x = (TempNode.nodes[0].w) & 0xff;
     uint e_y = (TempNode.nodes[0].w >> 8) & 0xff;
     uint e_z = (TempNode.nodes[0].w >> 16) & 0xff;
 
     const float3 adjusted_ray_direction_inv = float3(
-        asfloat(e_x << 23),
-        asfloat(e_y << 23),
-        asfloat(e_z << 23)
+        asfloat((e_x) << 23),
+        asfloat((e_y) << 23),
+        asfloat((e_z) << 23)
         ) / ray.direction;
     const float3 adjusted_ray_origin = (asfloat(TempNode.nodes[0].xyz) - ray.origin) / ray.direction;
             
@@ -674,13 +690,12 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     uint z_max = TempNode.nodes[4].y;
     uint meta4 = TempNode.nodes[1].z;
     //XOR swaps
-    [branch]if(RayDirBools.x) {x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;}
-    [branch]if(RayDirBools.y) {y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;}
-    [branch]if(RayDirBools.z) {z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;}
 
     [unroll]
     for(int i = 0; i < 2; i++) {
-
+	    [branch]if(RayDirBools.x) {x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;}
+	    [branch]if(RayDirBools.y) {y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;}
+	    [branch]if(RayDirBools.z) {z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;}
         uint bit_index4  = (meta4 ^ (oct_inv4 & ((((meta4 & (meta4 << 1)) & 0x10101010) >> 4) * 0xffu))) & 0x1f1f1f1f;
         uint child_bits4 = (meta4 >> 5) & 0x07070707;
 
@@ -695,13 +710,14 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
             float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
             float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
             
-            bool intersected = tmin < tmax;
+            bool intersected = tmin <= tmax;
             [branch]
             if (intersected) {
                 child_bits = (child_bits4 >> (j * 8)) & 0xffu;
                 bit_index  = (bit_index4 >> (j * 8)) & 0xffu;
 
                 hit_mask |= child_bits << bit_index;
+
             }
         }
         if(i == 0) {
@@ -713,9 +729,6 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
 	        z_max = TempNode.nodes[4].w;
     		meta4 = TempNode.nodes[1].w;
 		    //XOR swaps
-	        [branch]if(RayDirBools.x) {x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;}
-	        [branch]if(RayDirBools.y) {y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;}
-	        [branch]if(RayDirBools.z) {z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;}
     	}
     }
     return hit_mask;
@@ -880,20 +893,20 @@ inline float SGClampedCosineProductIntegralOverPi2024(const float cosine, const 
 	float ERFCTZ = 1.0f;
 	float ERFCT = 1.0f;
 	{
-		const float A1 = 1.628459513;
-		const float A2 = 9.15674746e-1;
-		const float A3 = 1.54329389e-1;
-		const float A4 = -3.51759829e-2;
-		const float A5 = 5.66795561e-3;
-		const float A6 = -5.64874616e-4;
-		const float A7 = 2.58907676e-5;
+		const float A1 = 1.628459513f;
+		const float A2 = 9.15674746e-1f;
+		const float A3 = 1.54329389e-1f;
+		const float A4 = -3.51759829e-2f;
+		const float A5 = 5.66795561e-3f;
+		const float A6 = -5.64874616e-4f;
+		const float A7 = 2.58907676e-5f;
 
-		const float B1 = 1.128379121;
-		const float B2 = -3.76123011e-1;
-		const float B3 = 1.12799220e-1;
-		const float B4 = -2.67030653e-2;
-		const float B5 = 4.90735564e-3;
-		const float B6 = -5.58853149e-4;
+		const float B1 = 1.128379121f;
+		const float B2 = -3.76123011e-1f;
+		const float B3 = 1.12799220e-1f;
+		const float B4 = -2.67030653e-2f;
+		const float B5 = 4.90735564e-3f;
+		const float B6 = -5.58853149e-4f;
 
 		float a = 1.0f;
 		ERFCTZ = 1.0f - mulsign(1.0f, -tz);
@@ -919,7 +932,7 @@ inline float SGClampedCosineProductIntegralOverPi2024(const float cosine, const 
 	}
 
 
-	const float lerpFactor = saturate(max(0.5f * (cosine * ERFCTZ + ERFCT) - 0.5f * 0.56418958354775628694807945156077f * exp(-tz * tz) * expm1(t * t * (cosine * cosine - 1.0)) * rcp(t), 0.5f * 1.192092896e-07f));
+	const float lerpFactor = saturate(max(0.5f * (cosine * ERFCTZ + ERFCT) - 0.5f * 0.56418958354775628694807945156077f * exp(-tz * tz) * expm1(t * t * (cosine * cosine - 1.0f)) * rcp(t), 0.5f * 1.192092896e-07f));
 
 	const float negsharp = expm1_over_x(-sharpness);
 	const float e = exp(-sharpness);
@@ -1326,6 +1339,77 @@ inline float3 LoadSurfaceInfoPrevInCurrent(int2 id, inout uint Norm) {
     return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
 }
 
+
+inline float3 LoadSurfaceInfo23(uint4 Target, float3 OriginPos) {
+	if(Target.w == 1) return asfloat(Target.xyz);
+	#ifdef ReSTIRAdaptiveUnityLights
+	[branch]if((Target.x & ~0xFFFFFFF) != 0) {
+        LightData Light = _UnityLights[Target.x & 0xFFFFFFF];
+            float3 LightPosition = Light.Position;
+            if(Light.Type == DIRECTIONALLIGHT)
+	            LightPosition = OriginPos + Light.Direction * 120000.0f;
+	    return LightPosition;
+	}
+	#endif
+
+    MyMeshDataCompacted Mesh = _MeshData[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
+
+inline void LoadSurfaceInfo22(uint4 Target, float3 OriginPos, inout float3 Norm) {
+	[branch]if(Target.w == 1) {
+		Norm = float3(0,12,0);
+		return;
+	}
+	#ifdef ReSTIRAdaptiveUnityLights
+	[branch]if((Target.x & ~0xFFFFFFF) != 0) {
+        LightData Light = _UnityLights[Target.x & 0xFFFFFFF];
+            float3 LightPosition = Light.Position;
+            Norm = Light.Direction;
+        [branch] switch (Light.Type) {
+
+	        case POINTLIGHT:
+	            Norm = normalize(OriginPos - LightPosition);
+	            // LightPosition += normalize(RandVec - 0.5f) * random(116, pixel_index).y * Light.Softness * 0.1f;//Soft Shadows
+	        break;
+	        case DIRECTIONALLIGHT:
+	            LightPosition = OriginPos + Norm * 120000.0f;
+	            Norm = -Norm;
+	            //  sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
+	            // RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * Light.Softness* 0.01f;
+	            // if(Light.Softness* 0.01f > 0.001f) {
+	            //     LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
+	            // }
+	            // if(UseTransmittanceInNEE && AggTriIndex == MainDirectionalLight) Radiance *= GetSkyTransmittance(pos, -LightNorm, 0, -LightNorm);
+	        break;
+	        default:
+	        break;
+	    }
+	    return;
+	}
+	#endif
+    MyMeshDataCompacted Mesh = _MeshData[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    
+    float3 USGNorm = mul(Inverse, cross(normalize(AggTrisA[Target.y].posedge1), normalize(AggTrisA[Target.y].posedge2)));
+    float wldScale = rsqrt(dot(USGNorm, USGNorm));
+    Norm = -mul(wldScale, USGNorm);
+    
+    return;// mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
+
+
 float3 LoadSurfaceInfo(int2 id) {
     uint4 Target = PrimaryTriData[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
@@ -1644,7 +1728,7 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
 }
 
 
-inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float3 Radiance, inout float3 FinalPos, float2 sharpness, float3 viewDir, float metallic) {//Need to check these to make sure they arnt simply doing uniform sampling
+inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float3 Radiance, inout float3 FinalPos, float2 sharpness, float3 viewDir, float metallic, inout float U, inout float V) {//Need to check these to make sure they arnt simply doing uniform sampling
     float2 TriangleUV, FinalUV;
     int MeshTriOffset, MatOffset, MinIndex = 0;
     #ifndef LBVH
@@ -1709,9 +1793,11 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     #endif
     int MaterialIndex = AggTrisA[AggTriIndex].MatDat + MatOffset;
     MaterialData TTMat = _Materials[MaterialIndex];
-    #ifdef AdvancedBackground
+    #ifdef SkyboxMeshPortals
     	if(GetFlag(TTMat.Tag, IsBackground)) return -1;
     #endif
+    U = FinalUV.x;
+    V = FinalUV.y;
     float2 BaseUv = TOHALF(AggTrisA[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTrisA[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTrisA[AggTriIndex].texedge2) * FinalUV.y;
     if(TTMat.AlbedoTex.x > 0) TTMat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, TTMat);
 
@@ -2765,7 +2851,7 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 			#ifndef TTDisplacement
 		    	const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
             #endif
-            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
+            #if defined(AdvancedAlphaMapped) || defined(SkyboxMeshPortals) || defined(IgnoreGlassShadow)
 				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
 	                float2 BaseUv = TriUVs.UV0 * (1.0f - u - v) + TriUVs.UV1 * u + TriUVs.UV2 * v;
@@ -2851,7 +2937,7 @@ inline void triangle_intersect_dist(const int tri_id, const SmallerRay ray, inou
 	  	#ifndef TTDisplacement
 		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 		#endif
-            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground)
+            #if defined(AdvancedAlphaMapped) || defined(SkyboxMeshPortals)
 				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return; 
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
 	                float2 BaseUv = TriUVs.UV0 * (1.0f - u - v) + TriUVs.UV1 * u + TriUVs.UV2 * v;

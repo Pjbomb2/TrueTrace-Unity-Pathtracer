@@ -61,7 +61,7 @@ float screenAverageLuma() {
 
 }
 static float nightVision = 0.0f;
-static float EXPOSURE_SPEED = 0.75f;
+static float EXPOSURE_SPEED = 0.25f;
 float frame_time;
 float Exposure;
 bool ExposureAuto;

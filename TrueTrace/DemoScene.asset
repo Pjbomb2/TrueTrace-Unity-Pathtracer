@@ -27,7 +27,7 @@ MonoBehaviour:
   DoFAperatureScale: 1
   DoFFocal: 5.2216897
   PPExposure: 0
-  ExposureAuto: 1
+  ExposureAuto: 0
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
@@ -36,9 +36,9 @@ MonoBehaviour:
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
-  ReSTIRGITemporalMCap: 4
+  ReSTIRGITemporalMCap: 60
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 28.8
+  Exposure: 50
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
@@ -108,5 +108,5 @@ MonoBehaviour:
   PhotonGuidingRatio: 0.15
   PhotonGuidingPerLightGuidingResolution: 128
   PhotonGuidingTotalPhotonsPerFrame: 2000000
-  RadCacheToggle: 1
+  RadCacheToggle: 0
   PhysSkyInfluencesHDRI: 0

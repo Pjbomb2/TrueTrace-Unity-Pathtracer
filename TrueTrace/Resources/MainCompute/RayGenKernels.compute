@@ -28,6 +28,10 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
+    [branch]if(UseReSTIRGI) {
+        ReSTIRSecondaryDestinationWorldPos[id.xy] = 0;
+        NEEDestinationWorldPos[id.xy] = 0;
+    }
 }
 
 #pragma kernel GeneratePanorama
@@ -54,6 +58,10 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     }
     RayData globray = {ray.origin, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
+    [branch]if(UseReSTIRGI) {
+        ReSTIRSecondaryDestinationWorldPos[id.xy] = 0;
+        NEEDestinationWorldPos[id.xy] = 0;
+    }
 }
 
 #pragma kernel CacheResolve

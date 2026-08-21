@@ -267,6 +267,10 @@ struct ShadowRayData {
 	int FIELD;
 	float3 illumination;
 	uint PixelIndex;
+	uint MeshID;
+	uint TriID;
+	float U;
+	float V;
 };
 RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
 

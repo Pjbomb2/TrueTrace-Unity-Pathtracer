@@ -78,6 +78,9 @@ namespace TrueTrace {
             RayTracingObject[] PossibleObjects = GameObject.FindObjectsOfType<RayTracingObject>();
             int ObjCount = PossibleObjects.Length;
             for(int i = 0; i < ObjCount; i++) {
+                if(PossibleObjects[i].Indexes == null) {
+                    continue;
+                }
                 int MaterialCount = (int)Mathf.Min(PossibleObjects[i].MaterialIndex.Length, PossibleObjects[i].Indexes.Length);
                 for (int i3 = 0; i3 < MaterialCount; i3++) {
                     if(TempOut[0] == (PossibleObjects[i].MaterialIndex[i3] + PossibleObjects[i].MatOffset)) {

@@ -2135,7 +2135,7 @@ Toolbar toolbar;
             PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "DX12 Only - Uses a higher texture LOD for each bounce, which can help performance"));
             PlayContainer.Add(CustomToggle("Double Buffer Light Tree", "DoubleBufferSGTree", "Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but hurts performance"));
             PlayContainer.Add(CustomToggle("Use BSDF Lights", "UseBRDFLights", "Toggle for BSDF lights, Turning off can help with fireflies"));
-            PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+            PlayContainer.Add(CustomToggle("Allow Mesh Skybox Portals", "SkyboxMeshPortals"));
          #endif
          PlayContainer.Add(CustomToggle("More AO", "MoreAO", "If you want yet more AO", AOContainer, PlayContainer));
 

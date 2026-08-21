@@ -6,41 +6,54 @@
 // #define MultiMapScreenshot
 // #define RasterizedDirect
 // #define PhotonMapping
-//Dont modify above, CPU code will do automatically
+// #define TTDisplacement
+// #define Fog
+//Dont modify above, These have CPU-side toggles, which are available under "Functionality Settings" in the truetrace settings menu
+
+//The defines below can be modified at any time by removing or adding "//" in front of each #define to tune your experience
+// -- Trace-time modifications --
 #define AdvancedAlphaMapped
-#define ExtraSampleValidation
-#define ReSTIRAdvancedValidation
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
-// #define FadeMapping
-// #define PointFiltering
 // #define StainedGlassShadows
+// #define ShadowGlassAttenuation
 // #define IgnoreBackfacing
+// #define FadeMapping
+// #define AltFadeMapping
+
+// -- Lights/Texture Modifications --
 #define LBVH
 #define AccurateEmissionTex
+// #define PointFiltering
 // #define UseTextureLOD
-#define EONDiffuse
-// #define AdvancedBackground
-#define UseBRDFLights
-#define DoubleBufferSGTree
-// #define Fog
-#define RadCache
-#define ClampRoughnessToBounce
-// #define ReSTIRSampleReduction
-#define ReSTIRReflectionRefinement
-// #define ShadowGlassAttenuation
 // #define DisableNormalMaps
 // #define ClayMetalOverride
 // #define IgnoreBackfacingEmissive
-// #define AltFadeMapping
+
+// -- Shading Modifications --
+#define EONDiffuse
+#define ClampRoughnessToBounce
+// #define SkyboxMeshPortals
+#define UseBRDFLights
+#define DoubleBufferSGTree
+// #define RadCache
 // #define MoreAO
-// #define TTDisplacement
+// #define YanusMode
+
+// -- ReSTIR Modifiers --
+#define ReSTIRAdvancedValidation
+#define ReSTIRAdaptiveLighting
+#define ReSTIRAdaptiveUnityLights
+// #define ExpensiveAdaptiveTemporal
+#define ReSTIRShadowBorderImprovement
+// #define ReSTIRSampleReduction
 
 
-//END OF DEFINES
+
+//END OF MODIFIABLE DEFINES
 //DEBUG VIEW DEFINES
 #define DebugView DVNone
-//Replace DVNone(^) with any of the DV Defines below
+//Replace DVNone(^) with any of the DV Defines below(Make sure "UseDebugTexture" is ENABLED under the RayTracingMaster script on the Scene gameobject)
 
 #define DVNone -1
 #define DVMatID 0

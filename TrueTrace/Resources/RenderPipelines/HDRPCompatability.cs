@@ -35,6 +35,7 @@ namespace TrueTrace {
             if(RayMaster == null) {
                 if(GameObject.FindObjectsOfType<RayTracingMaster>().Length == 0) {RayMaster = null; return;}
                 RayMaster = GameObject.FindObjectsOfType<RayTracingMaster>()[0];
+                if(!RayMaster.RunTrueTrace) return;
             }
             if((Application.isPlaying && Camera.current == null) || RayMaster.HDRPorURPRenderInScene) {
                 if(MainTex == null || MainTex.width != ctx.hdCamera.camera.pixelWidth) {

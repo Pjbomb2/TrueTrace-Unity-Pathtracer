@@ -13057,7 +13057,7 @@ MonoBehaviour:
   LightBLASCopyKernel: 6
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   UnsafeToBuild: 0
   TotalTriangles: 0
@@ -38410,6 +38410,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9c10216ea5531c4d82893474778943b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  RunTrueTrace: 1
   EnableDebugTexture: 1
   EnableDebugTexturePrev: 0
   LocalTTSettingsName: DemoSceneMain
@@ -55614,7 +55615,7 @@ MonoBehaviour:
   LightBLASCopyKernel: 6
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   UnsafeToBuild: 0
   TotalTriangles: 0
@@ -62256,7 +62257,7 @@ MonoBehaviour:
   LightBLASCopyKernel: 6
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   UnsafeToBuild: 0
   TotalTriangles: 0

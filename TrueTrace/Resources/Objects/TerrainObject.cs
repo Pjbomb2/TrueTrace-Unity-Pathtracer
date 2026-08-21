@@ -259,5 +259,23 @@ namespace TrueTrace {
                 }
             }
         }
+
+        public void OnEnable() {
+            if(AssetManager.Assets.Terrains != null) {
+                if(AssetManager.Assets.Terrains.IndexOf(this) == -1) {
+                    Load();
+                    AssetManager.Assets.Terrains.Add(this);
+                }
+            }
+        }
+        public void OnDisable() {
+            if(AssetManager.Assets.Terrains != null) {
+                if(AssetManager.Assets.Terrains.IndexOf(this) != -1) {
+                    AssetManager.Assets.Terrains.Remove(this);
+                    ClearAll();
+                }
+            }
+        }
+
     }
 }

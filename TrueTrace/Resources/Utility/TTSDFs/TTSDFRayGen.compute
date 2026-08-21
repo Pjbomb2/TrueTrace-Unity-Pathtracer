@@ -48,7 +48,7 @@ inline float Map(float3 p) {
         float MinDist3;
         SDFData TempSDF = SDFs[i];  
         switch(SDFs[i].Type) {
-            case 0: MinDist3 = sdSphere(rotate_vector(p - TempSDF.A, TempSDF.Transform), 256.0f * saturate(CustFramesSinceStart / 260.0f)); break;//SDFs[i].B.x); break;
+            case 0: MinDist3 = sdSphere(rotate_vector(p - TempSDF.A, TempSDF.Transform), SDFs[i].B.x); break;
             case 1: MinDist3 = sdBox(rotate_vector(p - TempSDF.A, TempSDF.Transform), TempSDF.B); break;
             default: break;
         }

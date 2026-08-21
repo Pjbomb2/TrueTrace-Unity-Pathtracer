@@ -258,8 +258,17 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
             #endif
             else if(CurBounce > 1) {
                 #ifdef RadCache
-                    if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol);
-                    else Color.Indirect += Color.throughput * EmissCol;
+                    #ifdef YanusMode
+                    if(REALLYRadCache) {
+                    #endif
+                        if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol);
+                        else Color.Indirect += Color.throughput * EmissCol;
+                    #ifdef YanusMode
+                    } else {
+                    Color.Indirect += Color.throughput * EmissCol;
+                    }
+                    #endif
+                    
                 #else
                     Color.Indirect += Color.throughput * EmissCol;
                 #endif
@@ -308,8 +317,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                     #endif
                     {
                         #ifdef RadCache
+                            #ifdef YanusMode
+                            if(REALLYRadCache) {
+                            #endif
                             if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
                             else Color.Indirect += Color.throughput * EmissCol * w;
+                            #ifdef YanusMode
+                            } else {
+                                Color.Indirect += Color.throughput * EmissCol * w;
+                            }
+                            #endif
                         #else
                             Color.Indirect += Color.throughput * EmissCol * w;
                         #endif
@@ -459,15 +476,15 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
     }
 #endif
     #ifdef RadCache
+        #ifdef YanusMode
+            if(REALLYRadCache) {
+        #endif
         #if DebugView == DVRadCache
             if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
         #endif
         // ReconstructBsdf2(TTMat, PrevDirection, ray.direction, Refracted ? -norm : norm, pdf3, bsdf, GetTangentSpace2(Refracted ? -norm : norm), pixel_index);
         [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
             if(GetBounceData(CachePathLength) != 0){
-                #ifdef NonDirectionalRadCache
-                if(MaterialLobe != 3)
-                #endif
                 int Layer;
                 float VoxSize = GetVoxSize(pos, Layer);
 
@@ -497,6 +514,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
             if(GTX.x % 16 != 0) return;
             else throughput *= 16.0f;
         }
+        #ifdef YanusMode
+            }
+        #endif
     #endif
     if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
     pos = ray.origin;
@@ -509,7 +529,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
     if(D2)
 #endif
 
-    [branch] if (MaterialLobe != 3 && (UseNEE) && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount + LightMeshCount != 0)) {//Next event estimation
+    [branch] if ((UseNEE) && MaterialLobe != 3 && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount + LightMeshCount != 0)) {//Next event estimation
         float3 LightNorm;
         float3 LightPosition;
         int LightFormat = TRILIGHT;
@@ -530,6 +550,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
         if(SecondaryBackgroundType == 1) selections[selectionoptions++] = 2;
         RunningWeight = selectionoptions;
         SelectedLightGroup = selections[min(floor(random(114, pixel_index).x * (float)selectionoptions), selectionoptions - 1)];
+        int MeshIndex = 0;
+        int TriIndex = 0;
+        float U = 0;
+        float V = 0;
 
         if (SelectedLightGroup == 1) {//we only really need to precompute this, right? maybe we can do a similar optimization as ReSTIR DI?
             AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
@@ -583,15 +607,15 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
             Radiance *= LightEnergyScale;
         } else if(SelectedLightGroup == 0) {
             #ifdef LBVH
-                int MeshIndex;
                 float4x4 MeshTransformInverse;
             #else
-                int MeshIndex = SelectLightMeshSmart(pixel_index, RunningWeight, pos);
+                MeshIndex = SelectLightMeshSmart(pixel_index, RunningWeight, pos);
                 float4x4 MeshTransformInverse = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].W2L;
             #endif
             float ax, ay;
             CalculateAnisotropicParams(TTMat.roughness, TTMat.anisotropic, ax, ay);
-            AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, float2(ax, ay), -PrevDirection, (saturate(TTMat.metallic + TTMat.Specular + TTMat.clearcoat)));
+            AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, float2(ax, ay), -PrevDirection, (saturate(TTMat.metallic + TTMat.Specular + TTMat.clearcoat)), U, V);
+            TriIndex = AggTriIndex;
             #ifdef LBVH
                 MeshTransformInverse = _MeshData[MeshIndex].W2L;
             #endif
@@ -635,16 +659,27 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                 float bsdf_pdf = 0.0f;
                 float3 bsdf_value = 0.0f;
                 float3 bsdf_diffuse = 0;
+                bool validbsdfNEE;
                 #ifdef RadCache
+                    #ifdef YanusMode
+                        if(REALLYRadCache) {
+                    #endif
                     float3 colcol = TTMat.surfaceColor;
                     TTMat.surfaceColor =1 ;
-                    bool validbsdfNEE = EvaluateBsdf3(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
+                    validbsdfNEE = EvaluateBsdf3(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
                     bsdf_pdf = 0;
                     TTMat.surfaceColor = colcol;
                     validbsdfNEE = EvaluateBsdf(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                    #ifdef YanusMode
+                        } else  {
+                            if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) TTMat.surfaceColor = 1.0f;
+                            validbsdfNEE = EvaluateBsdf(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                            if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
+                        }
+                    #endif
                 #else
                     if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) TTMat.surfaceColor = 1.0f;
-                    bool validbsdfNEE = EvaluateBsdf(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                    validbsdfNEE = EvaluateBsdf(TTMat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
                     if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
                 #endif
                 #ifdef Fog
@@ -668,7 +703,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                         bsdf_diffuse *= Homo;
                     }
                 #endif
-
+                // if(CurBounce == 0 && UseReSTIRGI) bsdf_value = 1;
                 if (validbsdfNEE) {
                     float NEE_pdf;
                     float3 Illum;
@@ -691,7 +726,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                     } else {
                         NEE_pdf = HDRIParams.x * HDRIParams.y * equirectDirectionPdf(to_light) * (luminance(Radiance) / TotSum[0]);
                         float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                        Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
+                        Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * (NEEMISWeight);
                         bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
                     }
                     Illum *= Color.throughput * bsdfmodifier;
@@ -722,11 +757,21 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
 
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
+                        bool IsPrimaryNEE;
                         #ifdef RadCache
-                            bool TempTemp = (CurBounce != GetBounceData(CachePathLength) - 2);
-                            if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                            #ifdef YanusMode
+                                if(REALLYRadCache) {
+                            #endif
+                            IsPrimaryNEE = (CurBounce != GetBounceData(CachePathLength) - 2);
+                            if(UseReSTIRGI && !IsPrimaryNEE && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                            #ifdef YanusMode
+                                } else {
+                                    IsPrimaryNEE = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
+                                    if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                                                        
+                                }
+                            #endif
                         #else
-                            bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
+                            IsPrimaryNEE = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
                             if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         #endif
                         ShadowRayData ShadRay = {pos, 
@@ -734,7 +779,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                                                         pos + to_light * (LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor),
                                                         LightFormat == TRILIGHT ? -1 : AggTriIndex,
                                                         Illum, 
-                                                        pixel_index & 0xFFFFFFF | ((TempTemp ? 1 : 0) << 30)};
+                                                        pixel_index & 0xFFFFFFF | ((IsPrimaryNEE ? 1 : 0) << 30),
+                                                        (MeshIndex & 0xFFFFFFF) | (((LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) ? 1 : 0) << 30),
+                                                        AggTriIndex - _MeshData[MeshIndex].TriOffset,
+                                                        U,
+                                                        V
+
+                                                    };
                         if((LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor) > 0.001f) {
                             InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
                             ShadowRaysBuffer[index3] = ShadRay;
@@ -819,8 +870,14 @@ void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     } 
 #ifdef RadCache
     else {
-        CacheBuffer[pixel_index].pathLength = 0;
-        CacheBuffer[pixel_index].RunningIlluminance = 0;
+        #ifdef YanusMode
+            if(REALLYRadCache) {
+        #endif
+            CacheBuffer[pixel_index].pathLength = 0;
+            CacheBuffer[pixel_index].RunningIlluminance = 0;
+        #ifdef YanusMode
+            }
+        #endif
     }
 #endif
 #ifdef AltFadeMapping
@@ -833,7 +890,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     #endif
 
 int MaterialIndex;
-#ifdef AdvancedBackground
+#ifdef SkyboxMeshPortals
     bool BackgroundCheck = false;
     if(bestHit.t != FarPlane && !(TerrainExists && (bestHit.mesh_id == 9999999))) {
         MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
@@ -891,7 +948,8 @@ int MaterialIndex;
                     if(SecondaryBackgroundType == 1) selections[selectionoptions++] = 2;
                     RunningWeight = selectionoptions;
                     SelectedLightGroup = selections[min(floor(random(114, pixel_index).x * (float)selectionoptions), selectionoptions - 1)];
-
+                    int MeshIndex;
+                    float U, V;
                     if (SelectedLightGroup == 1) {//we only really need to precompute this, right? maybe we can do a similar optimization as ReSTIR DI?
                         AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
                         LightData Light = _UnityLights[AggTriIndex];
@@ -941,13 +999,12 @@ int MaterialIndex;
                         Radiance *= LightEnergyScale;
                     } else if(SelectedLightGroup == 0) {
                         #ifdef LBVH
-                            int MeshIndex;
                             float4x4 MeshTransformInverse;
                         #else
-                            int MeshIndex = SelectLightMeshSmart(pixel_index, RunningWeight, pos);
+                            MeshIndex = SelectLightMeshSmart(pixel_index, RunningWeight, pos);
                             float4x4 MeshTransformInverse = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].W2L;
                         #endif
-                        AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, 0, -PrevDirection, 0);
+                        AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, 0, -PrevDirection, 0, U, V);
                         #ifdef LBVH
                             MeshTransformInverse = _MeshData[MeshIndex].W2L;
                         #endif
@@ -1052,12 +1109,22 @@ int MaterialIndex;
                                 Illum *= rcp(saturate(maxillum));
                                 if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                                     uint index3;
+                                    bool IsPrimaryNEE;
                                     #ifdef RadCache
-                                        bool TempTemp = (CurBounce != GetBounceData(CacheBuffer[pixel_index].pathLength) - 2);
-                                        // if(!TempTemp && CurBounce != 0) Illum *= Color.Data;
-                                        if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                                        #ifdef YanusMode
+                                            if(REALLYRadCache) {
+                                        #endif
+                                        IsPrimaryNEE = (CurBounce != GetBounceData(CacheBuffer[pixel_index].pathLength) - 2);
+                                        // if(!IsPrimaryNEE && CurBounce != 0) Illum *= Color.Data;
+                                        if(UseReSTIRGI && !IsPrimaryNEE && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                                        #ifdef YanusMode
+                                            } else {
+                                                IsPrimaryNEE = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
+                                                if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                                                                    
+                                            }
+                                        #endif
                                     #else
-                                        bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
+                                        IsPrimaryNEE = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
                                         if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                                     #endif
                                     ShadowRayData ShadRay = {pos, 
@@ -1065,7 +1132,11 @@ int MaterialIndex;
                                                                     pos + to_light * (LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor),
                                                                     LightFormat == TRILIGHT ? -1 : AggTriIndex,
                                                                     Illum, 
-                                                                    pixel_index & 0xFFFFFFF};
+                                                                    pixel_index & 0xFFFFFFF,
+                                                                    MeshIndex,
+                                                                    AggTriIndex - _MeshData[MeshIndex].TriOffset,
+                                                                    U,
+                                                                    V};
                                     if((LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor) > 0.001f) {
                                         InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
                                         ShadowRaysBuffer[index3] = ShadRay;
@@ -1084,6 +1155,7 @@ int MaterialIndex;
     float3x3 Ry;
     float RotX;
     float RotY;
+    if(CurBounce == 0) ray.origin = CamPos;
         [branch]switch(DoSecondary ? BackgroundType : SecondaryBackgroundType) {
             case 0:
                 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
@@ -1108,7 +1180,12 @@ int MaterialIndex;
                     Radiance *= Intensity;
                     if (CurBounce == 0) Color.Direct = Color.throughput * Radiance;
 #ifdef RadCache
-                    else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+                    #ifdef YanusMode
+                        else if(luminance(Color.Indirect) == 0 && REALLYRadCache) Color.Indirect += Color.throughput * Radiance;
+                        else if(!REALLYRadCache) Color.Indirect += Color.throughput * Radiance;
+                    #else
+                        else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+                    #endif
 #else
                     else Color.Indirect += Color.throughput * Radiance;
 #endif
@@ -1153,7 +1230,16 @@ int MaterialIndex;
                 Radiance *= Intensity;
                 if (CurBounce == 0) Color.Direct = Radiance;
 #ifdef RadCache
-                else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance * mis;
+                #ifdef YanusMode
+                    else if(luminance(Color.Indirect) == 0 && REALLYRadCache) Color.Indirect += Color.throughput * Radiance * mis;
+                    else if(!REALLYRadCache) {
+                        if (CurBounce == 1) Color.Direct += Radiance * mis;
+                        else Color.Indirect += Color.throughput * Radiance * mis;
+                    }
+                #else
+                    else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance * mis;
+                #endif
+                // else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance * mis;
 #else
                 else if (CurBounce == 1) Color.Direct += Radiance * mis;
                 else Color.Indirect += Color.throughput * Radiance * mis;
@@ -1168,7 +1254,15 @@ int MaterialIndex;
                 Radiance *= Intensity;
                 if (CurBounce == 0) Color.Direct = Radiance;
 #ifdef RadCache
+                #ifdef YanusMode
+                    else if(luminance(Color.Indirect) == 0 && REALLYRadCache) Color.Indirect += Color.throughput * Radiance;
+                    else if(!REALLYRadCache) {
+                        if (CurBounce == 1) Color.Direct += Radiance * mis;
+                        else Color.Indirect += Color.throughput * Radiance * mis;
+                    }
+                #else
                 else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+                #endif
 #else
                 else if (CurBounce == 1) Color.Direct += Radiance * mis;
                 else Color.Indirect += Color.throughput * Radiance * mis;
@@ -1176,10 +1270,16 @@ int MaterialIndex;
             break;
         }
 #ifdef RadCache
+        #ifdef YanusMode
+            if(REALLYRadCache) {
+        #endif
         if(!DoSecondary && CurBounce > 0 && luminance(Radiance) > 0) {
             CacheBuffer[pixel_index].RunningIlluminance = packRGBE(Radiance);
             AddHitToCachePartial(CacheBuffer[pixel_index], ray.origin);
         }
+        #ifdef YanusMode
+            }
+        #endif
 #endif
         if(CurBounce == 0) {
             Color.Data = float3(Color.Direct);
@@ -1239,7 +1339,7 @@ int MaterialIndex;
         HitTerrain = true;
     } else {
         BaseUv = TOHALF(AggTrisA[bestHit.triangle_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[bestHit.triangle_id].texedge1) * bestHit.u + TOHALF(AggTrisA[bestHit.triangle_id].texedge2) * bestHit.v;
-#ifndef AdvancedBackground
+#ifndef SkyboxMeshPortals
         MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
 #endif
         TTMat = _Materials[MaterialIndex];
@@ -1360,8 +1460,18 @@ int MaterialIndex;
     float3 bsdf = 1;
     float3 norm = 0;
 #ifdef RadCache
-    uint PathLength = CacheBuffer[pixel_index].pathLength;
-    calcFinalColor(ray, Color, TTMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x, PSRScreenData);
+    uint PathLength = 0;
+    #ifdef YanusMode
+    if(REALLYRadCache) {
+        PathLength = CacheBuffer[pixel_index].pathLength;
+        calcFinalColor(ray, Color, TTMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x, PSRScreenData);
+    } else {
+        calcFinalColor(ray, Color, TTMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x, PSRScreenData);        
+    }
+    #else
+        PathLength = CacheBuffer[pixel_index].pathLength;
+        calcFinalColor(ray, Color, TTMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x, PSRScreenData);
+    #endif
 #else
     calcFinalColor(ray, Color, TTMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PSRScreenData);
 #endif
@@ -1369,6 +1479,9 @@ int MaterialIndex;
     if(CurBounce == 0 || ((true ^ InvalidateScreenSpaceInfo) && any(PrevPrevPSR != PSRScreenData))) PSRGBuff[id.xy] = PSRScreenData;
     GlobalColors[pixel_index] = Color;
 #ifdef RadCache
+    #ifdef YanusMode
+    if(REALLYRadCache) {
+    #endif
     if(CurBounce != 0) {
         BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], PathLength, ray.origin, bsdf);
         if(BSDFWRITTEN) {
@@ -1378,6 +1491,9 @@ int MaterialIndex;
     norm  = i_octahedral_32(octahedral_32(norm));
     PathLength = (PathLength & (~56)) | (((((uint)(norm.x >= 1e-7f)) | ((uint)(norm.y >= 1e-7f) << 1) | ((uint)(norm.z >= 1e-7f) << 2)) & 7) << 3);
     CacheBuffer[pixel_index].pathLength = PathLength;
+    #ifdef YanusMode
+    }
+    #endif
 #endif
 
 }
@@ -1412,7 +1528,6 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             res = _DebugTex[id.xy];
         #endif
     #endif
-
     Result[id.xy] = float4(res, 1.0f);
 }
 

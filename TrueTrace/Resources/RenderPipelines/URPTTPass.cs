@@ -37,53 +37,55 @@ namespace TrueTrace {
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData) {
             RayMaster = GameObject.Find("Scene")?.GetComponent<RayTracingMaster>();
-            var resourceData = frameData.Get<UniversalResourceData>();
-            var cameraData = frameData.Get<UniversalCameraData>();
-            var camera = cameraData.camera;
+            if(RayMaster.RunTrueTrace) {
+                var resourceData = frameData.Get<UniversalResourceData>();
+                var cameraData = frameData.Get<UniversalCameraData>();
+                var camera = cameraData.camera;
 
-            if(camera.cameraType != CameraType.Game && camera.cameraType != CameraType.SceneView) return;
-            
-            if (resourceData.isActiveTargetBackBuffer) {
-                return;
-            }
-
-            TextureHandle cameraColorHandle = resourceData.activeColorTexture;
-
-            bool needsResize = MainTex == null || 
-                               MainTex.width != camera.pixelWidth || 
-                               MainTex.height != camera.pixelHeight;
-            if (needsResize) {
-                if (MainTex != null) {
-                    MainTex.Release();
+                if(camera.cameraType != CameraType.Game && camera.cameraType != CameraType.SceneView) return;
+                
+                if (resourceData.isActiveTargetBackBuffer) {
+                    return;
                 }
-                CreateRenderTexture(ref MainTex, camera);
-            }
 
-            TextureHandle mainTexHandle = renderGraph.ImportTexture(RTHandles.Alloc(MainTex));
+                TextureHandle cameraColorHandle = resourceData.activeColorTexture;
 
-            // if(RayTracingMaster.RayMaster.LocalTTSettings.RenderScale != 1.0f && RayTracingMaster.RayMaster.LocalTTSettings.UpscalerMethod != 0) {
-            //     Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBuffer2"));
-            //     Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBuffer0"));
-            //     Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBuffer1"));
-            // }
+                bool needsResize = MainTex == null || 
+                                   MainTex.width != camera.pixelWidth || 
+                                   MainTex.height != camera.pixelHeight;
+                if (needsResize) {
+                    if (MainTex != null) {
+                        MainTex.Release();
+                    }
+                    CreateRenderTexture(ref MainTex, camera);
+                }
 
-            using (var builder = renderGraph.AddUnsafePass<PassData>("TrueTrace", out var passData)) {
-                passData.mainTexHandle = mainTexHandle;
-                passData.cameraColorHandle = cameraColorHandle;
+                TextureHandle mainTexHandle = renderGraph.ImportTexture(RTHandles.Alloc(MainTex));
 
-                builder.UseTexture(passData.mainTexHandle, AccessFlags.ReadWrite);
-                builder.UseTexture(passData.cameraColorHandle, AccessFlags.Write);
+                // if(RayTracingMaster.RayMaster.LocalTTSettings.RenderScale != 1.0f && RayTracingMaster.RayMaster.LocalTTSettings.UpscalerMethod != 0) {
+                //     Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBuffer2"));
+                //     Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBuffer0"));
+                //     Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBuffer1"));
+                // }
 
-                builder.SetRenderFunc((PassData data, UnsafeGraphContext ctx) => {
-                    CommandBuffer nativeCmd = CommandBufferHelpers.GetNativeCommandBuffer(ctx.cmd);
+                using (var builder = renderGraph.AddUnsafePass<PassData>("TrueTrace", out var passData)) {
+                    passData.mainTexHandle = mainTexHandle;
+                    passData.cameraColorHandle = cameraColorHandle;
 
-                    RayMaster.TossCamera(camera);
+                    builder.UseTexture(passData.mainTexHandle, AccessFlags.ReadWrite);
+                    builder.UseTexture(passData.cameraColorHandle, AccessFlags.Write);
 
-                    RayMaster.RenderImage(MainTex, nativeCmd);
+                    builder.SetRenderFunc((PassData data, UnsafeGraphContext ctx) => {
+                        CommandBuffer nativeCmd = CommandBufferHelpers.GetNativeCommandBuffer(ctx.cmd);
 
-                    ctx.cmd.SetRenderTarget(data.cameraColorHandle);
-                    Blitter.BlitTexture(nativeCmd, data.mainTexHandle, new Vector4(1f, 1f, 0f, 0f), 0, false);
-                });
+                        RayMaster.TossCamera(camera);
+
+                        RayMaster.RenderImage(MainTex, nativeCmd);
+
+                        ctx.cmd.SetRenderTarget(data.cameraColorHandle);
+                        Blitter.BlitTexture(nativeCmd, data.mainTexHandle, new Vector4(1f, 1f, 0f, 0f), 0, false);
+                    });
+                }
             }
         }
 
