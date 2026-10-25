@@ -685,7 +685,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                 #ifdef Fog
                     // float temppdf = phase_draine_eval(dot(to_light.xzy, PrevDirection.xzy), DRAINE_G, DRAINE_A);
                     float temppdf = 1.0f / (PI * 4.0f);
-                    Homo = exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
+                    Homo *= exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
                     float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
                     if(DidScatter) {
                         SigmaT *= Homo;
@@ -763,7 +763,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData TTM
                                 if(REALLYRadCache) {
                             #endif
                             IsPrimaryNEE = (CurBounce != GetBounceData(CachePathLength) - 2);
-                            if(UseReSTIRGI && !IsPrimaryNEE && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                            if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                             #ifdef YanusMode
                                 } else {
                                     IsPrimaryNEE = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
@@ -1047,7 +1047,7 @@ int MaterialIndex;
                                 float3 SigmaT = FogDensity * FogScale;
                                 float3 SigmaS = SigmaT * FogColor;
                                 float temppdf = 1.0f / (PI * 4.0f);
-                                Homo = exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
+                                Homo *= exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
                                 float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
                                 
 

@@ -1813,6 +1813,7 @@ Toolbar toolbar;
          if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
          SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
          SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
+         SetGlobalDefines("YanusMode", definesList.Contains("TTYanusMode"));
          SetGlobalDefines("TTDisplacement", definesList.Contains("TTDisplacement"));
       }
 
@@ -1838,7 +1839,7 @@ Toolbar toolbar;
          NonPlayContainer.style.paddingLeft = 10;
          EnsureInitializedGlobalDefines();
 
-            HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
+            HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 6000+)"};
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {RemoveDefine("TTTriSplitting"); TriangleSplittingToggle.SetEnabled(false); AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {TriangleSplittingToggle.SetEnabled(true); RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
 
 
@@ -1862,7 +1863,7 @@ Toolbar toolbar;
 
             Toggle YanusModeToggle = new Toggle() {value = (definesList.Contains("TTYanusMode")), text = "Enable Settings used by Yanus"};
                YanusModeToggle.tooltip = "Enabled settings used by Yanus";
-            YanusModeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTYanusMode");} else {RemoveDefine("TTYanusMode");}});
+            YanusModeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTYanusMode"); SetGlobalDefines("YanusMode", true);} else {RemoveDefine("TTYanusMode"); SetGlobalDefines("YanusMode", false);}});
 
             Toggle RasterizedDirectToggle = new Toggle() {value = (definesList.Contains("RasterizedDirect")), text = "Use Rasterized Lighting for Direct"};
                RasterizedDirectToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
@@ -1964,6 +1965,7 @@ Toolbar toolbar;
 
 
 
+
             // DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
             if(Application.isPlaying) {
                PhotonMappingToggle.SetEnabled(false);
@@ -1990,7 +1992,11 @@ Toolbar toolbar;
                // DX11Toggle.SetEnabled(false);
             } else {
                PhotonMappingToggle.SetEnabled(true);
+#if UNITY_6000_0_OR_NEWER
                HardwareRTToggle.SetEnabled(true);
+#else
+               HardwareRTToggle.SetEnabled(false);
+#endif
                // CustomMotionVectorToggle.SetEnabled(true);
                // ReflectionMotionVectorToggle.SetEnabled(true);
                RasterizedDirectToggle.SetEnabled(true);
@@ -2130,12 +2136,16 @@ Toolbar toolbar;
             #endif
          #endif
 
+
+
+
          PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache", "Quick toggle for the radiance cache, does NOT affect memory used by the radiance cache, unlike the toggle above"));
          #if TTAdvancedSettings
             PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "DX12 Only - Uses a higher texture LOD for each bounce, which can help performance"));
             PlayContainer.Add(CustomToggle("Double Buffer Light Tree", "DoubleBufferSGTree", "Enables double buffering of the light tree, allowing for stable moving emissive objects with ASVGF, but hurts performance"));
             PlayContainer.Add(CustomToggle("Use BSDF Lights", "UseBRDFLights", "Toggle for BSDF lights, Turning off can help with fireflies"));
             PlayContainer.Add(CustomToggle("Allow Mesh Skybox Portals", "SkyboxMeshPortals"));
+            PlayContainer.Add(CustomToggle("ReSTIR Temporal Adaptivity Improvement(More expensive)", "ExpensiveAdaptiveTemporal", "Shoots an additional shadow ray during ReSTIR Temporal pass, expensive but can massively reduce noise in shadow borders"));
          #endif
          PlayContainer.Add(CustomToggle("More AO", "MoreAO", "If you want yet more AO", AOContainer, PlayContainer));
 
@@ -3076,6 +3086,8 @@ Slider AperatureSlider;
            SecondarySkyDesaturate = RayMaster.LocalTTSettings.SecondarySkyDesaturate;
            FireflyFrameCount = RayMaster.LocalTTSettings.FireflyFrameCount;
            FireflyFrameInterval = RayMaster.LocalTTSettings.FireflyFrameInterval;
+           FireflyStrength = RayMaster.LocalTTSettings.FireflyStrength;
+           FireflyOffset = RayMaster.LocalTTSettings.FireflyOffset;
            OIDNFrameCount = RayMaster.LocalTTSettings.OIDNFrameCount;
            OIDNBlendRatio = RayMaster.LocalTTSettings.OIDNBlendRatio;
            RayMaster.IsFocusing = false;
@@ -3382,7 +3394,7 @@ Slider AperatureSlider;
                FireflyFoldout.Add(FireflyStrengthSlider);
 
                FloatField FireflyOffsetField = new FloatField("Firefly Minimum Offset") {value = FireflyOffset};
-               FireflyOffsetField.RegisterValueChangedCallback(evt => {FireflyOffset = (int)evt.newValue; RayMaster.LocalTTSettings.FireflyOffset = FireflyOffset;});
+               FireflyOffsetField.RegisterValueChangedCallback(evt => {FireflyOffset = evt.newValue; RayMaster.LocalTTSettings.FireflyOffset = FireflyOffset;});
                FireflyOffsetField.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyOffsetField);
 
@@ -3612,7 +3624,11 @@ Slider AperatureSlider;
                               if (gos.Contains(go))
                                  continue;
                               gos.Add(go);
+   #if UNITY_6000_5_OR_NEWER
+                              m_instanceMap[go.GetEntityId().GetHashCode()] = go;
+   #else
                               m_instanceMap[go.GetInstanceID()] = go;
+   #endif
                            }
                            for(int i = 0; i < RayReadCount; i++) {
                               RayObjectDatas Ray = rayreads.RayObj[i];

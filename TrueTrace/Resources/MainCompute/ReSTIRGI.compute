@@ -102,14 +102,10 @@ struct RadianceData {
     float W;
 };
 
-struct RayData2 {
-    uint ReservoirAge;
-    uint PixelIndex;
-};
-
 struct ReservoirStruct {
     RadianceData Radiance;
-    // RayData2 Ray;
+    uint FrameData;
+    uint PixelIndex;
 };
 
 inline uint2 PackRadianceData(RadianceData Radiance) {
@@ -131,15 +127,6 @@ inline void UnpackRadianceData(uint2 RadianceDataPacked, float3 Diffuse, inout R
 
 
 // ------------------------ RESERVOIRStruct PACKING FUNCTIONS-----------------------
-
-
-inline uint2 PackRayData(RayData2 Ray)
-{
-    return uint2(Ray.ReservoirAge, Ray.PixelIndex);
-}
-
-
-
 
 
 
@@ -168,14 +155,20 @@ inline bool ReservoirMergeCandidates(ReservoirStruct SourceReservoir, float Samp
 }
 
 // Merges central reservoirStruct with a temporal neighbour (Radiance & Ray datas are exhanged) loaded externally
-inline bool ReservoirMerge(uint2 SampleReservoirPacked, float SampleWeight, float3 Diffuse, float Random, inout ReservoirStruct TargetReservoir, float MISWeight = 1) {
+inline bool ReservoirMerge(uint4 SampleReservoirPacked, float SampleWeight, float3 Diffuse, float Random, inout ReservoirStruct TargetReservoir, float MISWeight = 1) {
     RadianceData SampleRadiance;
    
     UnpackRadianceData(SampleReservoirPacked.xy, Diffuse, SampleRadiance);
     SampleRadiance.M *= SampleWeight;
     SampleRadiance.Wsum *= SampleWeight * MISWeight;
     
-    return ReservoirUpdate(SampleRadiance, TargetReservoir, Random);
+    if(ReservoirUpdate(SampleRadiance, TargetReservoir, Random)) {
+        TargetReservoir.FrameData = SampleReservoirPacked.z;
+        TargetReservoir.PixelIndex = SampleReservoirPacked.w;
+        return true;
+    }
+
+    return false;
 }
 
 // Empty RadianceData initialization
@@ -186,15 +179,12 @@ inline void RadianceDataInitialize(out RadianceData Radiance) {
     Radiance.W = 0;
 }
 
-inline void RayDataInitialize(out RayData2 Ray) {
-    Ray.ReservoirAge = 0;
-}
-
 
 // Empty reservoirStruct initialization
-inline void ReservoirInitialize(out ReservoirStruct ReservoirStruct) {
-    RadianceDataInitialize(ReservoirStruct.Radiance);
-    // RayDataInitialize(ReservoirStruct.Ray);
+inline void ReservoirInitialize(out ReservoirStruct CandidateReservoir) {
+    RadianceDataInitialize(CandidateReservoir.Radiance);
+    CandidateReservoir.FrameData = frames_accumulated;
+    CandidateReservoir.PixelIndex = 0;
 }
 
 
@@ -210,7 +200,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     const int pixel_index = id.x + id.y * screen_width;
 
     const float2 UV = id.xy / float2(screen_width, screen_height);
-    SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f, pixel_index);
     [branch]if(DoPanorama) {
         float2 jitter = ((random(0, pixel_index) - 0.5));
         if(OIDNGuideWrite) jitter = 0;
@@ -248,7 +238,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
     ReservoirStruct SecondaryReservoir;
     ReservoirInitialize(SecondaryReservoir);
-
+    SecondaryReservoir.PixelIndex = pixel_index;
     uint4 SecondarySurfacePos = ReSTIRSecondaryDestinationWorldPos[id.xy];
 
     float3 SecondaryWorldPos =  LoadSurfaceInfo23(SecondarySurfacePos, PrimaryHitPosition);
@@ -268,6 +258,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
     ReservoirStruct NEEReservoir;
     ReservoirInitialize(NEEReservoir);
+    NEEReservoir.PixelIndex = pixel_index;
 
     uint4 NEESurfacePos = NEEDestinationWorldPos[id.xy];
 
@@ -317,7 +308,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
   
 
-    [branch]if(!(any(prevIndex >= int2(screen_width, screen_height) || prevIndex < 0)) && !(Case == 0 && SurfaceMat.roughness < 0.05) && UseReSTIRGITemporal) {
+    [branch]if(!(any(prevIndex >= int2(screen_width, screen_height) || prevIndex < 0)) && !(Case == 0 && SurfaceMat.roughness < 0.1) && UseReSTIRGITemporal) {
         float4 PrevGBuffer = PrevScreenSpaceInfo[prevIndex];
         float NormDiff = max(dot(GeomNorm, i_octahedral_32(asuint(PrevGBuffer.x))), 0);
         float s = sqrt(0.05 * dot(CamPos - PrimaryHitPosition, CamPos - PrimaryHitPosition) / PI);
@@ -330,6 +321,20 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
             uint4 TemporalSurface = ReservoirUnifiedDestinationWorldPosTemporalPrevious[prevIndex];
             float3 TemporalPosition = LoadSurfaceInfo23(TemporalSurface, PrimaryHitPosition);
             bool ValidTemporal = EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(TemporalPosition - PrimaryHitPosition), SurfNorm, pdf, bsdf, pixel_index);
+
+            float Jacobian = 1.0f;
+            if(TemporalSurface.w != 1) {
+                float3 NeighborNorm = i_octahedral_32(TemporalSurface.w);
+                float3 WorldPoses = LoadSurfaceInfoPrevInCurrent(prevIndex);
+                float JacobianCosNumerator = (abs(dot(NeighborNorm, normalize(TemporalPosition - PrimaryHitPosition))));
+                float JacobianCosDenominator = (abs(dot(NeighborNorm, normalize(TemporalPosition - WorldPoses))));
+
+                float JacobianLengthNumerator = dot(WorldPoses - TemporalPosition, WorldPoses - TemporalPosition);
+                float JacobianLengthDenominator = dot(PrimaryHitPosition - TemporalPosition, PrimaryHitPosition - TemporalPosition);
+
+                Jacobian = ((JacobianCosNumerator / JacobianCosDenominator)) * (JacobianLengthNumerator / JacobianLengthDenominator);
+                if(Jacobian > 20 || Jacobian < 1.0f / 20.0f || isnan(Jacobian) || isinf(Jacobian)) Jacobian = 0;
+            }
             [branch]if(ValidTemporal) {
                 #ifdef ReSTIRAdaptiveLighting
                     #ifdef ReSTIRAdvancedValidation
@@ -338,7 +343,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                             #ifdef ExpensiveAdaptiveTemporal
                                 ReservoirStruct TemporalReservoir;
                                 ReservoirInitialize(TemporalReservoir);
-                                UnpackRadianceData(ReservoirB[prevIndex], 1.0f, TemporalReservoir.Radiance);
+                                UnpackRadianceData(ReservoirB[prevIndex].xy, 1.0f, TemporalReservoir.Radiance);
 
                                 if(SurfaceMat.specTrans == 0) {
                                     float3 TempPos = TemporalPosition;
@@ -374,7 +379,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                     #endif
                 #endif
                 [branch]if(h > 0) {
-                    bool MergedInSource = ReservoirMerge(ReservoirB[prevIndex], h, bsdf, randomNEE(129, pixel_index).x, UnifiedReservoir, 1);
+                    bool MergedInSource = ReservoirMerge(ReservoirB[prevIndex], h * Jacobian, bsdf, randomNEE(129, pixel_index).x, UnifiedReservoir, 1);
                     if(MergedInSource) {
                         UnifiedWorldPos = TemporalPosition;
                         RunningWorldPos = TemporalSurface;
@@ -395,7 +400,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     UnifiedReservoir.Radiance.W = clamp(UnifiedReservoir.Radiance.Wsum / max(max(UnifiedReservoir.Radiance.M, 1) * luminance(UnifiedReservoir.Radiance.Color * bsdf), 1e-7), 0, 102222000.0f);
     if(UnifiedReservoir.Radiance.W > 100 || UnifiedReservoir.Radiance.Wsum / (float)max(UnifiedReservoir.Radiance.M, 1) > 1000) UnifiedReservoir.Radiance.W = 0;
 
-    ReservoirA[id.xy] = PackRadianceData(UnifiedReservoir.Radiance);
+    ReservoirA[id.xy] = uint4(PackRadianceData(UnifiedReservoir.Radiance),0,0);
     ReservoirUnifiedDestinationWorldPosTemporalCurrent[id.xy] = RunningWorldPos;
     float3 NeighborNorm;
     LoadSurfaceInfo22(RunningWorldPos, PrimaryHitPosition, NeighborNorm);
@@ -430,7 +435,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);
-    SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f, pixel_index);
     [branch]if(DoPanorama) {
         float2 jitter = ((random(0, pixel_index) - 0.5));
         if(OIDNGuideWrite) jitter = 0;
@@ -546,7 +551,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
     if(UnifiedReservoir.Radiance.W > 100 || UnifiedReservoir.Radiance.Wsum / (float)max(UnifiedReservoir.Radiance.M, 1) > 1000) UnifiedReservoir.Radiance.W = 0;
 
-    ReservoirA[id.xy] = PackRadianceData(UnifiedReservoir.Radiance).xy;
+    ReservoirA[id.xy] = uint4(PackRadianceData(UnifiedReservoir.Radiance).xy,0,0);
     NEEDestinationWorldPos[id.xy] = RunningWorldPos;
 
 
@@ -571,7 +576,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);
-    SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f, pixel_index);
     [branch]if(DoPanorama) {
         float2 jitter = ((random(0, pixel_index) - 0.5));
         if(OIDNGuideWrite) jitter = 0;
@@ -735,11 +740,14 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
 
 
-    if(Case != 3 && !(Case == 0 && SurfaceMat.roughness < 0.01)) {
+    if(Case != 3) {
         GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(float3(0,0,0),rcp(2.2f)));
 
         GlobalColors[pixel_index].Indirect = 0;
         GlobalColors[pixel_index].Direct = UnifiedReservoir.Radiance.Color * UnifiedReservoir.Radiance.W;
+        if(SurfaceMat.metallic = 1 && SurfaceMat.roughness == 0 && SurfaceMat.Specular == 0 && Case == 0 && SurfaceMat.clearcoat == 0) {
+            GlobalColors[pixel_index].Direct = UnifiedReservoir.Radiance.Color;
+        } else
         if(GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) != 1) {
             SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(UnifiedWorldPos - PrimaryHitPosition));
             if(GetFlag(SurfaceMat.Tag, Thin) && dot(GeomNorm, ray.direction) < 0 && Case == 2) bsdf *= sqrt(exp(-CalculateExtinction(SurfaceMat.transmittanceColor, SurfaceMat.scatterDistance == 0.0f ? 1.0f : SurfaceMat.scatterDistance)));

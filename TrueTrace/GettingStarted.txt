@@ -1,6 +1,10 @@
 Hello and thank you for trying out my path tracer!
 For more in depth/full details, go to the Readme on the Truetrace Github(at least until I can get some half decent tutorial videos made): https://github.com/Pjbomb2/TrueTrace-Unity-Pathtracer
 
+Notes before you start:
+If you are updating truetrace, and you get an error about an active dll, you need to close the unity project, navigate to the truetrace folder in the project in File Explorer, go to TrueTrace -> Bindless -> x64 -> And then delete the .dll file here.  After doing that, you can open back up the project and update truetrace like normal(just drag the new .unitypackage in)
+If you want to use HWRT, truetrace now requires unity 6000+(6000.5 has been tested but apparently any unity 6000 works), due to an nvidia driver update that breaks inline raytracing that unity will only fix for 6000+.  If you dont need or want HWRT, anything down to and including unity 2021 should work fine, in addition to newer versions.
+
 
 To get started:
 1. First, import the unity package.  After doing this you will need to restart unity this one time, so that the bindless plugin initialized properly.

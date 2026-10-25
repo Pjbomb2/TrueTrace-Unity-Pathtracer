@@ -8378,11 +8378,11 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0
+    Roughness: 0.602
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
-    IOR: 1
-    Metallic: 0
+    IOR: 2.72
+    Metallic: 0.044
     Sheen: 0
     SheenTint: 0
     SpecularTint: 0
@@ -8393,7 +8393,7 @@ MonoBehaviour:
     Flatness: 0
     DiffTrans: 0
     SpecTrans: 0
-    Specular: 0
+    Specular: 0.901
     ScatterDist: 0
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
@@ -13057,7 +13057,7 @@ MonoBehaviour:
   LightBLASCopyKernel: 6
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   UnsafeToBuild: 0
   TotalTriangles: 0
@@ -38411,7 +38411,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RunTrueTrace: 1
-  EnableDebugTexture: 1
+  EnableDebugTexture: 0
   EnableDebugTexturePrev: 0
   LocalTTSettingsName: DemoSceneMain
   HDRPorURPRenderInScene: 0
@@ -38492,6 +38492,7 @@ MonoBehaviour:
   MainDirectionalLight: -1
   AtmoNumLayers: 4
   FramesSinceStart: 0
+  HasCreated: 0
   projectionScale: {x: 1, y: 1}
 --- !u!114 &1568839226
 MonoBehaviour:
@@ -55615,7 +55616,7 @@ MonoBehaviour:
   LightBLASCopyKernel: 6
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   UnsafeToBuild: 0
   TotalTriangles: 0
@@ -62257,7 +62258,7 @@ MonoBehaviour:
   LightBLASCopyKernel: 6
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   UnsafeToBuild: 0
   TotalTriangles: 0

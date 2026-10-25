@@ -36,7 +36,7 @@
 // #define SkyboxMeshPortals
 #define UseBRDFLights
 #define DoubleBufferSGTree
-// #define RadCache
+#define RadCache
 // #define MoreAO
 // #define YanusMode
 

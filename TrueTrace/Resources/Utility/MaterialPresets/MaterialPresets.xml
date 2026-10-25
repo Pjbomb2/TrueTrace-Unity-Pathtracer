@@ -46,9 +46,9 @@
             <RotationSecondaryNormal>0</RotationSecondaryNormal>
           </TextureModifiers>
           <BaseColor>
-            <x>1</x>
-            <y>1</y>
-            <z>1</z>
+            <x>0.8</x>
+            <y>0.8</y>
+            <z>0.8</z>
           </BaseColor>
           <emission>0</emission>
           <EmissionColor>
@@ -57,8 +57,8 @@
             <z>1</z>
           </EmissionColor>
           <Tag>512</Tag>
-          <Roughness>0.6</Roughness>
-          <MatType>0</MatType>
+          <Roughness>0</Roughness>
+          <MatType>1</MatType>
           <TransmittanceColor>
             <x>1</x>
             <y>1</y>
@@ -66,7 +66,7 @@
           </TransmittanceColor>
           <IOR>1</IOR>
           <Metallic>0</Metallic>
-          <Sheen>21.5</Sheen>
+          <Sheen>0.2</Sheen>
           <SheenTint>1</SheenTint>
           <SpecularTint>0</SpecularTint>
           <Clearcoat>0</Clearcoat>
@@ -74,10 +74,10 @@
           <Anisotropic>0</Anisotropic>
           <AnisotropicRotation>0</AnisotropicRotation>
           <Flatness>0</Flatness>
-          <DiffTrans>0.474</DiffTrans>
+          <DiffTrans>0.414</DiffTrans>
           <SpecTrans>0</SpecTrans>
           <Specular>0</Specular>
-          <ScatterDist>0.33</ScatterDist>
+          <ScatterDist>5</ScatterDist>
           <MetallicRemap>
             <x>0</x>
             <y>1</y>
@@ -86,7 +86,7 @@
             <x>0</x>
             <y>1</y>
           </RoughnessRemap>
-          <AlphaCutoff>0.1</AlphaCutoff>
+          <AlphaCutoff>1</AlphaCutoff>
           <NormalStrength>1</NormalStrength>
           <Hue>0</Hue>
           <Saturation>1</Saturation>
@@ -115,18 +115,19 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
-        <AlbedoGUID>f6315f33237ea5c47b18426d781a6090</AlbedoGUID>
+        <LinkTexTransforms>true</LinkTexTransforms>
+        <AlbedoGUID>546f67776761e8b45ac78f99a9a1a13f</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>f6315f33237ea5c47b18426d781a6090</AlphaGUID>
+        <AlphaGUID>546f67776761e8b45ac78f99a9a1a13f</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
-        <NormalGUID>f6315f33237ea5c47b18426d781a6090</NormalGUID>
+        <NormalGUID>null</NormalGUID>
         <DiffTransGUID>null</DiffTransGUID>
-        <ShaderName>GLTFUtility/Standard (Metallic)</ShaderName>
+        <ShaderName>Standard</ShaderName>
         <DisplacementGUID>null</DisplacementGUID>
       </RayObjectDatas>
     </ContainedPresets>
@@ -246,6 +247,7 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
+        <LinkTexTransforms>false</LinkTexTransforms>
         <AlbedoGUID>null</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -370,6 +372,7 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
+        <LinkTexTransforms>false</LinkTexTransforms>
         <AlbedoGUID>3dceba844e28dae4ea6681dbbc376837</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -499,6 +502,7 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
+        <LinkTexTransforms>false</LinkTexTransforms>
         <AlbedoGUID>1fc227ca53ee2d244bccdf950cf6faf1</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -623,6 +627,7 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
+        <LinkTexTransforms>false</LinkTexTransforms>
         <AlbedoGUID>eb4571e592d4d0047b6c4284d1d1926b</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -752,6 +757,7 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
+        <LinkTexTransforms>false</LinkTexTransforms>
         <AlbedoGUID>2718676ffa386f649ad76de6aa0fda4f</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -877,6 +883,7 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
+        <LinkTexTransforms>false</LinkTexTransforms>
         <AlbedoGUID>null</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>

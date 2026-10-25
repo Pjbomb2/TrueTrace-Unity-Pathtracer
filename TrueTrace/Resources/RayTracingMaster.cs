@@ -43,7 +43,11 @@ namespace TrueTrace {
         public static void WriteString(RayTracingObject OBJtoWrite, string NameIndex) {
             if(DoSaving) {
                 if(OBJtoWrite == null || OBJtoWrite.gameObject == null) return;
+#if UNITY_6000_5_OR_NEWER
+                int ID = OBJtoWrite.gameObject.GetEntityId().GetHashCode();
+#else
                 int ID = OBJtoWrite.gameObject.GetInstanceID();
+#endif
                 int Index = (new List<string>(OBJtoWrite.Names)).IndexOf(NameIndex);
                 RayObjectDatas TempOBJ = raywrites.RayObj.Find((s1) => (s1.MatName.Equals(NameIndex) && s1.ID.Equals(ID)));
                 int WriteID = raywrites.RayObj.IndexOf(TempOBJ);
@@ -264,8 +268,10 @@ namespace TrueTrace {
                 OverridenHeight = newHeight;    
             }
         }
+        public bool HasCreated = false;
         unsafe public void Start2()
         {
+            HasCreated = true;
             RayMaster = this;
             CurrentHorizonalPatch = new Vector2(0,1);
             LoadTT();
@@ -833,7 +839,7 @@ namespace TrueTrace {
             GenerateShader.SetTexture(GenPanoramaKernel, "ReSTIRSecondaryDestinationWorldPos", ReSTIRSecondaryDestinationWorldPos);
             GenerateShader.SetTexture(GenPanoramaKernel, "NEEDestinationWorldPos", NEEDestinationWorldPos);
 
-            
+
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, TraceKernel);
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalRays", _RayBuffer);
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalColors", LightingBuffer);
@@ -1199,9 +1205,9 @@ namespace TrueTrace {
             if(LocalTTSettings.UseReSTIRGI && !ReSTIRInitialized) {
                 CommonFunctions.CreateRenderTexture(ref GradientsA, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                 CommonFunctions.CreateRenderTexture(ref GradientsB, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
-                CommonFunctions.CreateRenderTexture(ref GIReservoirA, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
-                CommonFunctions.CreateRenderTexture(ref GIReservoirB, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
-                CommonFunctions.CreateRenderTexture(ref GIReservoirC, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
+                CommonFunctions.CreateRenderTexture(ref GIReservoirA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref GIReservoirB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref GIReservoirC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 ReSTIRInitialized = true;
             }
             CommonFunctions.CreateRenderTexture(ref PSRGBuff, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1361,12 +1367,12 @@ namespace TrueTrace {
 
                     if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
 
-                    SetInt("CurBounce", 1, cmd);
+                    // SetInt("CurBounce", 1, cmd);
                     cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                     if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
 
                     if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel 1");
-                    SetInt("CurBounce", 2, cmd);
+                    // SetInt("CurBounce", 2, cmd);
                     cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel+1, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                     if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel 1");
 

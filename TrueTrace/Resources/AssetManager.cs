@@ -517,9 +517,17 @@ namespace TrueTrace {
 
         private void KeyCheck(int MatIndex, Texture Tex, ref Dictionary<int, TexObj> DictTextures, ref List<PackingRectangle> PR, int ReadChannelIndex, int TexType) {
             #if !DX11Only && !UseAtlas
-                int index = Tex.GetInstanceID();
+                #if UNITY_6000_5_OR_NEWER
+                    int index = Tex.GetEntityId().GetHashCode();
+                #else
+                    int index = Tex.GetInstanceID();
+                #endif
             #else
+                #if UNITY_6000_5_OR_NEWER
+                int index = System.HashCode.Combine(Tex.GetEntityId().GetHashCode(), TexType);
+                #else
                 int index = System.HashCode.Combine(Tex.GetInstanceID(), TexType);
+                #endif
             #endif
             if (DictTextures.TryGetValue(index, out var existingTexObj)) {
                 existingTexObj.TexObjList.Add(new Vector3Int(MatIndex, TexType, ReadChannelIndex));
@@ -544,7 +552,11 @@ namespace TrueTrace {
         }
 
         private void KeyCheck(int MatIndex, Texture Tex, ref Dictionary<int, TexObj> DictTextures, ref List<int> PR, int ReadChannelIndex, int TexType) {
-            int index = Tex.GetInstanceID();
+            #if UNITY_6000_5_OR_NEWER
+                int index = Tex.GetEntityId().GetHashCode();
+            #else
+                int index = Tex.GetInstanceID();
+            #endif
             if (DictTextures.TryGetValue(index, out var existingTexObj)) {
                 existingTexObj.TexObjList.Add(new Vector3Int(MatIndex, TexType, ReadChannelIndex));
             } else {
@@ -735,7 +747,11 @@ namespace TrueTrace {
                     TempTerrain.TerrainDimY = Terrains[j].TerrainDimY;
                     TempTerrain.HeightScale = Terrains[j].HeightScale;
                     TempTerrain.MatOffset = TerrainMatCount - MatCount;
+    #if UNITY_6000_5_OR_NEWER
+                    int Index = Obj2.HeightMap.GetEntityId().GetHashCode();
+    #else
                     int Index = Obj2.HeightMap.GetInstanceID();
+    #endif
                     var E = new TexObj();
                     {
                         HeightMapRect.Add(new PackingRectangle() {
@@ -752,7 +768,12 @@ namespace TrueTrace {
                         HeightMapTextures.Add(Index, E);
                     }
                     E = new TexObj();
+    #if UNITY_6000_5_OR_NEWER
+
+                    Index = Obj2.AlphaMap.GetEntityId().GetHashCode();
+    #else
                     Index = Obj2.AlphaMap.GetInstanceID();
+    #endif
                     {
                         AlphaMapRect.Add(new PackingRectangle() {
                             Width = (uint)Mathf.Ceil(((float)Obj2.AlphaMap.width) / 4.0f) * 4,

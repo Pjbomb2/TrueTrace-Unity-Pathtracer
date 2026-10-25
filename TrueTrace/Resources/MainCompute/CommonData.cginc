@@ -141,8 +141,8 @@ bool DoExposure;
 StructuredBuffer<float> Exposure;
 
 
-RWTexture2D<uint2> ReservoirA;
-Texture2D<uint2> ReservoirB;
+RWTexture2D<uint4> ReservoirA;
+Texture2D<uint4> ReservoirB;
 
 
 RWTexture2D<float4> NEEPosA;
@@ -662,6 +662,7 @@ inline uint ray_get_octant_inv4(const float3 ray_direction) {
         (ray_direction.y < 0.0f ? 0 : 0x02020202) |
         (ray_direction.z < 0.0f ? 0 : 0x01010101);
 }
+
 
 
 inline uint cwbvh_node_intersect(const SmallerRay ray, const int oct_inv4, const float max_distance, const BVHNode8Data TempNode) {
@@ -2403,7 +2404,7 @@ inline float3 waveLengthToRGB(float Wavelength) {
 }
 
 #define DRAINE_G 0.65
-#define DRAINE_A 32.0
+#define DRAINE_A 3.0
 
 
 float phase_draine_eval(const float u, const float g, const float a) {

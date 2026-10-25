@@ -17,7 +17,7 @@ namespace TrueTrace {
             RayMaster = GameObject.FindObjectsOfType<RayTracingMaster>()[0];
             // gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
             RayMaster.TossCamera(gameObject.GetComponent<Camera>());
-            RayMaster.Start2();
+            if(!RayMaster.HasCreated) RayMaster.Start2();
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
@@ -25,7 +25,7 @@ namespace TrueTrace {
         {
             RayMaster = GameObject.FindObjectsOfType<RayTracingMaster>()[0];
             RayMaster.TossCamera(gameObject.GetComponent<Camera>());
-            RayMaster.Start2();
+            if(!RayMaster.HasCreated)RayMaster.Start2();
         }
     #if RasterizedDirect
         [ImageEffectOpaque]

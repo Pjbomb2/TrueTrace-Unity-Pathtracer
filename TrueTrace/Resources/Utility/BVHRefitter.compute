@@ -753,7 +753,7 @@ int Count;
 [numthreads(256,1,1)]
 void BLASCopyNodeDataKernel (uint3 id : SV_DispatchThreadID)
 {
-	if(id.x >= Count) return;
+	if(id.x >= (uint)Count) return;
 	LightNodesWriteB[id.x + TargetOffset] = LightNodesWriteB[id.x + TotalNodeOffset];
 
 }

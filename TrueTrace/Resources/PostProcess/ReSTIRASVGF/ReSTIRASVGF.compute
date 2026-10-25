@@ -167,7 +167,7 @@ int PartialRenderingFactor;
 [numthreads(16, 16, 1)]
 void CopyData(int3 id : SV_DispatchThreadID)
 {
-    if(any(id.xy >= uint2(screen_width, screen_height))) return;
+    if(any(id.xy >= int2(screen_width, screen_height))) return;
     int pixel_index = id.y * screen_width + id.x;
     ColData Pixel = GlobalColorsRead[pixel_index];
     const uint4 ScreenInfo = asuint(ScreenSpaceInfo[id.xy]);
@@ -518,7 +518,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
 
     float3 out_color_hf;
-    float4 out_moments_histlen_hf;
+    float4 out_moments_histlen_hf = 1;
 
     // Load the gradients
 

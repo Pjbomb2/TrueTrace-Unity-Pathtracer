@@ -12,7 +12,7 @@
   <li>High Performance Compute Shader based path tracing without RT cores</li>
   <li>Compressed Wide Bounding Volume Hierarchy for High Performance Software RT(no RT Cores)</li>
   <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores needed)</li>
-  <li>Hardware RT Support for modern cards</li>
+  <li>Hardware RT Support for modern cards(Unity 6000+ Only due to driver incompatibilities)</li>
   <li>Full Disney BSDF for materials</li>
   <li>Full support for complex emissive meshes</li>
   <li>Runtime transform, add, and removal of objects</li>
@@ -25,15 +25,15 @@
   <li>Support for all default unity lights(Using Next Event Estimation)</li>
   <li>Bloom, Depth of Field, AutoExposure, TAA, Tonemapping</li>
   <li>Precomputed Multiple Atmospheric Scattering for the sky</li>
-  <li>Object Instancing(Without RT Cores)</li>
-  <li>ReSTIR GI(cursed implementation)</li>
+  <li>Object Instancing</li>
+  <li>ReSTIR GI with unified reservoirs</li>
   <li>Simple upscaling ability</li>
   <li>Supports Built-in, HDRP, and URP</li>
   <li>Full skinned mesh support</li>
   <li>Supports deformable standard meshes</li>
   <li>Supports unity heightmap terrain and heightmap trees</li>
   <li>Enironment Map Importance Sampling</li>
-  <li>Radiance Cache</li>
+  <li>Radiance Caches</li>
   <li>Material Preset System</li>
   <li>Efficient Panorama Rendering</li>
   <li>IES for spotlights</li>

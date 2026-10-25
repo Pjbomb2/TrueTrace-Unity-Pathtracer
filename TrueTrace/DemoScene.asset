@@ -84,9 +84,9 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.008
-  FogHeight: 80
-  FogColor: {x: 1, y: 1, z: 1}
+  FogDensity: 0.2
+  FogHeight: 64.8
+  FogColor: {x: 0.7735849, y: 0.7735849, z: 0.7735849}
   MaxSampCount: 9999999
   DoChromaAber: 0
   ChromaDistort: 0.14
@@ -108,5 +108,5 @@ MonoBehaviour:
   PhotonGuidingRatio: 0.15
   PhotonGuidingPerLightGuidingResolution: 128
   PhotonGuidingTotalPhotonsPerFrame: 2000000
-  RadCacheToggle: 0
+  RadCacheToggle: 1
   PhysSkyInfluencesHDRI: 0
